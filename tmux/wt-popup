@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# wt-popup <caller-pane-id|@VAR> -- <cmd> [args...]
+#
+# Host-side popup-launch wrapper for tools that should follow the caller pane's
+# worktree backend. Reads @wt from caller pane via the main tmux server. If set,
+# dispatches the command via wt-run (which handles docker / coder transports).
+# If empty (native tmux pane), execs the command locally — byte-identical to the
+# pre-wt-popup behavior, so the native path stays untouched.
+#
+# Caller forms:
+#   wt-popup %42 -- cmd ...         pane id directly
+#   wt-popup @DIFFVIEW_CALLER -- cmd ...   reads pane id from tmux global env var
+#                                   (needed when invoked from `display-popup -E`,
+#                                   which doesn't expand #{pane_id} formats)
+set -euo pipefail
+
+PANE="${1:-}"
+shift || true
+if [ "${1:-}" = "--" ]; then shift; fi
+
+# Always talk to the main tmux server, not the popup one we're running inside.
+export TMUX=
+
+if [[ "$PANE" == @* ]]; then
+    VAR="${PANE#@}"
+    PANE=$(tmux show-environment -g "$VAR" 2>/dev/null | cut -d= -f2-)
+fi
+
+if [ -z "$PANE" ] || [ $# -eq 0 ]; then
+    echo "wt-popup: usage: wt-popup <caller-pane-id|@VAR> -- <cmd> [args...]" >&2
+    exit 2
+fi
+
+WT=$(tmux show-options -pvt "$PANE" @wt 2>/dev/null || true)
+
+if [ -n "$WT" ]; then
+    exec wt-run "$WT" -- "$@"
+fi
+
+exec "$@"

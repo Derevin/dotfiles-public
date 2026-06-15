@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Open a shell into a worktree backend.
+# Backend derived from the slot name's first letter: d → docker, c → coder.
+# Sets the @wt tmux pane option so cc-just.sh routes recipe dispatch correctly.
+set -euo pipefail
+
+# Worktree backend config (private; absent on public installs → empty defaults).
+WT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"
+[ -f "$WT_CONF" ] && . "$WT_CONF"
+WT_CONTAINER_PREFIX="${WT_CONTAINER_PREFIX:-}"
+WT_DOCKER_WORKDIR_PREFIX="${WT_DOCKER_WORKDIR_PREFIX:-}"
+
+WT="${1:-}"
+INNER_CMD="${2:-}"
+if [ -z "$WT" ]; then
+    echo "usage: wt-shell <dwtN|cwtN> [inner-cmd]"
+    exit 1
+fi
+
+case "${WT:0:1}" in
+    d) backend="docker" ;;
+    c) backend="coder" ;;
+    *) echo "wt-shell: unknown backend prefix for slot '$WT' (expected dwt* or cwt*)" >&2; exit 1 ;;
+esac
+
+if [ -n "${TMUX:-}" ] && [ -n "${TMUX_PANE:-}" ]; then
+    tmux set-option -pt "$TMUX_PANE" @wt "$WT" 2>/dev/null || true
+fi
+
+# Container busy-check uses WT_PANE_ID — set to the tmux pane id when present.
+PANE_ID_FOR_CONTAINER="${TMUX_PANE:-}"
+
+case "$backend" in
+    docker)
+        CONTAINER="${WT_CONTAINER_PREFIX}$WT"
+        # Use the host-shaped path so claude keys per-project state under the
+        # same encoded cwd as host runs (~/.claude/projects/-home-...).
+        WORKDIR="${WT_DOCKER_WORKDIR_PREFIX}$WT"
+
+        if ! docker container inspect "$CONTAINER" >/dev/null 2>&1; then
+            echo "Container $CONTAINER does not exist. Run 'just dwt-up' to create it."
+            exit 1
+        fi
+        if [ "$(docker container inspect -f '{{.State.Running}}' "$CONTAINER")" != "true" ]; then
+            docker start "$CONTAINER" >/dev/null
+        fi
+
+        DOCKER_ENV=(-e "TERM=${TERM:-xterm-256color}")
+        # Propagate the multiplexer pane id so cc-just.sh can detect busy
+        # panes by counting in-container processes that inherited it.
+        if [ -n "$PANE_ID_FOR_CONTAINER" ]; then
+            DOCKER_ENV+=(-e "WT_PANE_ID=$PANE_ID_FOR_CONTAINER")
+        fi
+        if [ -n "$INNER_CMD" ]; then
+            exec docker exec -it "${DOCKER_ENV[@]}" -w "$WORKDIR" "$CONTAINER" bash -lc "$INNER_CMD"
+        else
+            exec docker exec -it "${DOCKER_ENV[@]}" -w "$WORKDIR" "$CONTAINER" bash -l
+        fi
+        ;;
+    coder)
+        WORKSPACE="${WT_CONTAINER_PREFIX}$WT"
+        # Coder workspaces clone the repo at /workspace (set by coder_agent.dir).
+        # cd there directly — no host-shape worktree symlink any more.
+        EXT_ENV=""
+        [ -n "$PANE_ID_FOR_CONTAINER" ] && EXT_ENV="export WT_PANE_ID='$PANE_ID_FOR_CONTAINER'; "
+        WORKDIR="/workspace"
+        # coder ssh space-joins remote argv without re-quoting, so a bare
+        # `bash -lc "<script>"` gets mangled — bash -lc grabs only the first
+        # word and the WT_PANE_ID export is silently dropped. Pre-quote each
+        # token so the workspace shell re-parses it into the original words.
+        cq() { local a out=""; for a in "$@"; do out+=" '${a//\'/\'\\\'\'}'"; done; printf '%s' "$out"; }
+        if [ -n "$INNER_CMD" ]; then
+            exec coder ssh "$WORKSPACE" -- "$(cq bash -lc "${EXT_ENV}cd $WORKDIR && $INNER_CMD")"
+        else
+            exec coder ssh "$WORKSPACE" -- "$(cq bash -lc "${EXT_ENV}cd $WORKDIR && exec bash -l")"
+        fi
+        ;;
+esac

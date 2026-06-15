@@ -1,0 +1,31 @@
+# Global justfile — recipes available everywhere via `just -g`
+
+sync:
+    sync.sh
+
+[no-cd]
+task-list:
+    task-list.sh --status todo active
+
+[private]
+_claude-model:
+    #!/usr/bin/env bash
+    printf '%s\n' haiku sonnet opus
+
+# Fresh claude at a chosen model
+[no-cd]
+claude model='haiku':
+    #!/usr/bin/env bash
+    exec claude --model "{{model}}"
+
+# background_takeover
+dotfiles:
+    workspace-dotfiles.sh
+
+# Per-repo workspaces: wire a repo path to a layout script. Add your own, e.g.:
+# # background_takeover
+# myrepo:
+#     workspace-solo.sh ~/repos/myrepo      # claude left, two terminals right
+# # background_takeover
+# myrepo-dual:
+#     workspace-dual.sh ~/repos/myrepo      # claude ×2 + two terminals below

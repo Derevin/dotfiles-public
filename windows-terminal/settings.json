@@ -1,0 +1,171 @@
+{
+    "$help": "https://aka.ms/terminal-documentation",
+    "$schema": "https://aka.ms/terminal-profiles-schema",
+    "theme": "system",
+    "actions":
+    [
+        {
+            "command":
+            {
+                "action": "sendInput",
+                "input": "\n"
+            },
+            "id": "User.sendInput.DFCDAF06"
+        },
+        {
+            "command":
+            {
+                "action": "sendInput",
+                "input": "\u001bd"
+            },
+            "id": "User.sendInput.53EE635F"
+        },
+        {
+            "command":
+            {
+                "action": "sendInput",
+                "input": "\u0017"
+            },
+            "id": "User.sendInput.CtrlBackspace"
+        }
+    ],
+    "copyFormatting": "none",
+    "copyOnSelect": false,
+    "defaultProfile": "{2bbd12c8-8cf3-511f-8200-8ede53cf904a}",
+    "keybindings":
+    [
+        {
+            "id": "User.sendInput.CtrlBackspace",
+            "keys": "ctrl+backspace"
+        },
+        {
+            "id": "User.sendInput.53EE635F",
+            "keys": "ctrl+delete"
+        },
+        {
+            "id": "User.sendInput.DFCDAF06",
+            "keys": "shift+enter"
+        },
+        { "keys": "ctrl+c", "id": null },
+        { "keys": "ctrl+v", "id": null },
+        { "keys": "ctrl+shift+t", "id": null },
+        { "keys": "ctrl+shift+w", "id": null },
+        { "keys": "ctrl+shift+n", "id": null },
+        { "keys": "ctrl+shift+p", "id": null },
+        { "keys": "ctrl+shift+f", "id": null },
+        { "keys": "ctrl+shift+d", "id": null },
+        { "keys": "ctrl+shift+space", "id": null },
+        { "keys": "ctrl+shift+comma", "id": null },
+        { "keys": "ctrl+shift+up", "id": null },
+        { "keys": "ctrl+shift+down", "id": null },
+        { "keys": "ctrl+tab", "id": null },
+        { "keys": "ctrl+shift+tab", "id": null },
+        { "keys": "alt+shift+d", "id": null },
+        { "keys": "alt+shift+minus", "id": null },
+        { "keys": "alt+shift+plus", "id": null },
+        { "keys": "ctrl+shift+1", "id": null },
+        { "keys": "ctrl+shift+2", "id": null },
+        { "keys": "ctrl+shift+3", "id": null },
+        { "keys": "ctrl+shift+4", "id": null },
+        { "keys": "ctrl+shift+5", "id": null },
+        { "keys": "ctrl+shift+6", "id": null },
+        { "keys": "ctrl+shift+7", "id": null },
+        { "keys": "ctrl+shift+8", "id": null },
+        { "keys": "ctrl+shift+9", "id": null },
+        { "keys": "ctrl+alt+1", "id": null },
+        { "keys": "ctrl+alt+2", "id": null },
+        { "keys": "ctrl+alt+3", "id": null },
+        { "keys": "ctrl+alt+4", "id": null },
+        { "keys": "ctrl+alt+5", "id": null },
+        { "keys": "ctrl+alt+6", "id": null },
+        { "keys": "ctrl+alt+7", "id": null },
+        { "keys": "ctrl+alt+8", "id": null },
+        { "keys": "ctrl+alt+9", "id": null }
+    ],
+    "newTabMenu":
+    [
+        {
+            "type": "remainingProfiles"
+        }
+    ],
+    "profiles":
+    {
+        "defaults":
+        {
+            "builtinGlyphs": true,
+            "colorScheme": "Solarized Light High Contrast",
+            "cursorShape": "bar",
+            "font":
+            {
+                "face": "JetBrains Mono",
+                "features":
+                {
+                    "calt": 0,
+                    "liga": 0
+                },
+                "size": 14
+            },
+            "historySize": 50000,
+            "padding": "2"
+        },
+        "list":
+        [
+            {
+                "commandline": "wsl.exe -d Ubuntu-24.04",
+                "guid": "{2bbd12c8-8cf3-511f-8200-8ede53cf904a}",
+                "name": "WSL"
+            },
+            {
+                "commandline": "C:\\Program Files\\Git\\bin\\bash.exe --login",
+                "guid": "{1e0e3c28-8e1b-4f6a-b5c8-3a9d7e2f1b0c}",
+                "icon": "C:\\Program Files\\Git\\mingw64\\share\\git\\git-for-windows.ico",
+                "name": "Git Bash",
+                "startingDirectory": "%USERPROFILE%"
+            },
+            {
+                "guid": "{b453ae62-4e3d-5e58-b989-0a998ec441b8}",
+                "hidden": true,
+                "name": "Azure Cloud Shell",
+                "source": "Windows.Terminal.Azure"
+            },
+            {
+                "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
+                "hidden": false,
+                "name": "Windows PowerShell"
+            },
+            {
+                "guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}",
+                "hidden": false,
+                "name": "Command Prompt"
+            }
+        ]
+    },
+    "schemes":
+    [
+        {
+            "background": "#FDF6E3",
+            "black": "#073642",
+            "blue": "#268BD2",
+            "brightBlack": "#002B36",
+            "brightBlue": "#839496",
+            "brightCyan": "#93A1A1",
+            "brightGreen": "#586E75",
+            "brightPurple": "#6C71C4",
+            "brightRed": "#CB4B16",
+            "brightWhite": "#FDF6E3",
+            "brightYellow": "#657B83",
+            "cursorColor": "#002B36",
+            "cyan": "#2AA198",
+            "foreground": "#002B36",
+            "green": "#859900",
+            "name": "Solarized Light High Contrast",
+            "purple": "#D33682",
+            "red": "#DC322F",
+            "selectionBackground": "#EEE8D5",
+            "white": "#EEE8D5",
+            "yellow": "#B58900"
+        }
+    ],
+    "tabWidthMode": "compact",
+    "themes": []
+}

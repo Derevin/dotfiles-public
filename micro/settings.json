@@ -1,0 +1,9 @@
+{
+    "autoclose": false,
+    "colorscheme": "solarized-vp",
+    "lsp.server": "c++=clangd",
+    "lsp.formatOnSave": false,
+    "savecursor": true,
+    "saveundo": true,
+    "statusformatr": ""
+}

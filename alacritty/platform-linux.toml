@@ -1,0 +1,2 @@
+# Linux platform overrides
+# No shell override needed — Alacritty uses the default login shell

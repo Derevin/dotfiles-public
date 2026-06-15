@@ -1,0 +1,3 @@
+[wsl2]
+# Shut down VM 5 minutes after last distro exits
+vmIdleTimeout=300000

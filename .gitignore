@@ -1,0 +1,4 @@
+.claude/settings.local.json
+nvim/lazy-lock.json
+*.bak
+__pycache__/

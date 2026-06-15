@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# Run a single command in a worktree's backend.
+# Usage: wt-run <wt> -- <cmd> [args...]
+#        wt-run "" -- <cmd> [args...]   # native: exec locally
+#
+# Backend derived from the slot name's first letter: d → docker, c → coder.
+# Empty <wt> means "no backend, run on host". This is what callers pass when
+# the originating pane has no @wt option set.
+#
+# For coder backends, manages a long-lived ssh ControlMaster whose master
+# connection carries `-R /tmp/tmux-1000/default:/tmp/tmux-1000/default` so
+# tools inside the workspace can `tmux send-keys` etc. against host tmux
+# transparently. Slave connections multiplex over the master and are cheap.
+set -euo pipefail
+
+# Worktree backend config (private; absent on public installs → empty defaults).
+WT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"
+[ -f "$WT_CONF" ] && . "$WT_CONF"
+WT_CONTAINER_PREFIX="${WT_CONTAINER_PREFIX:-}"
+WT_DOCKER_WORKDIR_PREFIX="${WT_DOCKER_WORKDIR_PREFIX:-}"
+
+WT="${1:-}"
+shift || true
+if [ "${1:-}" = "--" ]; then shift; fi
+
+if [ $# -eq 0 ]; then
+    echo "wt-run: no command after --" >&2
+    exit 2
+fi
+
+if [ -z "$WT" ]; then
+    exec "$@"
+fi
+
+case "${WT:0:1}" in
+    d) backend="docker" ;;
+    c) backend="coder" ;;
+    *) echo "wt-run: unknown backend prefix for slot '$WT' (expected dwt* or cwt*)" >&2; exit 1 ;;
+esac
+
+case "$backend" in
+    docker)
+        CONTAINER="${WT_CONTAINER_PREFIX}$WT"
+        WORKDIR="${WT_DOCKER_WORKDIR_PREFIX}$WT"
+        DOCKER_FLAGS=(-i)
+        [ -t 0 ] && DOCKER_FLAGS+=(-t)
+        DOCKER_FLAGS+=(-e "TERM=${TERM:-xterm-256color}")
+        PANE_ID="${TMUX_PANE:-}"
+        [ -n "$PANE_ID" ] && DOCKER_FLAGS+=(-e "WT_PANE_ID=$PANE_ID")
+        exec docker exec "${DOCKER_FLAGS[@]}" -w "$WORKDIR" "$CONTAINER" "$@"
+        ;;
+    coder)
+        WORKSPACE="${WT_CONTAINER_PREFIX}$WT"
+        HOST="$WORKSPACE.coder"
+        # Coder workspaces clone the repo at /workspace (set by coder_agent.dir).
+        # cd there directly — no host-shape worktree symlink any more.
+        WORKDIR="/workspace"
+        SSHMUX_DIR="$HOME/.cache/wt-run-sshmux"
+        mkdir -p "$SSHMUX_DIR"
+        SOCKET="$SSHMUX_DIR/${WORKSPACE}.sock"
+
+        # Establish master if absent. Carries the -R forward and ControlPersist.
+        # ServerAlive* self-reaps a wedged master (e.g. wifi flap) in ~10s — else
+        # -O check still sees the live master process and slaves hang as blank popups.
+        if ! ssh -O check -o "ControlPath=$SOCKET" "$HOST" >/dev/null 2>&1; then
+            ssh -fN -o "ControlMaster=yes" -o "ControlPath=$SOCKET" -o "ControlPersist=30m" \
+                -o "ServerAliveInterval=5" -o "ServerAliveCountMax=2" \
+                -R "/tmp/tmux-1000/default:/tmp/tmux-1000/default" \
+                "$HOST"
+            # tmux refuses sockets in dirs with mode != 0700. Idempotent.
+            ssh -o "ControlPath=$SOCKET" "$HOST" -- \
+                'mkdir -p /tmp/tmux-1000 && chmod 700 /tmp/tmux-1000' >/dev/null 2>&1 || true
+        fi
+
+        # Quote args for the remote bash -c.
+        CMD_STR=""
+        for arg in "$@"; do
+            CMD_STR="$CMD_STR $(printf %q "$arg")"
+        done
+        EXT_ENV=""
+        PANE_ID="${TMUX_PANE:-}"
+        [ -n "$PANE_ID" ] && EXT_ENV="export WT_PANE_ID='$PANE_ID'; "
+        SSH_TTY=()
+        [ -t 0 ] && SSH_TTY=(-t)
+        exec ssh "${SSH_TTY[@]}" -o "ControlPath=$SOCKET" "$HOST" -- \
+            "${EXT_ENV}cd $WORKDIR && exec$CMD_STR"
+        ;;
+esac
