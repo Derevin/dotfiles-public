@@ -9,8 +9,12 @@ These skills are copied or adapted from
 [mattpocock/skills](https://github.com/mattpocock/skills) and are used under the
 MIT License (copyright remains his):
 
-- `claude/skills/grill-me/` — copied verbatim
+- `claude/skills/grill-me/` — verbatim
+- `claude/skills/design-an-interface/` — verbatim
+- `claude/skills/zoom-out/` — verbatim
 - `claude/skills/grill-me-with-docs/` — adapted from his `grill-with-docs`
+- `claude/skills/write-a-skill/` — adapted
+- `claude/skills/improve-codebase-architecture/` — adapted
 
 ```
 MIT License
@@ -35,3 +39,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## kickstart.nvim — Neovim config
+
+`nvim/` is based on [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim),
+used under the MIT License. Its license text is retained in-tree at
+`nvim/LICENSE.md`.
