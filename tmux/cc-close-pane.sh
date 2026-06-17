@@ -31,7 +31,7 @@ fi
 
 # Inspect window → toggle back
 if [[ "$WINDOW_NAME" =~ ^i[0-9]*[1-9]$ ]]; then
-    exec ~/.local/bin/cc-inspect.sh
+    exec cc-inspect.sh
 fi
 
 # Unclosable pane (e.g. overview originals) → no-op
@@ -40,5 +40,5 @@ if [[ "$(tmux show-options -pv @unclosable 2>/dev/null)" == "1" ]]; then
 fi
 
 # Default → save editor (if any), then kill pane
-~/.local/bin/cc-save-editor.sh
+cc-save-editor.sh
 tmux kill-pane

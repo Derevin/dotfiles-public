@@ -67,7 +67,7 @@ tmux set-option -pt "$P3" @unclosable 1
 # so the user can inspect what wasn't up to date. Splitting before send-keys
 # so claude in pane 1 starts at its final height.
 SYNC_ID=$(tmux split-window -vb -t "$P1" -l 4 -P -F '#{pane_id}' \
-    "~/repos/dotfiles/scripts/sync.sh")
+    "sync.sh")
 tmux set-option -p -t "$SYNC_ID" remain-on-exit failed
 
 # Pin the vertical divider to floor(width/2). A bare `split-window -h` is 50/50
