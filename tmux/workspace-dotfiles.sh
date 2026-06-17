@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Dotfiles workspace: claude on left, two terminals on right, sync strip on top.
 #
-# Optional args: <extra-repo-path> [window-name]. When given, the bottom-right
-# pane opens in that repo with its own claude instead of a plain dotfiles
-# terminal, and the window is named <window-name> (default "dotx"). A private
-# recipe supplies the extra repo path.
+# Optional args: <extra-repo-path> [window-name] [claude-name]. When given, the
+# bottom-right pane opens in that repo with its own claude instead of a plain
+# dotfiles terminal, the window is named <window-name> (default "dotx"), and that
+# claude's display name is <claude-name> (default: repo basename). A private
+# recipe supplies these.
 #
 # Pane references are by pane_id (the stable %N) rather than index, because
 # tmux re-numbers pane indices by spatial position when panes are added or
@@ -17,6 +18,7 @@ P3DIR="$DIR"
 if [[ -n "$EXTRA_REPO" ]]; then
     BASE="${2:-dotx}"
     P3DIR="$EXTRA_REPO"
+    P3NAME="${3:-$(basename "$EXTRA_REPO")}"
 fi
 WINDOW="$BASE"
 TAKEOVER=0
@@ -78,14 +80,14 @@ tmux resize-pane -t "$P1" -x $((WCOLS / 2))
 
 if [[ $TAKEOVER -eq 1 ]]; then
     # Script is running in pane 1 — queue cd + claude for after it exits
-    tmux send-keys -t "$P1" "cd $DIR && claude --effort max" Enter
+    tmux send-keys -t "$P1" "cd $DIR && claude --effort max -n dotfiles" Enter
 else
-    tmux send-keys -t "$P1" "claude --effort max" Enter
+    tmux send-keys -t "$P1" "claude --effort max -n dotfiles" Enter
 fi
 
 # Extra-repo mode: bottom-right pane runs claude in the given repo.
 if [[ -n "$EXTRA_REPO" ]]; then
-    tmux send-keys -t "$P3" "claude --effort max" Enter
+    tmux send-keys -t "$P3" "claude --effort max -n $P3NAME" Enter
 fi
 
 tmux select-pane -t "$P1"

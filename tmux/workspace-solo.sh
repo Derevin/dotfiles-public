@@ -53,9 +53,9 @@ tmux set-option -pt "$W.3" @unclosable 1
 
 if [[ $TAKEOVER -eq 1 ]]; then
     # Script is running in pane 1 — queue cd + claude for after it exits
-    tmux send-keys -t "$W.1" "cd $DIR && claude --effort max${CLAUDE_ARG:+ '$CLAUDE_ARG'}" Enter
+    tmux send-keys -t "$W.1" "cd $DIR && claude --effort max -n $BASE${CLAUDE_ARG:+ '$CLAUDE_ARG'}" Enter
 else
-    tmux send-keys -t "$W.1" "claude --effort max${CLAUDE_ARG:+ '$CLAUDE_ARG'}" Enter
+    tmux send-keys -t "$W.1" "claude --effort max -n $BASE${CLAUDE_ARG:+ '$CLAUDE_ARG'}" Enter
 fi
 
 tmux select-pane -t "$W.1"
