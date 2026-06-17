@@ -132,6 +132,20 @@ def own_layer():
     return Layer(DOTFILES, COMMON, WINDOWS_ONLY, LINUX_ONLY, LINUX_TARBALLS)
 
 
+def merge_mappings(layers):
+    """Flatten the layers' mappings into (root, src_rel, dst_rel), collapsing dst
+    collisions so a later layer wins (e.g. the private layer repoints ~/.justfile
+    from the public justfile to the private one). Without this both mappings link
+    in turn and the second relinks the first's dst on every run — never idempotent.
+    A reassigned dst keeps its original position, so ordering dependencies hold
+    (the public nvim dir links before the private dap slot nested under it)."""
+    merged = {}  # dst_rel -> (root, src_rel), insertion-ordered
+    for layer in layers:
+        for src_rel, dst_rel in layer.mappings():
+            merged[dst_rel] = (layer.root, src_rel)
+    return [(root, src_rel, dst_rel) for dst_rel, (root, src_rel) in merged.items()]
+
+
 def _is_native_symlink(path: Path) -> bool:
     """Check if a symlink is a native Windows symlink (vs MSYS-style)."""
     try:
@@ -333,14 +347,13 @@ def main(extra_layers=(), install_root=None):
                     continue
                 extract_tarball(tarball, layer.root / dir_rel, strip, args.dry_run, args.verbose)
 
-    for layer in layers:
-        for src_rel, dst_rel in layer.mappings():
-            src = layer.root / src_rel
-            dst = HOME / dst_rel
-            if not src.exists():
-                action(f"  warn: source not found {src}")
-                continue
-            link(src, dst, args.dry_run, args.verbose)
+    for root, src_rel, dst_rel in merge_mappings(layers):
+        src = root / src_rel
+        dst = HOME / dst_rel
+        if not src.exists():
+            action(f"  warn: source not found {src}")
+            continue
+        link(src, dst, args.dry_run, args.verbose)
 
     apply_gnome_keybindings(args.dry_run, args.verbose)
 
