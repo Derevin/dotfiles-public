@@ -24,4 +24,4 @@ Pick the next task from the queue and start working on it.
 
 7. **Self-review.** Invoke `/review-branch-medium` on the first implementation pass.
 
-8. **Hand off.** When done, stop and tell the user. Do NOT run `/complete-task` or suggest it. What follows is the user's manual review, possibly PR creation, review cycles, and merge. Task stays in `active/` until the user explicitly says it's done (typically after the branch is merged into main/master) and runs `/complete-task` themselves.
+8. **Hand off.** When done, stop and tell the user what you did — nothing more. Do NOT run `/complete-task` or suggest it, and do NOT announce that you're leaving the task in `active/` or that you're not completing it — leaving it there is the silent default; narrating the non-action is noise. What follows is the user's manual review, possibly PR creation, review cycles, and merge. Task stays in `active/` until the user explicitly says it's done (typically after the branch is merged into main/master) and runs `/complete-task` themselves.
