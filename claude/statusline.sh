@@ -8,6 +8,7 @@ cost=$(printf '%s' "$input" | jq -r '.cost.total_cost_usd // empty')
 rl5=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
 rl5_reset=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
 rl7=$(printf '%s' "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
+rl7_reset=$(printf '%s' "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
 
 # USD→CZK rate (cached daily, refreshed in background — never blocks statusline)
 rate_file=~/.cache/claude-statusline-usd-czk
@@ -26,14 +27,14 @@ if [[ -n "$dir" ]]; then
     [[ "$label" =~ -c?wt[0-9]+$ ]] && label="${label##*-}"
     parts+=("$label")
 fi
-if [[ -n "$rl5" ]]; then
-    p="block $(printf '%.0f' "$rl5")%"
-    [[ -n "$rl5_reset" ]] && p="$p $(date -d "@$rl5_reset" +%H%M)"
-    parts+=("$p")
-fi
 [[ -n "$ctx" ]] && parts+=("ctx ${ctx}%")
 
 extras=()
+if [[ -n "$rl5" ]]; then
+    p="block $(printf '%.0f' "$rl5")%"
+    [[ -n "$rl5_reset" ]] && p="$p $(date -d "@$rl5_reset" +%H%M)"
+    extras+=("$p")
+fi
 if [[ -n "$cost" ]]; then
     usd=$(printf '$%.2f' "$cost")
     if [[ -n "$czk_rate" ]]; then
@@ -43,7 +44,14 @@ if [[ -n "$cost" ]]; then
         extras+=("$usd")
     fi
 fi
-[[ -n "$rl7" ]] && extras+=("wk $(printf '%.0f' "$rl7")%")
+if [[ -n "$rl7" ]]; then
+    p="wk $(printf '%.0f' "$rl7")%"
+    if [[ -n "$rl7_reset" ]]; then
+        dow=$(date -d "@$rl7_reset" +%a)
+        p="$p ${dow:0:2}$(date -d "@$rl7_reset" +%H)"
+    fi
+    extras+=("$p")
+fi
 
 sep=' · '
 out=""
