@@ -80,14 +80,14 @@ tmux resize-pane -t "$P1" -x $((WCOLS / 2))
 
 if [[ $TAKEOVER -eq 1 ]]; then
     # Script is running in pane 1 — queue cd + claude for after it exits
-    tmux send-keys -t "$P1" "cd $DIR && claude --effort max -n dotfiles" Enter
+    tmux send-keys -t "$P1" "cd $DIR && CLAUDE_LABEL=dotfiles claude --effort max" Enter
 else
-    tmux send-keys -t "$P1" "claude --effort max -n dotfiles" Enter
+    tmux send-keys -t "$P1" "CLAUDE_LABEL=dotfiles claude --effort max" Enter
 fi
 
 # Extra-repo mode: bottom-right pane runs claude in the given repo.
 if [[ -n "$EXTRA_REPO" ]]; then
-    tmux send-keys -t "$P3" "claude --effort max -n $P3NAME" Enter
+    tmux send-keys -t "$P3" "CLAUDE_LABEL=$P3NAME claude --effort max" Enter
 fi
 
 tmux select-pane -t "$P1"

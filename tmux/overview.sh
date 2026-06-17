@@ -94,7 +94,7 @@ if [[ $LAUNCH_CLAUDE -eq 1 ]]; then
         d="${DIRS[p-1]:-$PWD}"
         name="${d##*/}"
         [[ "$name" =~ -[a-z]?wt[0-9]+$ ]] && name="${name##*-}"
-        tmux send-keys -t "$W.$p" "claude --effort max -n $name /where-were-we" Enter
+        tmux send-keys -t "$W.$p" "CLAUDE_LABEL=$name claude --effort max /where-were-we" Enter
     done
 fi
 

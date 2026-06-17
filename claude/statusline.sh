@@ -22,7 +22,11 @@ fi
 czk_rate=$(cat "$rate_file" 2>/dev/null)
 
 parts=()
-if [[ -n "$dir" ]]; then
+# CLAUDE_LABEL is set at launch by the workspace scripts; unlike a Claude session
+# name it survives /clear (env, not conversation state). Falls back to the dir.
+if [[ -n "${CLAUDE_LABEL:-}" ]]; then
+    parts+=("$CLAUDE_LABEL")
+elif [[ -n "$dir" ]]; then
     label="${dir##*/}"
     [[ "$label" =~ -c?wt[0-9]+$ ]] && label="${label##*-}"
     parts+=("$label")
