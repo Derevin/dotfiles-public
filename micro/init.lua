@@ -107,6 +107,20 @@ function fzfGrep(bp)
     fzfOpen(file, line, col)
 end
 
+-- Ctrl-B: yazi file browser. Like the fzf finders, micro suspends its screen so
+-- yazi owns the terminal; yazi runs in chooser mode (see micro-yazi.sh) and emits
+-- the chosen path(s), one per line. Open the first selection in the current pane,
+-- mirroring the file finder; fzfOpen no-ops on an empty pick (quit without choosing).
+local yaziScript = os.Getenv("HOME") .. "/.local/bin/micro-yazi.sh"
+
+function yaziBrowse(bp)
+    local out, err = shell.RunInteractiveShell(yaziScript, false, true)
+    if err ~= nil then
+        return
+    end
+    fzfOpen(fzfClean(out):match("^[^\n]*"))
+end
+
 -- The built-in linter runs `g++ -fsyntax-only -Wall -Wextra` with no -std, so
 -- valid C++23 (std::views::enumerate/adjacent) is falsely flagged as errors.
 -- Re-register the g++ linter at -std=c++23 to match how the projects build.
@@ -419,6 +433,7 @@ function prePreviousTab(bp)    jbRecord(bp) end
 function init()
     config.MakeCommand("findfiles", fzfFiles, config.NoComplete)
     config.MakeCommand("livegrep", fzfGrep, config.NoComplete)
+    config.MakeCommand("browse", yaziBrowse, config.NoComplete)
     fixCppLinter()
     -- Runs after InitTabs, so micro.Tabs() is populated: capture every tab opened
     -- at startup (onBufferOpen fires too early — before the tab list exists).

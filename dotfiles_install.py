@@ -95,6 +95,7 @@ LINUX_ONLY = [
     ("micro/colorschemes/solarized-vp.micro", ".config/micro/colorschemes/solarized-vp.micro"),
     ("tmux/micro-session.sh", ".local/bin/micro-session.sh"),
     ("scripts/micro-fzf.sh", ".local/bin/micro-fzf.sh"),
+    ("scripts/micro-yazi.sh", ".local/bin/micro-yazi.sh"),
     ("scripts/micro-lastfile.sh", ".local/bin/micro-lastfile.sh"),
     ("tmux/wt-shell", ".local/bin/wt-shell"),
     ("tmux/wt-run", ".local/bin/wt-run"),

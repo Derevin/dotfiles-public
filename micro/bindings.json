@@ -1,6 +1,7 @@
 {
     "Ctrl-e": "command:findfiles",
     "Ctrl-g": "command:livegrep",
+    "Ctrl-b": "command:browse",
     "Ctrl-w": "DeleteWordLeft",
     "Alt-d": "DeleteWordRight",
     "Alt-g": "None",
