@@ -5,5 +5,7 @@
     "lsp.formatOnSave": false,
     "savecursor": true,
     "saveundo": true,
-    "statusformatr": ""
+    "softwrap": true,
+    "statusformatr": "",
+    "wordwrap": true
 }
