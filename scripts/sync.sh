@@ -292,6 +292,14 @@ if [[ "$before" != "$after" ]]; then
 fi
 
 # --- 3. Install — links new files, clones any newly-required sibling repos. ----
+# The installer is Python and can't install Python (chicken-and-egg). It's the one
+# prerequisite sync can't provide for itself, so error out with a hint rather than
+# guess a package manager; everything else the installer provisions.
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "error: python3 not found — required to run the installer." >&2
+  echo "Install it with your package manager (e.g. sudo apt-get install -y python3), then re-run." >&2
+  exit 1
+fi
 ~/repos/dotfiles/dotfiles_install.py
 
 # Re-collect siblings: install may have just cloned new ones (already current).

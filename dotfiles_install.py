@@ -387,7 +387,7 @@ def apply_gnome_keybindings(dry_run: bool, verbose: bool = False):
         action(f"  warn: gnome keybindings apply failed ({script})")
 
 
-def main(extra_layers=(), install_root=None):
+def main(extra_layers=(), install_root=None, provision=None):
     layers = [own_layer(), *extra_layers]
     if install_root is None:
         install_root = DOTFILES
@@ -420,6 +420,14 @@ def main(extra_layers=(), install_root=None):
         print(f"Home:     {HOME}\n")
 
     verify_dotfiles_location(install_root)
+
+    # A layer may provision system-level prerequisites that can't be symlinked
+    # (apt packages, runtimes). The mechanism is generic and dormant for a public
+    # clone (which passes no provision); the private composer supplies the
+    # Debian/Ubuntu logic.
+    if provision is not None:
+        provision(args.dry_run, args.verbose)
+
     for name, remote in core_repos.items():
         clone_repo(name, remote, args.dry_run, args.verbose)
     for name in args.extra:
