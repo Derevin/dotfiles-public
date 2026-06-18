@@ -2,11 +2,16 @@
 """Dotfiles installer. Creates symlinks from repo files to their home locations."""
 
 import argparse
+import hashlib
 import os
 import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
+import urllib.error
+import urllib.request
+import zipfile
 from pathlib import Path
 
 DOTFILES = Path(__file__).resolve().parent
@@ -84,6 +89,11 @@ WINDOWS_ONLY = [
 # is the tracked artifact. (tarball relative to DOTFILES, extract dir, strip count)
 LINUX_TARBALLS = []
 
+# Like LINUX_TARBALLS, but the archive is downloaded at install instead of tracked
+# in git — for tools too big to vendor (>50MB). Extracted tree should be gitignored.
+# Supports .zip and .tar.* archives. (url, extract dir, strip count, sha256)
+LINUX_URL_ARTIFACTS = []
+
 LINUX_ONLY = [
     ("alacritty/alacritty.toml", ".config/alacritty/alacritty.toml"),
     ("alacritty/platform-linux.toml", ".config/alacritty/platform.toml"),
@@ -111,12 +121,13 @@ class Layer:
     later layer wins on a dst collision. A standalone install is one layer (this
     file's own dir); the private superproject adds its own via main(extra_layers)."""
 
-    def __init__(self, root, common=(), windows_only=(), linux_only=(), tarballs=()):
+    def __init__(self, root, common=(), windows_only=(), linux_only=(), tarballs=(), url_artifacts=()):
         self.root = Path(root)
         self.common = list(common)
         self.windows_only = list(windows_only)
         self.linux_only = list(linux_only)
         self.tarballs = list(tarballs)
+        self.url_artifacts = list(url_artifacts)
 
     def mappings(self):
         return self.common + (self.windows_only if IS_WINDOWS else self.linux_only)
@@ -128,7 +139,7 @@ class Layer:
 
 def own_layer():
     """The layer rooted at this installer's own directory."""
-    return Layer(DOTFILES, COMMON, WINDOWS_ONLY, LINUX_ONLY, LINUX_TARBALLS)
+    return Layer(DOTFILES, COMMON, WINDOWS_ONLY, LINUX_ONLY, LINUX_TARBALLS, LINUX_URL_ARTIFACTS)
 
 
 def merge_mappings(layers):
@@ -241,6 +252,82 @@ def extract_tarball(tarball: Path, extract_dir: Path, strip: int, dry_run: bool,
     marker.write_text(tarball_mtime)
 
 
+def _extract_stripped(archive: Path, extract_dir: Path, strip: int):
+    """Extract a .zip or .tar.* archive into extract_dir, dropping `strip` leading
+    path components. Preserves unix permissions, including zip exec bits (taken
+    from external_attr, which tarfile carries natively but zipfile does not)."""
+    if zipfile.is_zipfile(archive):
+        with zipfile.ZipFile(archive) as zf:
+            for info in zf.infolist():
+                parts = Path(info.filename).parts
+                if len(parts) <= strip:
+                    continue
+                target = extract_dir / Path(*parts[strip:])
+                if info.is_dir():
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(info) as src, open(target, "wb") as dst:
+                    shutil.copyfileobj(src, dst)
+                mode = (info.external_attr >> 16) & 0o7777
+                if mode:
+                    target.chmod(mode)
+    else:
+        with tarfile.open(archive, "r:*") as tf:
+            members = []
+            for m in tf.getmembers():
+                parts = Path(m.name).parts
+                if len(parts) <= strip:
+                    continue
+                m.name = str(Path(*parts[strip:]))
+                members.append(m)
+            tf.extractall(extract_dir, members=members)
+
+
+def fetch_url_artifact(url, extract_dir: Path, strip: int, sha256: str, dry_run: bool, verbose: bool = False):
+    """Download an archive from URL and extract it into extract_dir — for tools too
+    big to vendor in git (>50MB). Idempotent via a marker recording (url, sha256):
+    re-runs skip when unchanged, so the download only happens on first install or a
+    version bump. sha256 ('' to skip) is verified before extraction; on a network
+    error or hash mismatch we warn and leave any prior install intact, rather than
+    aborting the whole installer."""
+    marker = extract_dir / ".installed-from-url"
+    want = f"{url}\n{sha256}"
+    if marker.exists() and marker.read_text() == want:
+        if verbose:
+            print(f"  skip (already fetched) {extract_dir}")
+        return
+
+    action(f"  fetch {url} -> {extract_dir}")
+    if dry_run:
+        return
+
+    fd, tmp_name = tempfile.mkstemp(prefix="dotfiles-artifact-")
+    os.close(fd)
+    tmp_path = Path(tmp_name)
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "dotfiles-installer"})
+        with urllib.request.urlopen(req) as resp, open(tmp_path, "wb") as out:
+            shutil.copyfileobj(resp, out)
+        if sha256:
+            h = hashlib.sha256()
+            with open(tmp_path, "rb") as f:
+                for chunk in iter(lambda: f.read(1 << 20), b""):
+                    h.update(chunk)
+            if h.hexdigest() != sha256:
+                action(f"  warn: sha256 mismatch for {url} — skipping (got {h.hexdigest()})")
+                return
+        if extract_dir.exists():
+            shutil.rmtree(extract_dir)
+        extract_dir.mkdir(parents=True)
+        _extract_stripped(tmp_path, extract_dir, strip)
+        marker.write_text(want)
+    except (urllib.error.URLError, OSError) as e:
+        action(f"  warn: failed to fetch {url}: {e}")
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
 def link(src: Path, dst: Path, dry_run: bool, verbose: bool = False):
     if dst.is_symlink():
         is_correct_target = dst.resolve() == src.resolve()
@@ -345,6 +432,10 @@ def main(extra_layers=(), install_root=None):
                     action(f"  warn: tarball not found {tarball}")
                     continue
                 extract_tarball(tarball, layer.root / dir_rel, strip, args.dry_run, args.verbose)
+
+        for layer in layers:
+            for url, dir_rel, strip, sha in layer.url_artifacts:
+                fetch_url_artifact(url, layer.root / dir_rel, strip, sha, args.dry_run, args.verbose)
 
     for root, src_rel, dst_rel in merge_mappings(layers):
         src = root / src_rel
