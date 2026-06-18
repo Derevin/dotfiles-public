@@ -25,6 +25,7 @@ dotfiles:
 # Per-repo workspaces: wire a repo path to a layout script. Add your own, e.g.:
 # # background_takeover
 # myrepo:
+#     @# requires-repo myrepo               # M-j chooser hides this unless ~/repos/myrepo exists
 #     workspace-solo.sh ~/repos/myrepo      # claude left, two terminals right
 # # background_takeover
 # myrepo-dual:

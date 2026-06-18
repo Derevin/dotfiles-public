@@ -86,6 +86,30 @@ send_to_idle_or_split() {
     tmux send-keys -t "$target" "cd '$PWD' && $cmd" Enter
 }
 
+# Hide per-repo recipes whose backing repo isn't checked out. A recipe opts in
+# with a `# requires-repo <name>` body marker (the `@#` form is a silent no-op),
+# which `just --show` surfaces; we drop it from the listing when ~/repos/<name>
+# is absent — so e.g. the honeybee workspace recipes only appear where honeybee
+# exists. Fails open: any --show/parse miss leaves the recipe visible.
+drop_missing_repos() {
+    local scope="$1" listing="$2" line name show repo kept=""
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        name=${line%%[[:space:]]*}
+        if [ "$scope" = global ]; then
+            show=$(just -g --show "$name" 2>/dev/null)
+        else
+            show=$(just --show "$name" 2>/dev/null)
+        fi
+        repo=$(printf '%s\n' "$show" | sed -nE 's/^[[:space:]]*@?#[[:space:]]*requires-repo[[:space:]]+([^[:space:]]+).*/\1/p' | head -1)
+        if [ -n "$repo" ] && [ ! -d "$HOME/repos/$repo" ]; then
+            continue
+        fi
+        kept+="$line"$'\n'
+    done <<< "$listing"
+    printf '%s' "${kept%$'\n'}"
+}
+
 # Collect recipes: "source recipe  # description"
 recipes=""
 
@@ -97,6 +121,10 @@ recipes=""
 strip_directives='s/[[:space:]]+#[[:space:]]*(background_takeover|background|host_only)$//'
 project=$(just --list --list-heading '' --list-prefix '' 2>/dev/null | sed -E "$strip_directives")
 global=$(just -g --list --list-heading '' --list-prefix '' 2>/dev/null | sed -E "$strip_directives")
+
+# Drop recipes that require an absent ~/repos/<name> (see drop_missing_repos).
+project=$(drop_missing_repos project "$project")
+global=$(drop_missing_repos global "$global")
 
 # Deduplicate: if a recipe name appears in both and the body is identical, drop from project (global wins)
 if [ -n "$global" ] && [ -n "$project" ]; then
