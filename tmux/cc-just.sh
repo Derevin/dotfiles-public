@@ -231,19 +231,22 @@ for arg in "${args[@]}"; do
     cmd+=" '$arg'"
 done
 
-# Check dispatch directives in recipe body
+# Check dispatch directives. Recognized as a `@#` body marker (silent no-op,
+# leaving the doc-comment slot free for descriptions) or a legacy doc comment
+# above the recipe — the `^[[:space:]]*@?#` anchor matches both forms. `\b`
+# after `background` keeps it from matching `background_takeover`.
 BACKGROUND=0
 BACKGROUND_TAKEOVER=0
 HOST_ONLY=0
-if echo "$show" | grep -q '^# background_takeover'; then
+if echo "$show" | grep -qE '^[[:space:]]*@?#[[:space:]]*background_takeover\b'; then
     BACKGROUND_TAKEOVER=1
-elif echo "$show" | grep -q '^# background'; then
+elif echo "$show" | grep -qE '^[[:space:]]*@?#[[:space:]]*background\b'; then
     BACKGROUND=1
 fi
 # host_only: skip wt-shell routing even if caller pane is bound to a workspace.
 # For recipes whose body only makes sense on the laptop (e.g. opening a VNC
 # window, port-forwarding, anything talking to the local Coder server).
-if echo "$show" | grep -q '^# host_only'; then
+if echo "$show" | grep -qE '^[[:space:]]*@?#[[:space:]]*host_only\b'; then
     HOST_ONLY=1
 fi
 

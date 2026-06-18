@@ -18,15 +18,18 @@ claude model='haiku':
     #!/usr/bin/env bash
     exec claude --model "{{model}}"
 
-# background_takeover
 dotfiles:
+    @# background_takeover
     workspace-dotfiles.sh
 
-# Per-repo workspaces: wire a repo path to a layout script. Add your own, e.g.:
-# # background_takeover
+# Per-repo workspaces: wire a repo path to a layout script. `@#` body markers
+# (silent no-ops) drive the M-j chooser without using the doc-comment slot:
+# `@# background_takeover` sets dispatch mode, `@# requires-repo <name>` hides
+# the recipe unless ~/repos/<name> exists. Add your own, e.g.:
 # myrepo:
-#     @# requires-repo myrepo               # M-j chooser hides this unless ~/repos/myrepo exists
+#     @# background_takeover
+#     @# requires-repo myrepo
 #     workspace-solo.sh ~/repos/myrepo      # claude left, two terminals right
-# # background_takeover
 # myrepo-dual:
+#     @# background_takeover
 #     workspace-dual.sh ~/repos/myrepo      # claude ×2 + two terminals below
