@@ -27,7 +27,7 @@ if [[ "$WINDOW_NAME" == overview* ]]; then
 fi
 INSPECT_WIN="i${SUFFIX}${PANE_INDEX}"
 
-# Inspect window exists → re-swap Claude in and switch (preserves nvim/console context)
+# Inspect window exists → re-swap Claude in and switch (preserves editor/console context)
 if tmux list-windows -F '#{window_name}' | grep -q "^${INSPECT_WIN}$"; then
     PLACEHOLDER=$(tmux show-window-options -vt ":${INSPECT_WIN}" @overview_pane_id 2>/dev/null)
     if [[ -n "$PLACEHOLDER" ]]; then
@@ -39,7 +39,7 @@ if tmux list-windows -F '#{window_name}' | grep -q "^${INSPECT_WIN}$"; then
 fi
 
 # Create 3-pane inspect layout:
-#   pane 1 (left 50%)         — code/nvim
+#   pane 1 (left 50%)         — code/micro
 #   pane 2 (right top 75%)    — Claude (will be swapped with overview pane)
 #   pane 3 (right bottom 25%) — console
 tmux new-window -n "$INSPECT_WIN" -c "$PANE_PATH"
@@ -47,7 +47,7 @@ tmux setw -t ":${INSPECT_WIN}" automatic-rename off
 tmux setw -t ":${INSPECT_WIN}" @hidden 1
 tmux split-window -t ":${INSPECT_WIN}" -h -c "$PANE_PATH" -l 50%
 tmux split-window -t ":${INSPECT_WIN}.2" -v -c "$PANE_PATH" -l 25%
-tmux send-keys -t ":${INSPECT_WIN}.1" "nvim" Enter
+tmux send-keys -t ":${INSPECT_WIN}.1" "micro-session.sh" Enter
 
 # Tag default panes as unclosable
 for p in 1 2 3; do

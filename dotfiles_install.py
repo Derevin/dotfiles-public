@@ -73,7 +73,6 @@ COMMON = [
 
 WINDOWS_ONLY = [
     ("windows/.minttyrc", ".minttyrc"),
-    ("nvim", "AppData/Local/nvim"),
     ("alacritty/alacritty.toml", "AppData/Roaming/alacritty/alacritty.toml"),
     ("alacritty/platform-windows.toml", "AppData/Roaming/alacritty/platform.toml"),
     ("windows-terminal/settings.json", "AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"),
@@ -86,7 +85,6 @@ WINDOWS_ONLY = [
 LINUX_TARBALLS = []
 
 LINUX_ONLY = [
-    ("nvim", ".config/nvim"),
     ("alacritty/alacritty.toml", ".config/alacritty/alacritty.toml"),
     ("alacritty/platform-linux.toml", ".config/alacritty/platform.toml"),
     ("micro/settings.json", ".config/micro/settings.json"),
@@ -138,8 +136,8 @@ def merge_mappings(layers):
     collisions so a later layer wins (e.g. the private layer repoints ~/.justfile
     from the public justfile to the private one). Without this both mappings link
     in turn and the second relinks the first's dst on every run — never idempotent.
-    A reassigned dst keeps its original position, so ordering dependencies hold
-    (the public nvim dir links before the private dap slot nested under it)."""
+    A reassigned dst keeps its original position, so any ordering dependencies
+    between nested mappings still hold."""
     merged = {}  # dst_rel -> (root, src_rel), insertion-ordered
     for layer in layers:
         for src_rel, dst_rel in layer.mappings():

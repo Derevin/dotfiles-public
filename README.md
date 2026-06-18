@@ -17,13 +17,12 @@ cd ~/repos/dotfiles
 It symlinks each config to its home location and applies GNOME keybindings
 where applicable (a no-op elsewhere). It's idempotent — re-run any time.
 
-The CLI tools the configs expect (`nvim`, `fzf`, `ripgrep`, `just`, `delta`,
+The CLI tools the configs expect (`fzf`, `ripgrep`, `just`, `delta`,
 `tmux`, `micro`) aren't bundled — install them with your package manager.
 
 ## What's inside
 
 - `bash/` — shell config, prompt, a direnv hook
-- `nvim/` — Neovim config (lazy.nvim)
 - `tmux/` — tmux config and an Alt-driven pane/window workflow (`cc-*`, worktree dispatch)
 - `alacritty/`, `windows-terminal/` — terminal config per platform
 - `micro/` — the micro editor

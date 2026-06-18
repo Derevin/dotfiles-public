@@ -89,7 +89,7 @@ send_to_idle_or_split() {
 # Hide per-repo recipes whose backing repo isn't checked out. A recipe opts in
 # with a `# requires-repo <name>` body marker (the `@#` form is a silent no-op),
 # which `just --show` surfaces; we drop it from the listing when ~/repos/<name>
-# is absent — so e.g. the honeybee workspace recipes only appear where honeybee
+# is absent — so e.g. recipes for a given repo only appear where that repo
 # exists. Fails open: any --show/parse miss leaves the recipe visible.
 drop_missing_repos() {
     local scope="$1" listing="$2" line name show repo kept=""
