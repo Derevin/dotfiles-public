@@ -101,6 +101,7 @@ LINUX_ONLY = [
     ("micro/bindings.json", ".config/micro/bindings.json"),
     ("micro/init.lua", ".config/micro/init.lua"),
     ("micro/colorschemes/solarized-vp.micro", ".config/micro/colorschemes/solarized-vp.micro"),
+    ("diffview/config", ".config/diffview/config"),
     ("tmux/micro-session.sh", ".local/bin/micro-session.sh"),
     ("scripts/micro-fzf.sh", ".local/bin/micro-fzf.sh"),
     ("scripts/micro-yazi.sh", ".local/bin/micro-yazi.sh"),
