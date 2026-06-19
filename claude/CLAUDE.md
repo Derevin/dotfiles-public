@@ -4,6 +4,8 @@ Sacrifice grammar for being concise.
 
 Don't open a sentence with a lowercase symbol/path/identifier (`modules/gui/...`, `foo()`) — rephrase so it starts with a capital letter; a lowercase start looks malformed.
 
+Comments: add only when they genuinely add value. Don't explain the obvious.
+
 ## Git
 
 Never add Co-Authored-By, Signed-off-by, or any other trailer attributing Claude to git commits.
