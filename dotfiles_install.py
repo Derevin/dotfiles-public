@@ -343,6 +343,13 @@ def link(src: Path, dst: Path, dry_run: bool, verbose: bool = False):
             dst.unlink()
 
     if dst.exists():
+        if os.path.ismount(dst):
+            # A bind-mounted file (e.g. a host config mounted read-only into a
+            # container) is a mountpoint; renaming it raises EBUSY. Leave the mount
+            # in place — it is the intended content — rather than back it up.
+            if verbose:
+                print(f"  skip (mountpoint) {dst}")
+            return
         backup = dst.with_suffix(dst.suffix + ".bak")
         action(f"  backup {dst} -> {backup}")
         if not dry_run:
@@ -396,6 +403,8 @@ def main(extra_layers=(), install_root=None, provision=None):
     parser = argparse.ArgumentParser(description="Install dotfiles symlinks")
     parser.add_argument("--dry-run", action="store_true", help="Preview without making changes")
     parser.add_argument("-v", "--verbose", action="store_true", help="Show already-linked skips")
+    parser.add_argument("--no-provision", action="store_true",
+                        help="Skip the provision() prerequisites step (apt, runtimes)")
     parser.add_argument(
         "--extra", nargs="+", choices=sorted(extra_repos), default=[], metavar="REPO",
         help="Also clone optional repos into ~/repos (choices: %(choices)s)",
@@ -424,8 +433,9 @@ def main(extra_layers=(), install_root=None, provision=None):
     # A layer may provision system-level prerequisites that can't be symlinked
     # (apt packages, runtimes). The mechanism is generic and dormant for a public
     # clone (which passes no provision); the private composer supplies the
-    # Debian/Ubuntu logic.
-    if provision is not None:
+    # Debian/Ubuntu logic. --no-provision skips it for environments that supply
+    # their own prerequisites (e.g. a container reusing only the symlinks).
+    if provision is not None and not args.no_provision:
         provision(args.dry_run, args.verbose)
 
     for name, remote in core_repos.items():
