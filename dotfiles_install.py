@@ -340,20 +340,27 @@ def link(src: Path, dst: Path, dry_run: bool, verbose: bool = False):
         if needs_native:
             action(f"  replacing MSYS symlink with native: {dst}")
         if not dry_run:
-            dst.unlink()
+            try:
+                dst.unlink()
+            except OSError as e:
+                action(f"  skip (cannot replace: {e.strerror}) {dst}")
+                return
 
     if dst.exists():
-        if os.path.ismount(dst):
-            # A bind-mounted file (e.g. a host config mounted read-only into a
-            # container) is a mountpoint; renaming it raises EBUSY. Leave the mount
-            # in place — it is the intended content — rather than back it up.
-            if verbose:
-                print(f"  skip (mountpoint) {dst}")
-            return
         backup = dst.with_suffix(dst.suffix + ".bak")
-        action(f"  backup {dst} -> {backup}")
-        if not dry_run:
-            dst.rename(backup)
+        if dry_run:
+            action(f"  backup {dst} -> {backup}")
+        else:
+            try:
+                dst.rename(backup)
+            except OSError as e:
+                # Read-only bind-mounted file (e.g. ~/.gitconfig in a container) —
+                # renaming a mountpoint fails with EBUSY. os.path.ismount can't predict
+                # it when the bind source shares the parent's device, so catch the
+                # failure instead. Leave it; the mount is the intended content.
+                action(f"  skip (cannot replace: {e.strerror}) {dst}")
+                return
+            action(f"  backup {dst} -> {backup}")
 
     action(f"  link {dst} -> {src}")
     if not dry_run:
