@@ -90,11 +90,18 @@ else
 fi
 
 if [[ $LAUNCH_CLAUDE -eq 1 ]]; then
-    for p in $(seq 1 $PANE_COUNT); do
-        d="${DIRS[p-1]:-$PWD}"
+    # Address panes by @quadrant, not index: after the 2x2 splits tmux
+    # renumbers indices row-major, so $W.2 is the TR pane (DIR3's cwd) and
+    # $W.3 is BL (DIR2's) — launching DIR-N's label by index swaps the TR/BL
+    # ids. @quadrant is the stable spatial tag the M-N keybinds also resolve,
+    # so labels track cwds. (6-pane sets @quadrant = index, so this is a no-op
+    # there.)
+    for q in $(seq 1 $PANE_COUNT); do
+        d="${DIRS[q-1]:-$PWD}"
         name="${d##*/}"
         [[ "$name" =~ -[a-z]?wt[0-9]+$ ]] && name="${name##*-}"
-        tmux send-keys -t "$W.$p" "CLAUDE_LABEL=$name claude --effort max /where-were-we" Enter
+        id=$(tmux list-panes -t "$W" -F '#{@quadrant} #{pane_id}' | awk -v n="$q" '$1==n{print $2; exit}')
+        tmux send-keys -t "${id:-$W.$q}" "CLAUDE_LABEL=$name claude --effort max /where-were-we" Enter
     done
 fi
 
