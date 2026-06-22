@@ -49,6 +49,9 @@ if ! shopt -oq posix; then
   fi
 fi
 
+# just recipe-name completion (dynamic; clap_complete engine)
+command -v just >/dev/null 2>&1 && eval "$(just --completions bash)"
+
 # Auto-start tmux (just for panes/windows, no session persistence).
 # Skipped inside coder workspaces — the outer laptop tmux is already the multiplexer there.
 if [[ $- == *i* ]] && command -v tmux &>/dev/null && [[ -z "$TMUX" ]] && [[ -z "$NO_TMUX" ]] && [[ -z "$VSCODE_RESOLVING_ENVIRONMENT" ]] && [[ -z "$CODER_AGENT_TOKEN" ]]; then
