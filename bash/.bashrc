@@ -53,8 +53,9 @@ fi
 command -v just >/dev/null 2>&1 && eval "$(just --completions bash)"
 
 # Auto-start tmux (just for panes/windows, no session persistence).
-# Skipped inside coder workspaces — the outer laptop tmux is already the multiplexer there.
-if [[ $- == *i* ]] && command -v tmux &>/dev/null && [[ -z "$TMUX" ]] && [[ -z "$NO_TMUX" ]] && [[ -z "$VSCODE_RESOLVING_ENVIRONMENT" ]] && [[ -z "$CODER_AGENT_TOKEN" ]]; then
+# Skipped inside coder workspaces and containers — the host's tmux is
+# already the multiplexer there.
+if [[ $- == *i* ]] && command -v tmux &>/dev/null && [[ -z "$TMUX" ]] && [[ -z "$IN_CONTAINER" ]] && [[ -z "$VSCODE_RESOLVING_ENVIRONMENT" ]] && [[ -z "$CODER_AGENT_TOKEN" ]]; then
     _tmux_cleanup() {
         trap '' EXIT HUP TERM
         tmux kill-session -t "$$" 2>/dev/null
