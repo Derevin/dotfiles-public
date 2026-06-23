@@ -2,17 +2,31 @@
 # wt-popup <caller-pane-id|@VAR> -- <cmd> [args...]
 #
 # Host-side popup-launch wrapper for tools that should follow the caller pane's
-# worktree backend. Reads @wt from caller pane via the main tmux server. If set,
-# dispatches the command via wt-run (which handles docker / coder transports).
-# If empty (native tmux pane), execs the command locally — byte-identical to the
-# pre-wt-popup behavior, so the native path stays untouched.
+# worktree backend. Reads @wt from the caller pane via the main tmux server and
+# routes by backend:
+#
+#   - No @wt (native host pane): exec the command locally.
+#   - docker (dwt): the worktree is bind-mounted at an identical host path, so
+#     run the command on the HOST in that path — same files, and crucially host
+#     tmux stays reachable. The container has no tmux server (compose mounts no
+#     tmux socket; IN_CONTAINER suppresses tmux), so a tool that send-keys back
+#     to the caller pane (e.g. diffview's "send") silently no-ops if run inside
+#     it. Equivalent to a host run, as docker-compose.yml intends.
+#   - coder (cwt): the worktree is remote, so dispatch via wt-run, which runs the
+#     tool in the workspace and tunnels host tmux over its ssh master — so a
+#     send-keys back to the caller pane still lands.
 #
 # Caller forms:
-#   wt-popup %42 -- cmd ...         pane id directly
+#   wt-popup %42 -- cmd ...                pane id directly
 #   wt-popup @DIFFVIEW_CALLER -- cmd ...   reads pane id from tmux global env var
-#                                   (needed when invoked from `display-popup -E`,
-#                                   which doesn't expand #{pane_id} formats)
+#                                          (needed under `display-popup -E`, which
+#                                          doesn't expand #{pane_id} formats)
 set -euo pipefail
+
+# Worktree backend config (private; absent on public installs → empty defaults).
+WT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"
+[ -f "$WT_CONF" ] && . "$WT_CONF"
+WT_DOCKER_WORKDIR_PREFIX="${WT_DOCKER_WORKDIR_PREFIX:-}"
 
 PANE="${1:-}"
 shift || true
@@ -33,8 +47,16 @@ fi
 
 WT=$(tmux show-options -pvt "$PANE" @wt 2>/dev/null || true)
 
-if [ -n "$WT" ]; then
-    exec wt-run "$WT" -- "$@"
+if [ -z "$WT" ]; then
+    exec "$@"
 fi
 
-exec "$@"
+# docker: run on the host at the bind-mounted worktree path (keeps host tmux
+# reachable). The dir check also guards a misconfigured/empty prefix — falls
+# back to wt-run, which fails the same way the in-backend path would.
+if [ "${WT:0:1}" = d ] && [ -n "$WT_DOCKER_WORKDIR_PREFIX" ] && [ -d "${WT_DOCKER_WORKDIR_PREFIX}$WT" ]; then
+    cd "${WT_DOCKER_WORKDIR_PREFIX}$WT"
+    exec "$@"
+fi
+
+exec wt-run "$WT" -- "$@"
