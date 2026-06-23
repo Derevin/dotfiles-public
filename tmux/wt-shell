@@ -10,12 +10,39 @@ WT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"
 WT_CONTAINER_PREFIX="${WT_CONTAINER_PREFIX:-}"
 WT_DOCKER_WORKDIR_PREFIX="${WT_DOCKER_WORKDIR_PREFIX:-}"
 
+# --interactive-after: after running the inner cmd, drop into an interactive
+# login shell with the cmd recorded in its history (Up-arrow recalls it). Used
+# by cc-just's foreground recipe dispatch so the split pane shows what it ran.
+INTERACTIVE_AFTER=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --interactive-after) INTERACTIVE_AFTER=1; shift ;;
+        --) shift; break ;;
+        *) break ;;
+    esac
+done
+
 WT="${1:-}"
 INNER_CMD="${2:-}"
 if [ -z "$WT" ]; then
-    echo "usage: wt-shell <dwtN|cwtN> [inner-cmd]"
+    echo "usage: wt-shell [--interactive-after] <dwtN|cwtN> [inner-cmd]"
     exit 1
 fi
+
+# Single-quote a value for safe embedding in a shell command (mirrors cq()).
+sq() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
+
+# Build the in-backend command for --interactive-after: run the recipe, append
+# it verbatim to the history file, then exec an interactive login shell. The
+# recipe runs in a non-interactive `bash -lc` whose in-memory history is lost at
+# exec, so the seed goes through the history FILE, which the fresh login shell
+# reads at startup. HISTFILE is unset in `bash -lc`, so the fallback resolves to
+# the same path the interactive shell defaults to.
+seeded_interactive_cmd() {
+    local seed
+    seed='printf '\''%s\n'\'' '"$(sq "$1")"' >> "${HISTFILE:-$HOME/.bash_history}"'
+    printf '%s; %s; exec bash -l' "$1" "$seed"
+}
 
 case "${WT:0:1}" in
     d) backend="docker" ;;
@@ -51,7 +78,10 @@ case "$backend" in
         if [ -n "$PANE_ID_FOR_CONTAINER" ]; then
             DOCKER_ENV+=(-e "WT_PANE_ID=$PANE_ID_FOR_CONTAINER")
         fi
-        if [ -n "$INNER_CMD" ]; then
+        if [ -n "$INNER_CMD" ] && [ "$INTERACTIVE_AFTER" -eq 1 ]; then
+            exec docker exec -it "${DOCKER_ENV[@]}" -w "$WORKDIR" "$CONTAINER" \
+                bash -lc "$(seeded_interactive_cmd "$INNER_CMD")"
+        elif [ -n "$INNER_CMD" ]; then
             exec docker exec -it "${DOCKER_ENV[@]}" -w "$WORKDIR" "$CONTAINER" bash -lc "$INNER_CMD"
         else
             exec docker exec -it "${DOCKER_ENV[@]}" -w "$WORKDIR" "$CONTAINER" bash -l
@@ -69,7 +99,9 @@ case "$backend" in
         # word and the WT_PANE_ID export is silently dropped. Pre-quote each
         # token so the workspace shell re-parses it into the original words.
         cq() { local a out=""; for a in "$@"; do out+=" '${a//\'/\'\\\'\'}'"; done; printf '%s' "$out"; }
-        if [ -n "$INNER_CMD" ]; then
+        if [ -n "$INNER_CMD" ] && [ "$INTERACTIVE_AFTER" -eq 1 ]; then
+            exec coder ssh "$WORKSPACE" -- "$(cq bash -lc "${EXT_ENV}cd $WORKDIR && $(seeded_interactive_cmd "$INNER_CMD")")"
+        elif [ -n "$INNER_CMD" ]; then
             exec coder ssh "$WORKSPACE" -- "$(cq bash -lc "${EXT_ENV}cd $WORKDIR && $INNER_CMD")"
         else
             exec coder ssh "$WORKSPACE" -- "$(cq bash -lc "${EXT_ENV}cd $WORKDIR && exec bash -l")"

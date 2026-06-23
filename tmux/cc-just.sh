@@ -329,7 +329,7 @@ if [ -n "$CALLER_PANE_ID" ]; then
             tmux send-keys -t "$tagged_pane" "cd '$wt_dir' && $cmd" Enter
         elif wt_pane_busy "$main_pane" "$WT"; then
             target=$(tmux split-window -t "$main_pane" -v $SPLIT_BEFORE -l 25% -d -P -F '#{pane_id}' \
-                "wt-shell $WT \"$cmd; exec bash -l\"")
+                "wt-shell --interactive-after $WT \"$cmd\"")
             tmux set-option -pt "$target" @wt "$WT"
             tmux set-option -pt "$target" @just_caller "$main_pane"
         else
