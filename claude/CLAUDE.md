@@ -4,7 +4,7 @@ Sacrifice grammar for being concise.
 
 Don't open a sentence with a lowercase symbol/path/identifier (`modules/gui/...`, `foo()`) — rephrase so it starts with a capital letter; a lowercase start looks malformed.
 
-Comments: add only when they genuinely add value. Don't explain the obvious.
+Comments: sparse — don't write one that just narrates the code below it; reserve them for the surprising, the non-obvious, or the *why*.
 
 ## Git
 
