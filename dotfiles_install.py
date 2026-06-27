@@ -109,6 +109,7 @@ LINUX_ONLY = [
     ("tmux/wt-shell", ".local/bin/wt-shell"),
     ("tmux/wt-run", ".local/bin/wt-run"),
     ("tmux/wt-popup", ".local/bin/wt-popup"),
+    ("tmux/park-host-worktrees.sh", ".local/bin/park-host-worktrees.sh"),
     ("scripts/apply-gnome-keybindings.sh", ".local/bin/apply-gnome-keybindings.sh"),
 ]
 
