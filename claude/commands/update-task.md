@@ -1,7 +1,6 @@
 ---
 allowed-tools: Bash(task-*),Bash(git *),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
 description: Update active task file with current state so next session can resume
-disable-model-invocation: true
 ---
 
 Refresh the active task file with current state — what's done, what's left, where to pick up. So a future session (you, after compaction, or a fresh start) reads the file and knows the lay of the land without retracing the whole conversation.

@@ -20,8 +20,10 @@ Pick the next task from the queue and start working on it.
 
 5. **Wait for go.** Docs approval ≠ impl approval. After grilling+docs commits, stop and ask explicitly before implementing.
 
-6. **Implement.** Implement the agreed plan.
+6. **Snapshot the plan.** The moment impl is approved — before writing code — invoke `/update-task` to record the agreed plan in the task file: a handoff so a cold resume (compaction, fresh session) starts from the confirmed approach, not the original description.
 
-7. **Self-review.** Invoke `/review-branch-medium` on the first implementation pass.
+7. **Implement.** Implement the agreed plan.
 
-8. **Hand off.** When done, stop and tell the user what you did — nothing more. Do NOT run `/complete-task` or suggest it, and do NOT announce that you're leaving the task in `active/` or that you're not completing it — leaving it there is the silent default; narrating the non-action is noise. What follows is the user's manual review, possibly PR creation, review cycles, and merge. Task stays in `active/` until the user explicitly says it's done (typically after the branch is merged into main/master) and runs `/complete-task` themselves.
+8. **Self-review.** Invoke `/review-branch-medium` on the first implementation pass.
+
+9. **Hand off.** When done, stop and tell the user what you did — nothing more. Do NOT run `/complete-task` or suggest it, and do NOT announce that you're leaving the task in `active/` or that you're not completing it — leaving it there is the silent default; narrating the non-action is noise. What follows is the user's manual review, possibly PR creation, review cycles, and merge. Task stays in `active/` until the user explicitly says it's done (typically after the branch is merged into main/master) and runs `/complete-task` themselves.
