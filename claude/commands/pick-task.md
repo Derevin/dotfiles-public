@@ -14,7 +14,7 @@ Pick the next task from the queue and start working on it.
 
 4. **Grill.** Read the task file.
    - **Reminder-only task** (just `# Title`, no real body): you have zero context. Do NOT explore the codebase, propose a plan, or guess intent. Your only permitted response is to ask the user to give you more context so you can invoke grill. The moment they reply, invoke `/grill-me-with-docs` — no preamble, no analysis in between.
-   - **Task with a real body**: invoke `/grill-me-with-docs` directly.
+   - **Task with a real body**: first recap the task in one paragraph (what it asks, not a plan) so the user — who filed it a while ago and may have forgotten — knows what they're answering before grilling's first question. Then invoke `/grill-me-with-docs`.
 
    Grill interviews the user about scope and design until you reach a shared plan. Don't proceed until the user is satisfied.
 
