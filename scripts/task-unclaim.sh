@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Unclaim a task (move active -> todo). Usage: task-unclaim.sh <filename>
+# Unclaim a task (active -> planned if implementing, else todo). Usage: task-unclaim.sh <filename>
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
-    echo "Unclaim a task (move active/ -> todo/)."
+    echo "Unclaim a task (active/ -> planned/ if implementing, else todo/)."
     echo "Usage: task-unclaim.sh <filename>"
     exit 0
 fi
@@ -20,10 +20,18 @@ detect_project
 detect_worker
 
 src="$TASKS_DIR/active/$filename"
-dst="$TASKS_DIR/todo/$filename"
 
 if [[ ! -f "$src" ]]; then
   echo "error: not found in active/: $filename" >&2; exit 1
+fi
+
+# Return to where the claim came from, inferred from the active phase: an
+# implementing task goes back to planned/ (still groomed); anything else
+# (grilling, or no status) goes back to todo/.
+if grep -qiE '^##[[:space:]]*Status:[[:space:]]*implementing' "$src"; then
+  dst="$TASKS_DIR/planned/$filename"
+else
+  dst="$TASKS_DIR/todo/$filename"
 fi
 
 cd "$TASKS_ROOT"

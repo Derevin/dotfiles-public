@@ -25,7 +25,7 @@ fi
 (cd "$TASKS_ROOT" && git pull --rebase >&2) || true
 
 max_id=0
-for dir in todo active done canceled; do
+for dir in todo planned active done canceled; do
   if [[ -d "$TASKS_DIR/$dir" ]]; then
     for f in "$TASKS_DIR/$dir"/*.md; do
       [[ -f "$f" ]] || continue

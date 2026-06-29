@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
       shift
       while [[ $# -gt 0 ]]; do
         case $1 in
-          todo|active|done|canceled) status_list+=("$1"); shift ;;
+          todo|planned|active|done|canceled) status_list+=("$1"); shift ;;
           *) break ;;
         esac
       done
@@ -74,7 +74,7 @@ list_dir() {
   echo ""
 }
 
-statuses=(canceled done active todo)
+statuses=(canceled done active planned todo)
 
 if [[ ${#status_list[@]} -gt 0 ]]; then
   statuses=("${status_list[@]}")
