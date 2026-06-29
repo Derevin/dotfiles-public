@@ -1,14 +1,18 @@
 ---
 allowed-tools: Bash(task-*),Read,Write(~/repos/tasks/**)
-description: Create one or more tasks from rough descriptions
+description: File a reminder-only task (title-only, fire-and-forget)
 disable-model-invocation: true
+context: fork
+agent: general-purpose
+model: haiku
 ---
 
-Create tasks from $argument per `~/repos/tasks/CLAUDE.md`. Multiple tasks OK (bullets, numbered, or prose).
+File one **reminder-only task** from $argument. Title only, no body. No clarifying questions. No approval step.
 
-Focus: *what* and *why*, not *how* — the implementing agent plans the *how*.
-
+- If $argument is empty or whitespace-only, fail with "title required" — don't write anything.
 - Detect project via `task-list.sh`. Create `~/repos/tasks/$PROJECT/{todo,active,done,canceled}` if missing.
-- Get next ID via `task-next-id.sh <project>` — never scan IDs by hand.
-- Ask only when genuinely ambiguous.
-- Show created files, await approval, then `task-commit.sh "Add: <slug>"` (single) or `task-commit.sh "Add: <count> tasks for <project>"` (multi).
+- Get next ID via `task-next-id.sh <project>` — never scan by hand.
+- Default priority N. Inline hints like "urgent:", "high priority:", "low:" map to the letter prefix per `~/repos/tasks/CLAUDE.md` (H/N/U); strip the hint from the title before slugging.
+- Write `~/repos/tasks/<project>/todo/<letter><NNN>-<slug>.md` containing just `# Title`.
+- `task-commit.sh "Add: <slug>"`.
+- Report the created filename.
