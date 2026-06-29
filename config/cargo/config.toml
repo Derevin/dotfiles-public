@@ -1,0 +1,8 @@
+# Global cargo config (~/.cargo/config.toml), shared by every project and worktree.
+# Requires sccache on PATH: https://github.com/mozilla/sccache
+[build]
+rustc-wrapper = "sccache"
+
+[env]
+# 40G: the 10G default evicts cached crates too soon for large dep trees.
+SCCACHE_CACHE_SIZE = { value = "40G", force = true }

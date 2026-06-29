@@ -25,6 +25,8 @@ COMMON = [
     ("bash/.inputrc", ".inputrc"),
     ("git/.gitconfig", ".gitconfig"),
     ("git/ignore", ".config/git/ignore"),
+    # cargo config needs sccache on PATH — a public clone installs it itself.
+    ("config/cargo/config.toml", ".cargo/config.toml"),
     ("claude/CLAUDE.md", ".claude/CLAUDE.md"),
     ("claude/keybindings.json", ".claude/keybindings.json"),
     ("claude/settings.json", ".claude/settings.json"),
