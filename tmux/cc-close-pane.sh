@@ -39,6 +39,14 @@ if [[ "$(tmux show-options -pv @unclosable 2>/dev/null)" == "1" ]]; then
     exit 0
 fi
 
-# Default → save editor (if any), then kill pane
+# Default → save editor (if any), reap any in-backend process tree, then kill pane.
+# A docker-exec/coder-ssh worktree pane leaves its in-container processes running
+# on kill-pane (the client has no signal proxying); cc-wt-cleanup.sh SIGTERMs them
+# by their inherited WT_PANE_ID tag. Detached so the pane closes instantly.
 cc-save-editor.sh
+WT=$(tmux show-options -pv @wt 2>/dev/null)
+if [[ -n "$WT" ]]; then
+    PANE_ID=$(tmux display-message -p '#{pane_id}')
+    setsid cc-wt-cleanup.sh "$WT" "$PANE_ID" </dev/null >/dev/null 2>&1 &
+fi
 tmux kill-pane

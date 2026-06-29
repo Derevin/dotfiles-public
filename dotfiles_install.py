@@ -52,6 +52,7 @@ COMMON = [
     ("tmux/cc-scratch.sh", ".local/bin/cc-scratch.sh"),
     ("tmux/cc-close-pane.sh", ".local/bin/cc-close-pane.sh"),
     ("tmux/cc-save-editor.sh", ".local/bin/cc-save-editor.sh"),
+    ("tmux/cc-wt-cleanup.sh", ".local/bin/cc-wt-cleanup.sh"),
     ("tmux/cc-select-pane.sh", ".local/bin/cc-select-pane.sh"),
     ("tmux/wt-split.sh", ".local/bin/wt-split.sh"),
     ("just/justfile", ".justfile"),
