@@ -60,7 +60,9 @@ wt_worktree() {
 # into something that might be running.
 wt_pane_busy() {
     local pane_id="$1" wt="$2" count
-    count=$(wt_exec "$wt" bash -c "grep -al 'WT_PANE_ID=$pane_id' /proc/*/environ 2>/dev/null | wc -l" 2>/dev/null)
+    # -z anchors the match on the value end so %1 doesn't also count %12/%13
+    # (environ entries are NUL-separated, so the trailing $ binds to the value).
+    count=$(wt_exec "$wt" bash -c "grep -alz 'WT_PANE_ID=$pane_id$' /proc/*/environ 2>/dev/null | wc -l" 2>/dev/null)
     # coder ssh returns CRLF, so $() leaves a trailing \r — strip every
     # non-digit before the integer test (a bare `[ 0$'\r' -ne 1 ]` errors).
     count=${count//[!0-9]/}
