@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Park idle host worktrees + the main checkout onto the latest base branch.
 # "Parked" = clean tree with no commits beyond the base tip; those fast-forward
-# to latest. Dirty or ahead worktrees are left untouched and reported. The main
-# checkout is best-effort (its own state is yours) and never affects the exit
-# code; a WORKTREE needing attention exits non-zero so the overview sync strip
-# (remain-on-exit=failed) stays open.
+# to latest. Dirty or ahead worktrees are left untouched and reported. Neither the
+# main checkout nor a dirty worktree affects the exit code — active claude work
+# lives in these trees, so dirty is the normal state, not a problem to flag. Only
+# an AHEAD or DIVERGED worktree exits non-zero, so the overview sync strip
+# (remain-on-exit=failed) stays open just for those.
 set -uo pipefail
 
 if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ -z "${1:-}" ]; then
@@ -42,7 +43,7 @@ park_one() (
     name=${1##*/}
     br=$(git symbolic-ref --quiet --short HEAD || echo "(detached)")
     if [ -n "$(git status --porcelain)" ]; then
-        echo "  $name  [$br]  DIRTY — skipped"; exit 1
+        echo "  $name  [$br]  dirty — left as is"; exit 0
     fi
     ahead=$(git rev-list --count "$TARGET..HEAD")
     if [ "$ahead" -gt 0 ]; then
