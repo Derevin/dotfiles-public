@@ -15,4 +15,4 @@ Rules (each one has tripped past runs):
 - Do not interpret. If the text seems incomplete or contextless, that is fine — emit it anyway.
 - No code fences, no bullets, no markdown adjustments.
 
-!`task-list.sh --status active todo`
+!`task-list.sh --status active planned todo`
