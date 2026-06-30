@@ -6,6 +6,8 @@ Don't open a sentence with a lowercase symbol/path/identifier (`modules/gui/...`
 
 Comments: sparse — don't write one that just narrates the code below it; reserve them for the surprising, the non-obvious, or the *why*.
 
+No history-relative comments — "previously…", "originally", "the original X", "used to", "now instead of" mean nothing to a reader who never saw the old code. Describe the present, standalone. Such phrasing is usually leftover editing scaffolding — delete it.
+
 ## Git
 
 Never add Co-Authored-By, Signed-off-by, or any other trailer attributing Claude to git commits.
