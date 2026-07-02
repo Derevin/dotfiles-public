@@ -101,7 +101,7 @@ if [[ $LAUNCH_CLAUDE -eq 1 ]]; then
         name="${d##*/}"
         [[ "$name" =~ -[a-z]?wt[0-9]+$ ]] && name="${name##*-}"
         id=$(tmux list-panes -t "$W" -F '#{@quadrant} #{pane_id}' | awk -v n="$q" '$1==n{print $2; exit}')
-        tmux send-keys -t "${id:-$W.$q}" "CLAUDE_LABEL=$name claude --effort max /where-were-we" Enter
+        tmux send-keys -t "${id:-$W.$q}" "CLAUDE_LABEL=$name claude --effort max" Enter
     done
 fi
 
