@@ -2,7 +2,7 @@
 input=$(cat)
 
 dir=$(printf '%s' "$input" | jq -r '.workspace.current_dir // ""')
-branch=$(git -C "$dir" symbolic-ref --short HEAD 2>/dev/null)
+branch=$(git -C "$dir" symbolic-ref --short HEAD 2>/dev/null || git -C "$dir" rev-parse --short HEAD 2>/dev/null)
 ctx=$(printf '%s' "$input" | jq -r '.context_window.used_percentage // empty' | cut -d. -f1)
 cost=$(printf '%s' "$input" | jq -r '.cost.total_cost_usd // empty')
 rl5=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
