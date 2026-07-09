@@ -4,6 +4,9 @@ input=$(cat)
 dir=$(printf '%s' "$input" | jq -r '.workspace.current_dir // ""')
 branch=$(git -C "$dir" symbolic-ref --short HEAD 2>/dev/null || git -C "$dir" rev-parse --short HEAD 2>/dev/null)
 ctx=$(printf '%s' "$input" | jq -r '.context_window.used_percentage // empty' | cut -d. -f1)
+model=$(printf '%s' "$input" | jq -r '.model.display_name // empty')
+model=${model:0:5}
+model=${model% }   # "Opus 4.8"→"Opus": drop the space a 4-letter name leaves
 cost=$(printf '%s' "$input" | jq -r '.cost.total_cost_usd // empty')
 rl5=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
 rl5_reset=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
@@ -32,6 +35,7 @@ elif [[ -n "$dir" ]]; then
     parts+=("$label")
 fi
 [[ -n "$ctx" ]] && parts+=("ctx ${ctx}%")
+[[ -n "$model" ]] && parts+=("$model")
 
 extras=()
 if [[ -n "$rl5" ]]; then
