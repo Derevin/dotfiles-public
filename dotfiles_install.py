@@ -35,7 +35,6 @@ COMMON = [
     ("claude/skills/remember", ".claude/skills/remember"),
     ("claude/skills/promote-memory", ".claude/skills/promote-memory"),
     ("claude/skills/zoom-out", ".claude/skills/zoom-out"),
-    ("claude/skills/grill-me", ".claude/skills/grill-me"),
     ("claude/skills/design-an-interface", ".claude/skills/design-an-interface"),
     ("claude/skills/grill-me-with-docs", ".claude/skills/grill-me-with-docs"),
     ("claude/skills/improve-codebase-architecture", ".claude/skills/improve-codebase-architecture"),

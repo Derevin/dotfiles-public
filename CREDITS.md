@@ -9,7 +9,6 @@ These skills are copied or adapted from
 [mattpocock/skills](https://github.com/mattpocock/skills) and are used under the
 MIT License (copyright remains his):
 
-- `claude/skills/grill-me/` — verbatim
 - `claude/skills/design-an-interface/` — verbatim
 - `claude/skills/zoom-out/` — verbatim
 - `claude/skills/grill-me-with-docs/` — adapted from his `grill-with-docs`
