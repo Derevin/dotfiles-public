@@ -34,8 +34,6 @@ COMMON = [
     ("claude/git-push-gate.sh", ".claude/git-push-gate.sh"),
     ("claude/skills/remember", ".claude/skills/remember"),
     ("claude/skills/promote-memory", ".claude/skills/promote-memory"),
-    ("claude/skills/zoom-out", ".claude/skills/zoom-out"),
-    ("claude/skills/design-an-interface", ".claude/skills/design-an-interface"),
     ("claude/skills/grill-me-with-docs", ".claude/skills/grill-me-with-docs"),
     ("claude/skills/improve-codebase-architecture", ".claude/skills/improve-codebase-architecture"),
     ("claude/skills/write-a-skill", ".claude/skills/write-a-skill"),
