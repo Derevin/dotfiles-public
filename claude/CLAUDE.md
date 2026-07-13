@@ -60,7 +60,7 @@ When fixing bugs or implementing new features in a project that has tests: write
 
 Task data lives in `~/repos/tasks/` — personal, not shared with collaborators. Don't reference task IDs or contents in PRs, commits, or any external comms. See its CLAUDE.md for conventions (naming, priorities, format, claiming). Task scripts (`task-list.sh`, etc.) are on PATH — invoke them directly, never with a `~/repos/tasks/` prefix. Use `/grill-task`, `/implement-task`, `/complete-task`, `/list-tasks` commands when working on tasks. Don't auto-complete on PR merge — user's call; leave it in `active/` silently, don't narrate the non-action.
 
-**All state changes (claim/complete/cancel/move) go through the task scripts** — `task-done.sh`, `task-pick.sh`, `task-cancel.sh`, etc. Never `git mv` or `mv` files under `~/repos/tasks/{todo,active,done,canceled}/`. The scripts handle the commit message + remote sync atomically; manual moves leave the repo out of sync with origin.
+**All state changes (claim/complete/cancel/move) go through the task scripts** — `task-done.sh`, `task-pick.sh`, `task-cancel.sh`, etc. Never `git mv` or `mv` files under `~/repos/tasks/{todo,planning,planned,active,done,canceled}/`. The scripts handle the commit message + remote sync atomically; manual moves leave the repo out of sync with origin.
 
 Verify pwd before any task script — project (via `find-project.sh`) and worker both derive from it; wrong cwd → wrong project listed or wrong worker stamped.
 

@@ -10,7 +10,7 @@ Groom the next task: pick it, grill it to an agreed plan, snapshot that plan, an
 
 2. **Pick.** Take the first one (highest priority). If it has `Depends:`, check if those IDs exist in done/ (use `task-list.sh --status done` or read the file).
 
-3. **Claim.** Run `task-claim.sh <filename>` — syncs, moves to active, commits, and outputs task content.
+3. **Claim.** Run `task-claim.sh <filename>` — syncs, moves to planning/, commits, and outputs task content.
 
 4. **Grill.** Read the task file.
    - **Reminder-only task** (just `# Title`, no real body): you have zero context. Do NOT explore the codebase, propose a plan, or guess intent. Your only permitted response is to ask the user to give you more context so you can invoke grill. The moment they reply, invoke `/grill-me-with-docs` — no preamble, no analysis in between.

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
-    echo "Park a groomed task (move active/ -> planned/, strip worker)."
+    echo "Park a groomed task (move planning/ -> planned/, strip worker)."
     echo "Usage: task-planned.sh <filename>"
     exit 0
 fi
@@ -19,7 +19,7 @@ filename=$1
 detect_project
 detect_worker
 
-src="$TASKS_DIR/active/$filename"
+src="$TASKS_DIR/planning/$filename"
 dst="$TASKS_DIR/planned/$filename"
 
 if [[ ! -f "$src" ]]; then

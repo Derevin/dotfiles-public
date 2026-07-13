@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
       shift
       while [[ $# -gt 0 ]]; do
         case $1 in
-          todo|planned|active|done|canceled) status_list+=("$1"); shift ;;
+          todo|planning|planned|active|done|canceled) status_list+=("$1"); shift ;;
           *) break ;;
         esac
       done
@@ -58,7 +58,7 @@ list_dir() {
   else
     for f in "${files[@]}"; do
       local suffix=""
-      if [[ "$dir" == "active" ]]; then
+      if [[ "$dir" == "active" || "$dir" == "planning" ]]; then
         local worker
         worker=$(grep -m1 '^Worker: ' "$TASKS_DIR/$dir/$f" 2>/dev/null | sed 's/^Worker: //') || true
         [[ -n "$worker" ]] && suffix=" [$worker]" || true
@@ -74,7 +74,7 @@ list_dir() {
   echo ""
 }
 
-statuses=(canceled done active planned todo)
+statuses=(canceled done active planned planning todo)
 
 if [[ ${#status_list[@]} -gt 0 ]]; then
   statuses=("${status_list[@]}")

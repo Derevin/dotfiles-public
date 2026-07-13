@@ -12,7 +12,7 @@ Pick a groomed task from `planned/` and implement it from its snapshotted plan. 
 
 3. **Claim.** Run `task-claim.sh <filename>` — syncs, moves planned/ → active/, stamps you as worker, outputs task content.
 
-4. **Orient.** Read the task file — the recorded plan and status sections are your brief. Read the referenced CONTEXT.md / ADRs. If the brief has a genuine gap that blocks implementation, surface it to the user before writing code rather than guessing — a well-groomed task shouldn't have one, so a gap is a signal worth raising. Then invoke `/update-task` to set `## Status: implementing`, so the active task's phase is unambiguous and an unclaim returns it to `planned/`, not `todo/`.
+4. **Orient.** Read the task file — the recorded plan and status sections are your brief. Read the referenced CONTEXT.md / ADRs. If the brief has a genuine gap that blocks implementation, surface it to the user before writing code rather than guessing — a well-groomed task shouldn't have one, so a gap is a signal worth raising.
 
 5. **Implement.** Implement the agreed plan.
 
