@@ -52,25 +52,25 @@ list_dir() {
     done < <(find "$TASKS_DIR/$dir" -maxdepth 1 -name '*.md' -print0 2>/dev/null | sort -z)
   fi
 
+  # Omit empty categories entirely; a global "(none)" covers the all-empty case.
+  [[ ${#files[@]} -eq 0 ]] && return
+  total_shown=$((total_shown + ${#files[@]}))
+
   echo "## ${label} (${#files[@]})"
-  if [[ ${#files[@]} -eq 0 ]]; then
-    echo "  (none)"
-  else
-    for f in "${files[@]}"; do
-      local suffix=""
-      if [[ "$dir" == "active" || "$dir" == "planning" ]]; then
-        local worker
-        worker=$(grep -m1 '^Worker: ' "$TASKS_DIR/$dir/$f" 2>/dev/null | sed 's/^Worker: //') || true
-        [[ -n "$worker" ]] && suffix=" [$worker]" || true
-      fi
-      echo "  $f$suffix"
-      if $verbose; then
-        echo ""
-        sed 's/^/    /' "$TASKS_DIR/$dir/$f"
-        echo ""
-      fi
-    done
-  fi
+  for f in "${files[@]}"; do
+    local suffix=""
+    if [[ "$dir" == "active" || "$dir" == "planning" ]]; then
+      local worker
+      worker=$(grep -m1 '^Worker: ' "$TASKS_DIR/$dir/$f" 2>/dev/null | sed 's/^Worker: //') || true
+      [[ -n "$worker" ]] && suffix=" [$worker]" || true
+    fi
+    echo "  $f$suffix"
+    if $verbose; then
+      echo ""
+      sed 's/^/    /' "$TASKS_DIR/$dir/$f"
+      echo ""
+    fi
+  done
   echo ""
 }
 
@@ -83,7 +83,11 @@ fi
 echo "# Tasks: $PROJECT"
 echo "# Worker: $WORKER"
 echo ""
+total_shown=0
 for s in "${statuses[@]}"; do
   label=$(echo "$s" | tr '[:lower:]' '[:upper:]')
   list_dir "$s" "$label"
 done
+if [[ $total_shown -eq 0 ]]; then
+  echo "(none)"
+fi
