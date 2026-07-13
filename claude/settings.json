@@ -99,7 +99,7 @@
       "Bash(fd *--exec*)"
     ]
   },
-  "model": "claude-fable-5[1m]",
+  "model": "Fable",
   "hooks": {
     "PreToolUse": [
       {
