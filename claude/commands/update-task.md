@@ -1,9 +1,11 @@
 ---
 allowed-tools: Bash(task-*),Bash(git *),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
-description: Update active task file with current state so next session can resume
+description: Update active task file with current state so next session can resume — self-invoke only as a grill/implement flow step, not as a mid-work checkpoint
 ---
 
 Refresh the active task file with current state — what's done, what's left, where to pick up. So a future session (you, after compaction, or a fresh start) reads the file and knows the lay of the land without retracing the whole conversation.
+
+The user can invoke this whenever. Self-invoke only as a step of `/grill-task` / `/implement-task` — not on your own initiative mid-implementation; commits and the conversation already carry that state.
 
 1. **Find.** Run `task-list.sh --status active`. The first two lines are `# Tasks: <project>` and `# Worker: <worker>`. Filter active rows to those with `[worker]` matching `# Worker:`. If not exactly one match, stop and report.
 
