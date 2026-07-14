@@ -41,7 +41,7 @@ sq() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
 seeded_interactive_cmd() {
     local seed
     seed='printf '\''%s\n'\'' '"$(sq "$1")"' >> "${HISTFILE:-$HOME/.bash_history}"'
-    printf '%s; %s; exec bash -l' "$1" "$seed"
+    printf 'trap : INT; %s; %s; exec bash -l' "$1" "$seed"
 }
 
 case "${WT:0:1}" in
