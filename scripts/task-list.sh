@@ -56,7 +56,7 @@ list_dir() {
   [[ ${#files[@]} -eq 0 ]] && return
   total_shown=$((total_shown + ${#files[@]}))
 
-  echo "## ${label} (${#files[@]})"
+  echo "${label} (${#files[@]})"
   for f in "${files[@]}"; do
     local suffix=""
     if [[ "$dir" == "active" || "$dir" == "planning" ]]; then
@@ -71,7 +71,6 @@ list_dir() {
       echo ""
     fi
   done
-  echo ""
 }
 
 statuses=(canceled done active planned planning todo)
@@ -80,8 +79,8 @@ if [[ ${#status_list[@]} -gt 0 ]]; then
   statuses=("${status_list[@]}")
 fi
 
-echo "# Tasks: $PROJECT"
-echo "# Worker: $WORKER"
+echo "Tasks: $PROJECT"
+echo "Worker: $WORKER"
 echo ""
 total_shown=0
 for s in "${statuses[@]}"; do

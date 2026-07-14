@@ -8,7 +8,7 @@ model: haiku
 
 Complete the current active task. Assumes exactly one active task for this worker — if zero or multiple, stop and tell the user (they can run `/complete-task-with-context` for the multi case).
 
-1. **Find.** Run `task-list.sh --status active`. The first two lines are `# Tasks: <project>` and `# Worker: <worker>`. Filter active rows to those with `[worker]` matching `# Worker:`. If not exactly one match, stop and report.
+1. **Find.** Run `task-list.sh --status active`. The first two lines are `Tasks: <project>` and `Worker: <worker>`. Filter active rows to those with `[worker]` matching `Worker:`. If not exactly one match, stop and report.
 
 2. **PR check.** Run `gh pr view --json state -q .state` for the current branch. If a PR exists and its state is not `MERGED`, stop and tell the user. If no PR exists, continue.
 

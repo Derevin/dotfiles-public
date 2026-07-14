@@ -7,7 +7,7 @@ Refresh the active task file with current state — what's done, what's left, wh
 
 The user can invoke this whenever. Self-invoke only as a step of `/grill-task` — not on your own initiative mid-implementation; commits and the conversation already carry that state.
 
-1. **Find.** Run `task-list.sh --status active planning`. The first two lines are `# Tasks: <project>` and `# Worker: <worker>`. Filter rows to those with `[worker]` matching `# Worker:`. If not exactly one match, stop and report.
+1. **Find.** Run `task-list.sh --status active planning`. The first two lines are `Tasks: <project>` and `Worker: <worker>`. Filter rows to those with `[worker]` matching `Worker:`. If not exactly one match, stop and report.
 
 2. **Read.** Read the task file at `~/repos/tasks/<project>/<status>/<filename>` (status per the section it was listed under) so you know its existing structure (sections, prior status notes, user-written Context).
 
