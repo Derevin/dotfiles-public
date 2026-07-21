@@ -238,19 +238,42 @@ if [ -n "$params" ]; then
             default=""
         fi
 
-        # Check for chooser recipe: _recipe-param (provides fzf values)
+        # Check for chooser recipe: _recipe-param (provides fzf values). With
+        # the dump maps, existence is a map lookup and the chooser's output
+        # streams straight into fzf — the picker opens before slow probes
+        # (docker/coder) finish. An empty-output chooser falls through to the
+        # typed prompt: --exit-0 auto-closes the empty fzf, and the tee'd file
+        # distinguishes "chooser produced nothing" from "user cancelled".
         chooser="_${recipe}-${name}"
-        if [ "$source" = "global" ]; then
-            chooser_output=$(just -g "$chooser" 2>/dev/null)
+        if [ "$HAVE_JQ" -eq 1 ]; then
+            if [ "$source" = "global" ]; then chooser_def=${g_body[$chooser]:-}; else chooser_def=${p_body[$chooser]:-}; fi
+            if [ -n "$chooser_def" ]; then
+                ctmp=$(mktemp)
+                if [ "$source" = "global" ]; then
+                    val=$(just -g "$chooser" 2>/dev/null | tee "$ctmp" | fzf --prompt "$name> " --exit-0)
+                else
+                    val=$(just "$chooser" 2>/dev/null | tee "$ctmp" | fzf --prompt "$name> " --exit-0)
+                fi
+                if [ -s "$ctmp" ]; then
+                    rm -f "$ctmp"
+                    [ -z "$val" ] && echo "aborted" && exit 0
+                    args+=("$val")
+                    continue
+                fi
+                rm -f "$ctmp"
+            fi
         else
-            chooser_output=$(just "$chooser" 2>/dev/null)
-        fi
-
-        if [ -n "$chooser_output" ]; then
-            val=$(echo "$chooser_output" | fzf --prompt "$name> ")
-            [ -z "$val" ] && echo "aborted" && exit 0
-            args+=("$val")
-            continue
+            if [ "$source" = "global" ]; then
+                chooser_output=$(just -g "$chooser" 2>/dev/null)
+            else
+                chooser_output=$(just "$chooser" 2>/dev/null)
+            fi
+            if [ -n "$chooser_output" ]; then
+                val=$(echo "$chooser_output" | fzf --prompt "$name> ")
+                [ -z "$val" ] && echo "aborted" && exit 0
+                args+=("$val")
+                continue
+            fi
         fi
 
         # Prompt for value
