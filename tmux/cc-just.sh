@@ -19,6 +19,10 @@ WT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"
 WT_CONTAINER_PREFIX="${WT_CONTAINER_PREFIX:-}"
 WT_DOCKER_WORKDIR_PREFIX="${WT_DOCKER_WORKDIR_PREFIX:-}"
 
+# Dispatch splits open minimal — 1 row — so a long-running recipe doesn't eat
+# the window; zoom/resize the pane when the output matters.
+SPLIT_SIZE=1
+
 # Build one POSIX-quoted command line from argv. `coder ssh -- argv...`
 # space-joins the remote argv WITHOUT re-quoting and lets the workspace shell
 # re-tokenize, so a bare `bash -c "pipeline"` gets mangled (bash -c grabs only
@@ -83,7 +87,7 @@ send_to_idle_or_split() {
     if [ -n "$target" ]; then
         target="$t.$target"
     else
-        target=$(tmux split-window -t "$t" -v $SPLIT_BEFORE -l 25% -d -P -F '#{pane_id}' -c "$PWD")
+        target=$(tmux split-window -t "$t" -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -d -P -F '#{pane_id}' -c "$PWD")
     fi
     tmux send-keys -t "$target" "cd '$PWD' && $cmd" Enter
 }
@@ -325,7 +329,7 @@ if [ -n "$CALLER_PANE_ID" ]; then
 
     if [[ $BACKGROUND_TAKEOVER -eq 1 ]]; then
         if [ -n "$WT" ]; then
-            tmux split-window -d -v $SPLIT_BEFORE -l 25% -t "$CALLER_PANE_ID" "wt-shell $WT \"$cmd\""
+            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "wt-shell $WT \"$cmd\""
         else
             # Background-takeover: send to caller pane if idle bash in single-pane window; else ephemeral split
             c_win_panes=$(tmux display-message -t "$CALLER_PANE_ID" -p '#{window_panes}')
@@ -333,15 +337,15 @@ if [ -n "$CALLER_PANE_ID" ]; then
             if [[ $c_win_panes -eq 1 && "$c_pane_cmd" =~ ^(bash|zsh)$ ]]; then
                 tmux send-keys -t "$CALLER_PANE_ID" "cd '$PWD' && $cmd" Enter
             else
-                tmux split-window -d -v $SPLIT_BEFORE -l 25% -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $cmd"
+                tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $cmd"
             fi
         fi
     elif [[ $BACKGROUND -eq 1 ]]; then
         if [ -n "$WT" ]; then
-            tmux split-window -d -v $SPLIT_BEFORE -l 25% -t "$CALLER_PANE_ID" "wt-shell $WT \"$cmd\""
+            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "wt-shell $WT \"$cmd\""
         else
             # Background: ephemeral split that auto-closes when command finishes
-            tmux split-window -d -v $SPLIT_BEFORE -l 25% -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $cmd"
+            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $cmd"
         fi
     elif [ -n "$WT" ]; then
         # Foreground in a worktree backend. pane_current_command on the host
@@ -370,7 +374,7 @@ if [ -n "$CALLER_PANE_ID" ]; then
         if [ -n "$tagged_pane" ]; then
             tmux send-keys -t "$tagged_pane" "cd '$wt_dir' && $cmd" Enter
         elif wt_pane_busy "$main_pane" "$WT"; then
-            target=$(tmux split-window -t "$main_pane" -v $SPLIT_BEFORE -l 25% -d -P -F '#{pane_id}' \
+            target=$(tmux split-window -t "$main_pane" -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -d -P -F '#{pane_id}' \
                 "wt-shell --interactive-after $WT \"$cmd\"")
             tmux set-option -pt "$target" @wt "$WT"
             tmux set-option -pt "$target" @just_caller "$main_pane"
@@ -402,7 +406,7 @@ if [ -n "$CALLER_PANE_ID" ]; then
             elif [[ "$c_pane_cmd" =~ ^(bash|zsh)$ ]]; then
                 tmux send-keys -t "$CALLER_PANE_ID" "cd '$PWD' && $cmd" Enter
             else
-                target=$(tmux split-window -t "$CALLER_PANE_ID" -v $SPLIT_BEFORE -l 25% -d -P -F '#{pane_id}' -c "$PWD")
+                target=$(tmux split-window -t "$CALLER_PANE_ID" -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -d -P -F '#{pane_id}' -c "$PWD")
                 tmux set-option -pt "$target" @just_caller "$CALLER_PANE_ID"
                 tmux send-keys -t "$target" "cd '$PWD' && $cmd" Enter
             fi
