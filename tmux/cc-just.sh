@@ -89,21 +89,34 @@ send_to_idle_or_split() {
 }
 
 # Hide per-repo recipes whose backing repo isn't checked out. A recipe opts in
-# with a `# requires-repo <name>` body marker (the `@#` form is a silent no-op),
-# which `just --show` surfaces; we drop it from the listing when ~/repos/<name>
-# is absent — so e.g. recipes for a given repo only appear where that repo
-# exists. Fails open: any --show/parse miss leaves the recipe visible.
+# with a `# requires-repo <name>` body marker (the `@#` form is a silent no-op);
+# we drop it from the listing when ~/repos/<name> is absent — so e.g. recipes
+# for a given repo only appear where that repo exists. Fails open: any parse
+# miss leaves the recipe visible.
+#
+# Per-recipe metadata (requires-repo marker, recipe identity for dedup) comes
+# from one jq-parsed `just --dump` per scope — per-recipe `just --show` spawns
+# make the listing visibly slow. Without jq, fall back to per-recipe shows.
+HAVE_JQ=0
+command -v jq >/dev/null 2>&1 && HAVE_JQ=1
+declare -A p_req p_body g_req g_body
+
 drop_missing_repos() {
     local scope="$1" listing="$2" line name show repo kept=""
     while IFS= read -r line; do
         [ -z "$line" ] && continue
         name=${line%%[[:space:]]*}
-        if [ "$scope" = global ]; then
-            show=$(just -g --show "$name" 2>/dev/null)
+        if [ "$HAVE_JQ" -eq 1 ]; then
+            if [ "$scope" = global ]; then repo=${g_req[$name]:-}; else repo=${p_req[$name]:-}; fi
+            [ "$repo" = "-" ] && repo=""
         else
-            show=$(just --show "$name" 2>/dev/null)
+            if [ "$scope" = global ]; then
+                show=$(just -g --show "$name" 2>/dev/null)
+            else
+                show=$(just --show "$name" 2>/dev/null)
+            fi
+            repo=$(printf '%s\n' "$show" | sed -nE 's/^[[:space:]]*@?#[[:space:]]*requires-repo[[:space:]]+([^[:space:]]+).*/\1/p' | head -1)
         fi
-        repo=$(printf '%s\n' "$show" | sed -nE 's/^[[:space:]]*@?#[[:space:]]*requires-repo[[:space:]]+([^[:space:]]+).*/\1/p' | head -1)
         if [ -n "$repo" ] && [ ! -d "$HOME/repos/$repo" ]; then
             continue
         fi
@@ -124,6 +137,30 @@ strip_directives='s/[[:space:]]+#[[:space:]]*(background_takeover|background|hos
 project=$(just --list --list-heading '' --list-prefix '' 2>/dev/null | sed -E "$strip_directives")
 global=$(just -g --list --list-heading '' --list-prefix '' 2>/dev/null | sed -E "$strip_directives")
 
+if [ "$HAVE_JQ" -eq 1 ]; then
+    # name<TAB>requires-repo(or -)<TAB>compact recipe JSON; the JSON doubles as
+    # recipe identity for dedup (tojson escapes tabs/newlines, so TSV stays sane)
+    dump_meta='.recipes | to_entries[] | [.key,
+        ([.value.body[][]? | strings
+          | capture("^\\s*@?#\\s*requires-repo\\s+(?<r>\\S+)").r] | first // "-"),
+        (.value | tojson)] | @tsv'
+    pdump=$(just --dump --dump-format json 2>/dev/null)
+    gdump=$(just -g --dump --dump-format json 2>/dev/null)
+    while IFS=$'\t' read -r n r b; do p_req[$n]=$r; p_body[$n]=$b; done \
+        < <(jq -r "$dump_meta" <<<"$pdump" 2>/dev/null)
+    while IFS=$'\t' read -r n r b; do g_req[$n]=$r; g_body[$n]=$b; done \
+        < <(jq -r "$dump_meta" <<<"$gdump" 2>/dev/null)
+
+    # A dir without its own justfile resolves the project scope to ~/.justfile
+    # itself — drop the whole project side up front rather than discovering
+    # per-recipe that everything is a duplicate.
+    if [ -n "$project" ]; then
+        psrc=$(jq -r '.source // empty' <<<"$pdump" 2>/dev/null)
+        gsrc=$(jq -r '.source // empty' <<<"$gdump" 2>/dev/null)
+        [ -n "$psrc" ] && [ "$psrc" = "$gsrc" ] && project=""
+    fi
+fi
+
 # Drop recipes that require an absent ~/repos/<name> (see drop_missing_repos).
 project=$(drop_missing_repos project "$project")
 global=$(drop_missing_repos global "$global")
@@ -134,9 +171,12 @@ if [ -n "$global" ] && [ -n "$project" ]; then
         <(echo "$project" | awk '{print $1}' | sort) \
         <(echo "$global"  | awk '{print $1}' | sort))
     for name in $dupes; do
-        if [ "$(just --show "$name" 2>/dev/null)" = "$(just -g --show "$name" 2>/dev/null)" ]; then
-            project=$(echo "$project" | awk -v r="$name" '$1 != r')
+        if [ "$HAVE_JQ" -eq 1 ]; then
+            [ -n "${p_body[$name]:-}" ] && [ "${p_body[$name]:-}" = "${g_body[$name]:-}" ] || continue
+        else
+            [ "$(just --show "$name" 2>/dev/null)" = "$(just -g --show "$name" 2>/dev/null)" ] || continue
         fi
+        project=$(echo "$project" | awk -v r="$name" '$1 != r')
     done
 fi
 
