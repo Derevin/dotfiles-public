@@ -16,8 +16,6 @@ Commits: title-only when possible, max 50 chars. Capitalize first word. Optional
 
 PR descriptions: as short as the change allows. Plain text, no headers/checklists/bullets. Why, not what — never restate the diff. No test plans, no "This PR..." preamble, no background already in the linked issue. Every sentence must earn its place; if one is enough, stop there.
 
-Before creating a PR or force-pushing to update one: stop and ask the user if they want to run a local Claude review on the branch diff first.
-
 To swap two commits in a non-interactive rebase: `GIT_SEQUENCE_EDITOR='sed -i "1{h;d}; 2G"' git rebase -i HEAD~2`
 
 Branch off `origin/main` (or `origin/master`), not local.
