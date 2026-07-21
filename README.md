@@ -33,7 +33,7 @@ The CLI tools the configs expect (`fzf`, `ripgrep`, `just`, `delta`,
 ## Task queue & context store
 
 Some shipped scripts and skills (`task-*.sh`, `context-*.sh`, `/list-tasks`,
-`/grill-task`) drive two personal, file-based systems kept in **separate** repos
+`/plan-task`) drive two personal, file-based systems kept in **separate** repos
 (not included here):
 
 - **Tasks** — a markdown task queue under `~/repos/tasks/<project>/`.
