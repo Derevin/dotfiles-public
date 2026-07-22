@@ -1,10 +1,12 @@
 ---
 name: promote-memory
-description: Promote stable conventions from auto-memory into the appropriate CLAUDE.md, CONTEXT.md, ADR, or done task. Mirror of `remember` in reverse. Use when user invokes /promote-memory or asks to codify memory entries into project docs.
+description: Triage auto-memory toward pristine — purge most entries, promote the rare durable ones into CLAUDE.md, CONTEXT.md, ADR, or done task.
 disable-model-invocation: true
 ---
 
 # Promote memory to project docs
+
+Auto-memory is instance-local — sessions on another machine, worktree, or surface never see it. This skill partly exists to serve those instances: durable knowledge must move into shared, git-synced files. Ideal outcome of a run: memory left **pristine** — nothing lingering that's captured (or belongs) elsewhere.
 
 ## Scope
 
@@ -34,13 +36,15 @@ For duplicate detection, scan everything a candidate might already live in:
 
 ## Classify each memory file
 
+Default is **purge only** — most memories are spent or thin and earn no promotion. A doc target (CLAUDE.md / CONTEXT.md / ADR) takes an entry only when it adds genuine value not yet captured anywhere; done tasks carry no such bar — archive into them freely.
+
 For each memory file, decide target kind:
 
+- **Purge only** (default) — already captured in some destination, value spent, or too thin to earn doc space. Delete, no edit.
 - **CLAUDE.md** — rule, preference, convention, gotcha. Forward-looking ("do this", "don't do that"). `user`/`feedback` usually → global CLAUDE.md (cross-project, cross-PC via dotfiles symlink); `project` → project root or module subdir CLAUDE.md.
 - **CONTEXT.md** — defines / clarifies / disambiguates a domain term, names a project-specific concept, pins vocabulary. Tight one-sentence "what it IS" definitions, no rationale.
 - **adr/** — decision meeting all three ADR bar criteria: hard to reverse, surprising without context, real trade-off. Architecture shape, integration patterns, tech lock-in, deliberate deviations.
-- **Done task** — completed investigation, incident timeline, troubleshooting log, or reusable recipe/technique tied to a specific event. Backward-looking ("here's what was tried" / "here's what worked"). `project`-type memories with status/timeline headers and `reference`-type how-to procedures both fit here when the body has archival value but no forward-looking rule worth promoting elsewhere.
-- **Already-promoted duplicate** — content effectively appears in some existing destination → propose memory purge only, no edit.
+- **Done task** — completed investigation, incident timeline, troubleshooting log, or reusable recipe/technique tied to a specific event. Backward-looking ("here's what was tried" / "here's what worked"). `project`-type memories with status/timeline headers and `reference`-type how-to procedures both fit here when the body has archival value but no forward-looking rule worth promoting elsewhere. When unsure whether a body deserves keeping at all, archiving here beats a doc promotion.
 - **Keep as memory** — ephemeral state (active work, deadlines), pointers to fast-changing external systems, or rich Why context that wouldn't survive any target file's style.
 
 Disambiguation:
@@ -59,15 +63,15 @@ Present each promote candidate with:
   - CONTEXT.md: one-sentence "what it IS", no rationale
   - ADR: 1–3 sentences total
   - Done task: preserve memory body largely as-is (it's archival); strip frontmatter, add `## Resolution` noting it was archived from memory
-- purge memory file after promotion? Default **keep** for CLAUDE.md/CONTEXT.md/ADR — memory body has rationale the target file won't carry. Default **purge** for done task — preserves the body wholesale. User overrides either way.
+- purge memory file after promotion? Default **purge** for every target — the content now lives where all instances see it, and purging is what leaves memory pristine. User overrides to keep (e.g. rationale still wanted at hand next session).
 
-For each already-promoted duplicate, present:
+For each purge-only, present:
 
 - source memory file
-- where the duplicate already lives (file + section)
+- why it earns no promotion (where the duplicate lives, or what makes it spent/thin)
 - recommend purge
 
-Wait for user confirmation. User can skip items, override target file, change section, opt to purge.
+Wait for user confirmation. User can skip items, override target file, change section, flip purge/keep.
 
 ## Apply
 
