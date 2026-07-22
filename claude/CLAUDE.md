@@ -12,7 +12,7 @@ No history-relative comments — "previously…", "originally", "the original X"
 
 Never add Co-Authored-By, Signed-off-by, or any other trailer attributing Claude to git commits.
 
-Commits: title-only when possible, max 50 chars. Capitalize first word. Optional `Tag: Message` format only when a tag adds clarity. If a body is needed, keep it brief. Sacrifice grammar for brevity.
+Commits: title-only when possible, max 50 chars. Capitalize first word. Optional `Tag: Message` format only when a tag adds clarity. If a body is needed, keep it brief. No caveat bodies about deferred/related/out-of-scope work. Sacrifice grammar for brevity.
 
 PR descriptions: as short as the change allows. Plain text, no headers/checklists/bullets. Why, not what — never restate the diff. No test plans, no "This PR..." preamble, no background already in the linked issue. Every sentence must earn its place; if one is enough, stop there.
 
@@ -20,7 +20,7 @@ To swap two commits in a non-interactive rebase: `GIT_SEQUENCE_EDITOR='sed -i "1
 
 Branch off `origin/main` (or `origin/master`), not local.
 
-Single tag prefix only — `Recovery: X`, not `GUI: Recovery: X`. Use "Fix" only for genuine bugs; refactors take neutral verbs (Load, Reorder, Move, Use).
+Single tag prefix only — `Recovery: X`, not `GUI: Recovery: X`. Tag = one word naming what changed, not which file (`Tasks:`, not `Global CLAUDE:`). Use "Fix" only for genuine bugs; refactors take neutral verbs (Load, Reorder, Move, Use).
 
 Trim PR bodies hard — usually one sentence stating the why. Drop tail clauses, impact numbers, "so that…" purpose tails, named-pattern references. When user edits a PR body, apply exactly the requested change — never reintroduce previously dropped text.
 
