@@ -3,6 +3,12 @@
 	fpush = push --force-with-lease
 	asrebase = rebase -i --autosquash
 	amend-push = !git amend && git push --force-with-lease
+	# Structural diff (difftastic), worktree vs HEAD + untracked — diffview-parity
+	# view. Pager forced off per git call (difft output must not pipe through
+	# delta); one less session over the combined stream. DFT_WIDTH: difft sees a
+	# pipe, not the tty, so it would wrap at 80 without it. DFT_COLOR: same reason.
+	# 2>/dev/null on the untracked loop: broken symlinks / files vanishing mid-run.
+	dift = "!f() { DFT_WIDTH=$(stty size 2>/dev/null </dev/tty | cut -d' ' -f2); export DFT_WIDTH=${DFT_WIDTH:-80} DFT_COLOR=always DFT_BACKGROUND=light DFT_DISPLAY=${DFT_DISPLAY:-inline}; { git -c diff.external=difft --no-pager diff HEAD \"$@\"; git ls-files --others --exclude-standard -z -- \"$@\" | xargs -0 -r -I{} git -c diff.external=difft --no-pager diff --no-index -- /dev/null {} 2>/dev/null; } | less -RFX; }; f"
 [safe]
 	directory = *
 [include]
