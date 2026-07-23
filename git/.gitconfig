@@ -1,11 +1,8 @@
 [alias]
-	fixup = commit --amend --no-edit
 	amend = commit --amend --no-edit
 	fpush = push --force-with-lease
 	asrebase = rebase -i --autosquash
 	amend-push = !git amend && git push --force-with-lease
-	difi = "!f() { git -c delta.side-by-side=false diff \"$@\"; git ls-files --others --exclude-standard -z | xargs -0 -r -I{} git -c delta.side-by-side=false diff --no-index -- /dev/null {} 2>/dev/null; true; }; f"
-	difu = "!f() { git diff \"$@\"; git ls-files --others --exclude-standard -z | xargs -0 -r -I{} git diff --no-index -- /dev/null {} 2>/dev/null; true; }; f"
 [safe]
 	directory = *
 [include]
