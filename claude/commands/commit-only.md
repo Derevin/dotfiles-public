@@ -2,6 +2,7 @@
 description: Commit pending changes
 disable-model-invocation: true
 context: fork
+background: false
 agent: general-purpose
 model: haiku
 ---

@@ -2,6 +2,7 @@
 description: Detach to origin/base and delete current branch
 disable-model-invocation: true
 context: fork
+background: false
 agent: general-purpose
 model: haiku
 ---

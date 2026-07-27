@@ -3,6 +3,7 @@ allowed-tools: Bash(task-*),Read,Write(~/repos/tasks/**)
 description: File a reminder-only task (title-only, fire-and-forget)
 disable-model-invocation: true
 context: fork
+background: false
 agent: general-purpose
 model: haiku
 ---

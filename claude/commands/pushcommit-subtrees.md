@@ -2,6 +2,7 @@
 description: Commit pending changes, push, and push all subtree mirrors
 disable-model-invocation: true
 context: fork
+background: false
 agent: general-purpose
 model: haiku
 ---

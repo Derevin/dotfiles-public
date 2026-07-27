@@ -2,6 +2,7 @@
 description: Show task queue status
 disable-model-invocation: true
 context: fork
+background: false
 agent: general-purpose
 model: haiku
 ---

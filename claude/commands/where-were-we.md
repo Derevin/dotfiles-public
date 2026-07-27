@@ -2,6 +2,7 @@
 description: Where were we in this worktree
 disable-model-invocation: true
 context: fork
+background: false
 agent: general-purpose
 model: haiku
 ---
