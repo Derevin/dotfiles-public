@@ -19,6 +19,9 @@ where applicable (a no-op elsewhere). It's idempotent — re-run any time.
 
 The CLI tools the configs expect (`fzf`, `ripgrep`, `just`, `delta`,
 `tmux`, `micro`) aren't bundled — install them with your package manager.
+Nor is micro's `lsp` plugin (`micro -plugin install lsp`), which the c++
+config leans on for diagnostics in place of the built-in linter — that needs
+`clangd` on PATH too.
 
 ## What's inside
 

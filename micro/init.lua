@@ -121,18 +121,11 @@ function yaziBrowse(bp)
     fzfOpen(fzfClean(out):match("^[^\n]*"))
 end
 
--- The built-in linter runs `g++ -fsyntax-only -Wall -Wextra` with no -std, so
--- valid C++23 (std::views::enumerate/adjacent) is falsely flagged as errors.
--- Re-register the g++ linter at -std=c++23 to match how the projects build.
-local function fixCppLinter()
-    if linter == nil then
-        return
-    end
-    linter.removeLinter("g++")
-    linter.makeLinter("g++", "c++", "g++",
-        {"-std=c++23", "-fsyntax-only", "-Wall", "-Wextra", "%f"},
-        "%f:%l:%c:.+: %m")
-end
+-- C++ diagnostics come from clangd through the lsp plugin, so settings.json turns
+-- micro's built-in linter off for ft:c++ and the two don't double-report. The plugin
+-- also self-binds Alt-k/Alt-r/Alt-f (hover/references/format); Alt belongs to tmux and
+-- F2/F3/F4 already cover those, so bindings.json maps all three to None. Both notes
+-- live here because micro rewrites settings.json and bindings.json, dropping comments.
 
 -- VSCode-style multi-cursor paste. When the clipboard's line count equals the
 -- number of cursors, each cursor gets its own line ("spread"); otherwise defer
@@ -434,7 +427,6 @@ function init()
     config.MakeCommand("findfiles", fzfFiles, config.NoComplete)
     config.MakeCommand("livegrep", fzfGrep, config.NoComplete)
     config.MakeCommand("browse", yaziBrowse, config.NoComplete)
-    fixCppLinter()
     -- Runs after InitTabs, so micro.Tabs() is populated: capture every tab opened
     -- at startup (onBufferOpen fires too early — before the tab list exists).
     recordSession()
