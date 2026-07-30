@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# List tasks for a project. Usage: task-list.sh [--status STATUS...] [--verbose] [PROJECT]
+# List tasks for a project. Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [PROJECT]
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "List tasks for a project (defaults to detected project)."
-    echo "Usage: task-list.sh [--status STATUS...] [--verbose] [PROJECT]"
+    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [PROJECT]"
+    echo "Statuses: todo planning planned active done canceled"
+    echo "Shows open statuses only (todo planning planned active); done and"
+    echo "canceled need an explicit --status or --all."
     exit 0
 fi
 
@@ -12,6 +15,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/task-lib.sh"
 
 status_list=()
+show_all=false
 verbose=false
 explicit_project=""
 
@@ -26,6 +30,7 @@ while [[ $# -gt 0 ]]; do
         esac
       done
       ;;
+    --all) show_all=true; shift ;;
     --verbose) verbose=true; shift ;;
     *) explicit_project=$1; shift ;;
   esac
@@ -73,10 +78,12 @@ list_dir() {
   done
 }
 
-statuses=(canceled done active planned planning todo)
+statuses=(active planned planning todo)
 
 if [[ ${#status_list[@]} -gt 0 ]]; then
   statuses=("${status_list[@]}")
+elif $show_all; then
+  statuses=(canceled done active planned planning todo)
 fi
 
 echo "Tasks: $PROJECT"
