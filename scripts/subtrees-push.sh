@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Push every subtree listed in .subtrees to its mirror.
-# Format: <prefix> <remote> <branch>, one per line. Comments with #.
+# Format: <prefix> <remote> <branch> [flags], one per line. Comments with #.
+# Flags steer sync's pull direction only; every listed prefix is pushed.
 #
 # Instead of `git subtree push` (which re-bloats remote history with
 # every dotfiles commit walked by the split), this splits the subtree

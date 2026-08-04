@@ -175,8 +175,8 @@ apply_subtrees() {
     return 1
   fi
 
-  local prefix remote branch _ ref tip_tree before after
-  while read -r prefix remote branch _; do
+  local prefix remote branch flags ref tip_tree before after
+  while read -r prefix remote branch flags; do
     case "$prefix" in '#'*|'') continue ;; esac
     ref="refs/sync/${prefix//\//-}"
 
@@ -197,6 +197,17 @@ apply_subtrees() {
 
     if [[ "$tip_tree" == "$(git rev-parse "HEAD:$prefix")" ]]; then
       echo "$name/$prefix: ✓"
+      continue
+    fi
+
+    # A push-only prefix is a mirror we publish to and never author in, so a
+    # tree difference means local is ahead, not that there is something to
+    # ingest. Pulling is impossible there anyway: `public` was never `git
+    # subtree add`ed, so `subtree pull --squash` aborts with "was never added".
+    # Publishing is deliberate (gated on a leak scan), so report and carry on
+    # rather than failing the sync on a perfectly normal steady state.
+    if [[ " $flags " == *" push-only "* ]]; then
+      echo "$name/$prefix: unpublished (publish via /pushcommit-subtrees)"
       continue
     fi
 
