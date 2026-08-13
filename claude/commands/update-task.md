@@ -14,7 +14,7 @@ The user can invoke this whenever. Self-invoke only as a step of `/plan-task` �
 3. **Ground.** Run `git log --oneline -20` and `git status` so the update reflects committed work + in-flight changes, not just conversation memory.
 
 4. **Update.** Edit the task file in place:
-   - **Preserve**: `# Title`, `Depends:`, original background `## Context`, any user-written `## Notes`.
+   - **Preserve**: `# Title`, `Depends:`, user-written background `## Context`, any user-written `## Notes`. An agent-written `## Context` the user has since superseded is not background — correct it.
    - **Refresh or add**: the progress sections that match the task's existing shape (e.g. `## What's done` / `## What's left` / `## How to pick up <X>`). Don't invent boilerplate sections the task doesn't need. No `## Status:` line — the directory is the status.
    - **Capture the resume breadcrumb**: branch name, commands to re-enter the loop, gotchas surfaced this session, anything a cold reader would otherwise miss.
    - **Do NOT** add `## Resolution` — that's for `/complete-task`.
