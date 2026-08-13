@@ -14,6 +14,8 @@ Never add Co-Authored-By, Signed-off-by, or any other trailer attributing Claude
 
 Commits: title-only when possible, max 50 chars. Capitalize first word. Optional `Tag: Message` format only when a tag adds clarity. If a body is needed, keep it brief. No caveat bodies about deferred/related/out-of-scope work. Sacrifice grammar for brevity.
 
+Before opening a PR, show the title and body and wait for user's OK. Don't run `gh pr create` until they approve.
+
 PR descriptions: as short as the change allows. Plain text, no headers/checklists/bullets. Why, not what — never restate the diff. No test plans, no "This PR..." preamble, no background already in the linked issue. Every sentence must earn its place; if one is enough, stop there.
 
 No em dashes (—) in PR titles or bodies, even where grammatical — user never writes them, so they read as not-their-voice. Recast with `:`, a comma, a semicolon, a period, or a plain `-`.
