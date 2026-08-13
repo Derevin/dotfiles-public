@@ -31,7 +31,6 @@ COMMON = [
     ("claude/keybindings.json", ".claude/keybindings.json"),
     ("claude/settings.json", ".claude/settings.json"),
     ("claude/statusline.sh", ".claude/statusline.sh"),
-    ("claude/git-push-gate.sh", ".claude/git-push-gate.sh"),
     ("claude/skills/remember", ".claude/skills/remember"),
     ("claude/skills/promote-memory", ".claude/skills/promote-memory"),
     ("claude/skills/grill-me-with-docs", ".claude/skills/grill-me-with-docs"),

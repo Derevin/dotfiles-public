@@ -62,17 +62,6 @@
       "Bash(git --git-dir*)"
     ],
     "ask": [
-      "Bash(git branch -D *)",
-      "Bash(git stash drop *)",
-      "Bash(git stash clear *)",
-      "Bash(git clean *)",
-      "Bash(git commit *\")",
-      "Bash(git commit *')",
-      "Bash(git commit *-m *)",
-      "Bash(git push *--force*)",
-      "Bash(git push -f*)",
-      "Bash(git push -u*)",
-      "Bash(git push --set-upstream*)",
       "Bash(curl *| bash*)",
       "Bash(wget *| bash*)",
       "Bash(curl *| sh*)",
@@ -136,18 +125,6 @@
     "workshop": "off"
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/git-push-gate.sh",
-            "if": "Bash(git push*)"
-          }
-        ]
-      }
-    ],
     "PermissionRequest": [
       {
         "matcher": "",
