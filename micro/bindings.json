@@ -29,6 +29,7 @@
     "F7": "RemoveAllMultiCursors",
     "F8": "SpawnMultiCursorSelect",
     "F9": "SaveAll",
+    "F10": "lua:initlua.blameLine",
     "CtrlShiftUp": "SpawnMultiCursorUp",
     "CtrlShiftDown": "SpawnMultiCursorDown"
 }

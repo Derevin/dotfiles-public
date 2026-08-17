@@ -3,6 +3,7 @@
 -- launch (micro has no native session restore). Persisted via micro-lastfile.sh
 -- into a per-dir store under ~/.cache/micro/.
 local os = import("os")
+local filepath = import("path/filepath")
 local micro = import("micro")
 local config = import("micro/config")
 local shell = import("micro/shell")
@@ -423,10 +424,118 @@ function preFindPrevious(bp)   jbRecord(bp) end
 function preNextTab(bp)        jbRecord(bp) end
 function prePreviousTab(bp)    jbRecord(bp) end
 
+-- Git blame (F10). The first press names the commit behind the cursor line in the
+-- infobar; pressing again on the same line opens that commit in the pager, so the
+-- who/when and the why are one key apart. `blamefile` annotates the whole file.
+-- micro has no git binding, so this drives the CLI: ExecCommand for the one-line
+-- lookup (no screen suspend), RunInteractiveShell for the pagers, which need the
+-- terminal. Both pagers are forced to stay up — git exports LESS=FRX, whose -F
+-- quits on output that fits one screen, which inside an editor reads as the key
+-- having done nothing.
+local blamePending = nil -- {path, line, sha} of the last blame; a repeat press shows it
+
+-- Buffer's file, the directory to run git in (micro's cwd may be another repo) and
+-- the 1-indexed cursor line. Nil for a buffer that isn't a file on disk.
+local function blameTarget(bp)
+    -- Path, not AbsPath: an unnamed buffer's AbsPath is the working directory,
+    -- which git would happily blame something in.
+    if bp.Buf.Path == nil or bp.Buf.Path == "" then
+        micro.InfoBar():Error("Blame: buffer is not a file")
+        return nil
+    end
+    local path = bp.Buf.AbsPath
+    return path, filepath.Dir(path), bp.Buf:GetActiveCursor().Y + 1
+end
+
+-- git's trimmed output, or nil plus the first line of what it complained about.
+local function git(...)
+    local out, err = shell.ExecCommand("git", ...)
+    out = (out or ""):gsub("%s+$", "")
+    if err ~= nil then
+        return nil, (out:match("^[^\n]*") or "git failed")
+    end
+    return out
+end
+
+local function blameSha(dir, path, line)
+    local out, err = git("-C", dir, "blame", "-L", line .. "," .. line, "--porcelain", "--", path)
+    if out == nil then
+        return nil, err
+    end
+    local sha = out:match("^(%x+)")
+    if sha == nil then
+        return nil, "Blame: unrecognised git output"
+    end
+    if sha:match("^0+$") then -- all-zero sha = the line is a working-tree change
+        return nil, "Blame: line not committed yet"
+    end
+    return sha
+end
+
+local function doBlameLine(bp)
+    local path, dir, line = blameTarget(bp)
+    if path == nil then
+        return
+    end
+    if blamePending ~= nil and blamePending.path == path and blamePending.line == line then
+        local sha = blamePending.sha
+        blamePending = nil -- so the press after the pager closes blames afresh
+        shell.RunInteractiveShell('git -C "' .. dir .. '"'
+            .. ' -c "core.pager=delta --paging=always --pager=\'less -R -+F\'"'
+            .. ' show ' .. sha, false, false)
+        return
+    end
+    blamePending = nil
+    local sha, blameErr = blameSha(dir, path, line)
+    if sha == nil then
+        micro.InfoBar():Message(blameErr)
+        return
+    end
+    local desc, showErr = git("-C", dir, "show", "-s", "--date=short", "--format=%h  %ad  %an  %s", sha)
+    if desc == nil then
+        micro.InfoBar():Message(showErr)
+        return
+    end
+    blamePending = { path = path, line = line, sha = sha }
+    -- Blame reads the file from disk, so unsaved inserts or deletes above the
+    -- cursor shift which line got attributed.
+    local ok, modified = pcall(function() return bp.Buf:Modified() end)
+    micro.InfoBar():Message(desc .. ((ok and modified) and "   [unsaved edits]" or ""))
+end
+
+local function doBlameFile(bp)
+    local path, dir, line = blameTarget(bp)
+    if path == nil then
+        return
+    end
+    -- A pager with nothing to show just flickers the screen, so say why here
+    -- instead: no repo, or a file git doesn't track.
+    local tracked, trackErr = git("-C", dir, "ls-files", "--error-unmatch", "--", path)
+    if tracked == nil then
+        micro.InfoBar():Message(trackErr)
+        return
+    end
+    -- less, not the configured delta: blame output is not a diff. +line opens it
+    -- where the cursor was.
+    shell.RunInteractiveShell('git -C "' .. dir .. '"'
+        .. ' -c "core.pager=less -R -+F +' .. line .. '"'
+        .. ' blame --date=short -- "' .. path .. '"', false, false)
+end
+
+-- Keybinding entry point: `true` tells micro the key was handled. The commands in
+-- init() get wrappers instead — a command callback that returns anything at all
+-- takes micro down with "expecting 0 return values".
+function blameLine(bp)
+    doBlameLine(bp)
+    return true
+end
+
 function init()
     config.MakeCommand("findfiles", fzfFiles, config.NoComplete)
     config.MakeCommand("livegrep", fzfGrep, config.NoComplete)
     config.MakeCommand("browse", yaziBrowse, config.NoComplete)
+    config.MakeCommand("blame", function(bp) doBlameLine(bp) end, config.NoComplete)
+    config.MakeCommand("blamefile", function(bp) doBlameFile(bp) end, config.NoComplete)
     -- Runs after InitTabs, so micro.Tabs() is populated: capture every tab opened
     -- at startup (onBufferOpen fires too early — before the tab list exists).
     recordSession()
