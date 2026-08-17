@@ -22,8 +22,6 @@ Groom the next task: pick it, grill it to an agreed plan, snapshot that plan, an
 
 7. **Wait for go.** Don't snapshot a half-agreed plan. Approving the doc writes at grilling's end is not agreement that the plan is settled — they're separate gates. After the docs commit, ask explicitly whether the plan itself is final; only a clear yes here unlocks step 8.
 
-8. **Snapshot + park.** Invoke `/update-task` to record the agreed plan — written as a self-sufficient brief, because the implementer will have only this file plus the context store (CONTEXT.md, ADRs), not this conversation. Make the plan, the affected files, and any gotchas explicit; a terse jog-my-memory note is not enough across a cold handoff. Where the file's original body contradicts the framing agreed in step 4, rewrite it rather than leaving both — the implementer must not have to guess which one won.
-
-   **Cold-read it before parking.** Invoke `/cold-read-task`. Leave its edits uncommitted; `task-planned.sh` sweeps them into the park commit.
+8. **Snapshot + park.** Invoke `/fork-snapshot`: it inherits the grill, records the agreed plan as a self-sufficient brief (the implementer gets only that file plus the context store, not this conversation), cold-reads it against a context-free reader, and folds the gaps back in. The drafting and the fold stay in the fork. If it returns an open question, the plan wasn't final after all — take it to the user, then dispatch again.
 
    Then run `task-planned.sh <filename>` to move the task into `planned/` (this strips the worker — the task is now unowned and groomed). Stop there: do NOT implement, do NOT run `/complete-task`. Tell the user it's parked in `planned/`, ready for `/implement-task`.
