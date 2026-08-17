@@ -18,6 +18,8 @@ Before opening a PR, show the title and body and wait for user's OK. Don't run `
 
 PR descriptions: as short as the change allows. Plain text, no headers/checklists/bullets. Why, not what — never restate the diff. No test plans, no "This PR..." preamble, no background already in the linked issue. Every sentence must earn its place; if one is enough, stop there.
 
+Don't hard-wrap PR bodies at a column — one paragraph, one line, let it wrap. Newlines only for real paragraph breaks.
+
 No em dashes (—) in PR titles or bodies, even where grammatical — user never writes them, so they read as not-their-voice. Recast with `:`, a comma, a semicolon, a period, or a plain `-`.
 
 To swap two commits in a non-interactive rebase: `GIT_SEQUENCE_EDITOR='sed -i "1{h;d}; 2G"' git rebase -i HEAD~2`
