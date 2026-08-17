@@ -37,6 +37,7 @@ COMMON = [
     ("claude/skills/improve-codebase-architecture", ".claude/skills/improve-codebase-architecture"),
     ("claude/skills/write-a-skill", ".claude/skills/write-a-skill"),
     ("claude/skills/defend-pr", ".claude/skills/defend-pr"),
+    ("claude/agents", ".claude/agents"),
     ("claude/commands", ".claude/commands"),
     ("tmux/.tmux.conf", ".tmux.conf"),
     ("tmux/.tmux-base.conf", ".tmux-base.conf"),
