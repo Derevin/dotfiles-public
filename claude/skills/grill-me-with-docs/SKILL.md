@@ -17,7 +17,7 @@ Format each question like so:
 
 Each round's answers reshape the tree — settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a *later* round, not this one.
 
-Finding *facts* is your job, never mine. When a frontier question needs a fact from the environment, dispatch a subagent to find it rather than asking me something you could look up. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait — ask the rest of the frontier now. The *decisions* are mine — put each one to me and wait.
+Finding *facts* is your job, never mine. When a frontier question needs a fact from the environment, dispatch a subagent to find it rather than asking me something you could look up. When you dispatch an exploration, wait until every running subagent has finished before asking the round — a round posted while agents are still landing gets mangled by their output and I have to reask. The *decisions* are mine — put each one to me and wait.
 
 The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not enact the plan until I confirm we have reached a shared understanding.
 
