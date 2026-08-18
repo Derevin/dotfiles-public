@@ -16,6 +16,8 @@ Commits: title-only when possible, max 50 chars. Capitalize first word. Optional
 
 Before opening a PR, show the title and body and wait for user's OK. Don't run `gh pr create` until they approve.
 
+Close a proposed PR body with a `----` rule, blank line before it (else the last body line renders as a heading). Commentary goes after the rule, never inside the body.
+
 PR descriptions: as short as the change allows. Plain text, no headers/checklists/bullets. Why, not what — never restate the diff. No test plans, no "This PR..." preamble, no background already in the linked issue. Every sentence must earn its place; if one is enough, stop there.
 
 Don't hard-wrap PR bodies at a column — one paragraph, one line, let it wrap. Newlines only for real paragraph breaks.
