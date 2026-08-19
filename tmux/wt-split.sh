@@ -10,6 +10,11 @@
 # claude-less bash. Otherwise it behaves like the original binding: a host
 # shell that inherits pane_current_path.
 set -euo pipefail
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Worktree-aware split for tmux bindings; the new pane follows the caller's backend."
+    echo "Usage: wt-split.sh <h|v> [extra split-window args...]"
+    exit 0
+fi
 
 case "${1:-}" in
     h) DIR="-h" ;;

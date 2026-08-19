@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Toggle scratch window. Alt+t opens it zoomed; close returns to previous window.
 
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Toggle the scratch window; returns to the previous window when already on it."
+    echo "Usage: cc-scratch.sh"
+    exit 0
+fi
+
 WINDOW_NAME=$(tmux display-message -p '#{window_name}')
 
 # Already on scratch → return to previous window.

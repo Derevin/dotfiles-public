@@ -12,6 +12,11 @@
 # tools inside the workspace can `tmux send-keys` etc. against host tmux
 # transparently. Slave connections multiplex over the master and are cheap.
 set -euo pipefail
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Run one command in a worktree backend: d -> docker, c -> coder, empty -> host."
+    echo "Usage: wt-run <wt> -- <cmd> [args...]"
+    exit 0
+fi
 
 # Worktree backend config (private; absent on public installs → empty defaults).
 WT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"

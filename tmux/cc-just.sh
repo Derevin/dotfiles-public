@@ -1,6 +1,12 @@
 #!/bin/bash
 # Fuzzy recipe picker: merges project + global justfile recipes, runs selection
 
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Fuzzy just-recipe picker merging project and global justfiles."
+    echo "Usage: cc-just.sh"
+    exit 0
+fi
+
 # Check dependencies
 if ! command -v just >/dev/null 2>&1; then
     echo "just not found — install from https://github.com/casey/just/releases"

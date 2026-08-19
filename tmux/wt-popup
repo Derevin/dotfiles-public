@@ -22,6 +22,11 @@
 #                                          (needed under `display-popup -E`, which
 #                                          doesn't expand #{pane_id} formats)
 set -euo pipefail
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Popup-launch wrapper running a command in the caller pane's worktree backend."
+    echo "Usage: wt-popup <caller-pane-id|@VAR> -- <cmd> [args...]"
+    exit 0
+fi
 
 # Worktree backend config (private; absent on public installs → empty defaults).
 WT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"

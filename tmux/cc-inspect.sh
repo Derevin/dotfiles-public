@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Toggle between overview and inspect window for a quadrant.
 
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Toggle a quadrant between the overview window and its inspect window."
+    echo "Usage: cc-inspect.sh"
+    exit 0
+fi
+
 WINDOW_NAME=$(tmux display-message -p '#{window_name}')
 
 # In inspect window → swap Claude back to overview, keep inspect window alive

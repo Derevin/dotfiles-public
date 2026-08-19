@@ -5,6 +5,12 @@
 # 3. Inspect window → toggle back via cc-inspect.sh
 # 4. Default        → kill pane
 
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Close the current pane; scratch, zoomed, and inspect windows get their own behaviour."
+    echo "Usage: cc-close-pane.sh"
+    exit 0
+fi
+
 WINDOW_NAME=$(tmux display-message -p '#{window_name}')
 ZOOMED=$(tmux display-message -p '#{window_zoomed_flag}')
 

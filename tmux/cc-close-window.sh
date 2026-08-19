@@ -3,6 +3,12 @@
 # Otherwise, reap the in-backend process tree of every worktree pane, then kill
 # any inspect windows that were spawned from this window.
 
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Close the current window, reaping worktree backend processes first."
+    echo "Usage: cc-close-window.sh"
+    exit 0
+fi
+
 WINDOW_NAME=$(tmux display-message -p '#{window_name}')
 
 if [[ "$WINDOW_NAME" =~ ^i[0-9]*[1-9]$ ]]; then

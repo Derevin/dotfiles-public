@@ -6,6 +6,12 @@
 # Outside tmux: creates a new session.
 # Usage: overview.sh [--window NAME] [--claude] [dir1] ... [dir4|dir6]
 
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Launch a multi-pane tmux workspace: 2x2 for 1-4 dirs, 2x3 for 5-6."
+    echo "Usage: overview.sh [--window NAME] [--claude] [dir1] ... [dir6]"
+    exit 0
+fi
+
 WINDOW="overview"
 LAUNCH_CLAUDE=0
 DIRS=()

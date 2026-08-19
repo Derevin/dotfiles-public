@@ -10,6 +10,12 @@
 # Pane references are by pane_id (the stable %N) rather than index, because
 # tmux re-numbers pane indices by spatial position when panes are added or
 # removed — adding the sync strip above pane 1 reshuffles everything otherwise.
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Dotfiles workspace: claude left, two terminals right, sync strip on top."
+    echo "Usage: workspace-dotfiles.sh [extra-repo-path] [window-name] [claude-name]"
+    exit 0
+fi
+
 DIR=~/repos/dotfiles
 EXTRA_REPO="${1:-}"
 
