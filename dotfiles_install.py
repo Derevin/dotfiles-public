@@ -64,6 +64,7 @@ COMMON = [
     ("scripts/task-unclaim.sh", ".local/bin/task-unclaim.sh"),
     ("scripts/task-next-id.sh", ".local/bin/task-next-id.sh"),
     ("scripts/task-planned.sh", ".local/bin/task-planned.sh"),
+    ("scripts/task-reprioritize.sh", ".local/bin/task-reprioritize.sh"),
     ("scripts/task-commit.sh", ".local/bin/task-commit.sh"),
     ("scripts/context-commit.sh", ".local/bin/context-commit.sh"),
     ("scripts/context-sync.sh", ".local/bin/context-sync.sh"),
