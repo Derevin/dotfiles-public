@@ -92,6 +92,7 @@
   "skillOverrides": {
     "artifact-capabilities": "off",
     "artifact-design": "off",
+    "artifact-diagramming": "off",
     "artifact-pr-review": "off",
     "batch": "off",
     "claude-api": "off",
@@ -103,6 +104,7 @@
     "dataviz": "off",
     "debug": "off",
     "deep-research": "off",
+    "design": "off",
     "design-sync": "off",
     "fewer-permission-prompts": "off",
     "init": "off",
