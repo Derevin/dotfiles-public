@@ -12,7 +12,7 @@ MIT License (copyright remains his):
 - `claude/skills/grill-me-with-docs/` — adapted from his `grill-with-docs` and `grilling`
 - `claude/skills/write-a-skill/` — adapted from his `writing-great-skills`
 - `claude/skills/improve-codebase-architecture/` — adapted
-- `claude/commands/review-branch*.md` — Fowler smell baseline adapted from his `code-review`
+- `claude/commands/review-branch-medium.md` — Fowler smell baseline adapted from his `code-review`
 
 ```
 MIT License

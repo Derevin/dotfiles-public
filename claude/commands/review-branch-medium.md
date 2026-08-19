@@ -14,15 +14,15 @@ Review the current branch's diff against its merge base. Works offline — no PR
 
 2. **Dispatch subagent reviewers.** Launch all five in parallel, passing each the full output:
 
-   - **code-quality-reviewer** — readability, naming, error handling, dead code, code smells
-   - **system-architecture-reviewer** — design patterns, coupling, separation of concerns, API design
-   - **performance-reviewer** — algorithmic complexity, unnecessary allocations, hot paths, caching
-   - **test-coverage-reviewer** — missing tests, edge cases, test quality, untested error paths
-   - **security-code-reviewer** — injection, auth issues, secrets, unsafe operations, input validation
+   - **code-reviewer** — readability, naming, error handling, dead code, code smells
+   - **architecture-reviewer** — where responsibility sits, mixed layers, module coupling, seam contracts
+   - **perf-reviewer** — algorithmic complexity, repeated work, blocking calls, resource cleanup
+   - **test-reviewer** — untested paths, weak assertions, flaky patterns, missing edge cases
+   - **security-reviewer** — injection, secrets, validation at entry, unsafe file and process handling
 
    Instruct each to only report noteworthy findings. No praise, no minor style nits. Omit feedback on pre-existing code not affected by the branch changes.
 
-   Additionally, hand the **code-quality-reviewer** this smell baseline to screen the diff against (Fowler, *Refactoring* ch.3) — beyond its generic brief. Each is a judgement call, not a hard rule: a documented repo or CONTEXT.md convention overrides it, and skip anything tooling already enforces. Name the smell and quote the hunk.
+   Additionally, hand the **code-reviewer** this smell baseline to screen the diff against (Fowler, *Refactoring* ch.3) — beyond its generic brief. Each is a judgement call, not a hard rule: a documented repo or CONTEXT.md convention overrides it, and skip anything tooling already enforces. Name the smell and quote the hunk.
 
    - **Mysterious Name** — a function/variable/type whose name doesn't reveal what it does or holds.
    - **Duplicated Code** — the same logic shape in more than one hunk or file.
