@@ -1,11 +1,14 @@
 ---
 allowed-tools: Bash(task-*),Bash(git *),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
-description: Update claimed task file with current state so next session can resume — self-invoke only as a grill flow step, not as a mid-work checkpoint
+description: Refresh the claimed task file with current state. Reached by the fork that `/forkwc-update-task` spawns.
+user-invocable: false
 ---
 
 Refresh the active task file with current state — what's done, what's left, where to pick up. So a future session (you, after compaction, or a fresh start) reads the file and knows the lay of the land without retracing the whole conversation.
 
-The user can invoke this whenever. Self-invoke only as a step of the `/plan-task` flow — not on your own initiative mid-implementation; commits and the conversation already carry that state.
+Only the fork that `/forkwc-update-task` spawns runs this. Reached any other way, stop and invoke `/forkwc-update-task` instead — it forks, so the git reads and the commit don't land in the caller's session.
+
+Write it self-sufficient. Whoever picks this up gets this file and the context store, nothing else: the plan, the affected files, and any gotchas explicit. A terse jog-my-memory note doesn't survive a cold handoff. Where the file's original body contradicts what was agreed in this conversation, rewrite it rather than leaving both.
 
 1. **Find.** Run `task-list.sh --status active planning`. The first two lines are `Tasks: <project>` and `Worker: <worker>`. Filter rows to those with `[worker]` matching `Worker:`. If not exactly one match, stop and report.
 
@@ -20,3 +23,5 @@ The user can invoke this whenever. Self-invoke only as a step of the `/plan-task
    - **Do NOT** add `## Resolution` — that's for `/complete-task`.
 
 5. **Commit.** Run `task-commit.sh "Update: <slug> [<worker>]"`.
+
+**Return** one line: that the file is written, and its path. Whoever called this agreed the plan and doesn't need it read back.

@@ -22,7 +22,7 @@ Groom the next task: pick it, grill it to an agreed plan, snapshot that plan, an
 
 7. **Wait for go.** Don't snapshot a half-agreed plan. Approving the doc writes at grilling's end is not agreement that the plan is settled — they're separate gates. After the docs commit, ask explicitly whether the plan itself is final; only a clear yes here unlocks step 8.
 
-8. **Snapshot.** Invoke `/update-task` to record the agreed plan. This step stays in this conversation on purpose — the brief is written out of the grill, and only you hold it. Write it self-sufficient: the implementer gets this file and the context store, nothing else. Make the plan, the affected files, and any gotchas explicit; a terse jog-my-memory note doesn't survive a cold handoff. Where the file's original body contradicts what was agreed, rewrite it rather than leaving both.
+8. **Snapshot.** Invoke `/forkwc-update-task`: seeded, it inherits the grill and records the agreed plan as a self-sufficient brief, then returns one line. The git reads, the file re-reads, and the commit die in the fork.
 
 9. **Cold-read.** Invoke `/fork-cold-read`: forked, it puts a context-free reader on the brief and returns the gaps that survive triage. The reader's report and the triage stay in the fork. Answer each returned gap into the task file yourself — the fork returns questions rather than filling them because you hold the grill and it doesn't. Leave those edits uncommitted; `task-planned.sh` sweeps them into the park commit. A gap you can't answer means the plan wasn't final after all: take it to the user, then run the cold read again.
 
