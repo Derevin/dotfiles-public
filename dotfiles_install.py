@@ -43,7 +43,6 @@ COMMON = [
     ("tmux/cc-inspect.sh", ".local/bin/cc-inspect.sh"),
     ("tmux/cc-close-window.sh", ".local/bin/cc-close-window.sh"),
     ("tmux/cc-nav.sh", ".local/bin/cc-nav.sh"),
-    ("tmux/cc-diff.sh", ".local/bin/cc-diff.sh"),
     ("tmux/cc-just.sh", ".local/bin/cc-just.sh"),
     ("tmux/cc-scratch.sh", ".local/bin/cc-scratch.sh"),
     ("tmux/cc-close-pane.sh", ".local/bin/cc-close-pane.sh"),
