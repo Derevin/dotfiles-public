@@ -19,10 +19,12 @@ Run the deep review in isolation. You start cold, which is what makes this a bac
 
    - **Apply** if any holds: it's a defect (wrong behaviour, missing guard, dead code); it violates a documented rule (CLAUDE.md, CONTEXT.md, an ADR); or it's cheap, local, revertible in one hunk *and* the pattern it proposes already exists elsewhere in the repo.
    - **Drop** if any holds: no defect, no documented rule, and no in-repo precedent — taste with nothing behind it; it targets pre-existing code the diff merely touched rather than introduced; or it adds an abstraction, parameter, or hook with no second call site in the diff.
-   - **Ask** only what survives both: wide blast radius *and* a real argument behind it.
+   - **Ask** only what you are **blocked** on: you cannot settle it from the diff, the task file, the context store, or the repo's own conventions, *and* getting it wrong is expensive to undo. Name what the user knows that you don't — if you can't name it, you aren't blocked, so decide.
 
    The in-repo precedent test carries the most weight — "the codebase already does this" is what separates consistency from novelty. Check it, don't assume it.
 
 4. **Apply that bucket.** Edit directly, in place. Don't commit — leave the changes in the working tree for the user to inspect.
 
-5. **Return.** The **Ask** bucket as a numbered list, each item `file:line — one-line description — proposed fix — strongest case against`. If the against-case is plainly stronger, the item was a **Drop** — resolve it there rather than returning it. Then one line for how many findings you applied and how many you dropped. Nothing else: no walk through the diff, no recap of the review.
+5. **Return.** Before listing anything, put every surviving item to one question: *is this the user's to decide, or mine?* Anything you could settle by reading further is yours. Most of the bucket fails this, and a review that returns no questions is a good review.
+
+   Then the **Ask** bucket as a numbered list, each item `file:line — one-line description — proposed fix — strongest case against`. If the against-case is plainly stronger, the item was a **Drop** — resolve it there rather than returning it. Then one line for how many findings you applied and how many you dropped. Nothing else: no walk through the diff, no recap of the review.
