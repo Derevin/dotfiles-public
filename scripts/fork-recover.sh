@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Find forks that started and never returned, and show what they left behind.
-# Usage: fork-recover.sh [--all] [--session ID] [--idle SECS] [--prune] [AGENT_ID]
+# Inspect the fork registry: what never returned, and what forks kept out of the caller.
+# Usage: fork-recover.sh [--all] [--session ID] [--idle SECS] [--tokens] [--prune] [AGENT_ID]
 
 set -uo pipefail
 
@@ -12,10 +12,14 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo "  --session ID   only forks of that parent session"
     echo "  --idle SECS    transcript silence before STALE (default 300)"
     echo "  AGENT_ID       full detail: scratchpad, transcript trail, last words"
+    echo "  --tokens       what returned forks kept out of the caller's context"
     echo "  --prune        drop settled entries"
     echo
     echo "Status: DEAD = owning session gone. STALE = session alive but the fork's"
     echo "transcript has been silent (may be dead, or mid-build). running = active."
+    echo
+    echo "KEPT: how far a fork's context grew past its own briefing, so what the"
+    echo "caller would have carried had the work run inline. RET: what came back."
     exit 0
 fi
 
@@ -24,6 +28,7 @@ ROOT="${FORK_REGISTRY_ROOT:-$HOME/.claude/forks}"
 
 ALL=0
 SESSION=""
+TOKENS=0
 TARGET=""
 IDLE_SECS=300
 SCRATCH_CAP=400
@@ -31,6 +36,7 @@ SCRATCH_CAP=400
 while [ $# -gt 0 ]; do
     case "$1" in
     --all) ALL=1 ;;
+    --tokens) TOKENS=1 ;;
     --session)
         [ $# -ge 2 ] || { echo "--session needs an ID" >&2; exit 2; }
         SESSION="$2"; shift ;;
@@ -48,6 +54,57 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+# The registry records what a fork kept out of its caller when the fork closes
+# (see fork-registry.sh), so open entries and ones predating the accounting have
+# no numbers to show.
+if [ "$TOKENS" = 1 ]; then
+    if [ "$ALL" = 1 ]; then
+        mode=all; scope=""; label="every project"
+    elif [ -n "$SESSION" ]; then
+        mode=session; scope="$SESSION"; label="session ${SESSION%%-*}"
+    elif [ -n "${CLAUDE_CODE_SESSION_ID:-}" ]; then
+        mode=session; scope="$CLAUDE_CODE_SESSION_ID"; label="this session"
+    else
+        mode=cwd; scope="$PWD"; label="this directory"
+    fi
+
+    report=$(jq -sr --arg mode "$mode" --arg scope "$scope" --arg label "$label" '
+        def k: if . == null then "-"
+               elif . >= 10000 then "\(. / 1000 | floor)k"
+               elif . >= 1000 then "\(. / 100 | floor / 10)k"
+               else "\(.)" end;
+        def l(n): tostring | . + ((" " * (n - length)) // "");
+        def r(n): tostring | ((" " * (n - length)) // "") + .;
+        [ .[] | select($mode == "all"
+                       or ($mode == "session" and .session_id == $scope)
+                       or ($mode == "cwd" and .cwd == $scope)) ] as $scoped
+        | ([ $scoped[] | select(.tokens) ] | sort_by(.started // "")) as $rows
+        | ([ $scoped[] | select(.tokens | not) ] | length) as $bare
+        | ($rows | map(.tokens.kept) | add // 0) as $kept
+        | ($rows | map(.tokens.returned) | add // 0) as $ret
+        | (if $bare > 0 then
+               "\($bare) more with no accounting: still open, or closed before it was recorded."
+           else null end) as $note
+        | if ($rows | length) == 0 then "Nothing metered for \($label).", ($note // empty)
+          else
+              ("AGENT" | l(19)) + ("TYPE" | l(21)) + ("TURNS" | r(6))
+                  + ("KEPT" | r(8)) + ("RET" | r(8)) + ("OUT" | r(8)),
+              ($rows[] | (.agent_id | l(19)) + ((.agent_type // "?") | l(21))
+                  + (.tokens.turns | r(6)) + ((.tokens.kept | k) | r(8))
+                  + (("~" + (.tokens.returned | k)) | r(8))
+                  + ((.tokens.output | k) | r(8))),
+              "",
+              "\($rows | length) fork\(if ($rows | length) == 1 then "" else "s" end) kept \($kept | k) out of \($label), returned ~\($ret | k) (net ~\(($kept - $ret) | k))",
+              ($note // empty)
+          end' "$ROOT"/*/meta.json 2>/dev/null)
+    if [ -n "$report" ]; then
+        printf '%s\n' "$report"
+    else
+        echo "No accounting found in $ROOT."
+    fi
+    exit 0
+fi
 
 # Forks are in-process and share the CLI's pid, so the pid alone cannot tell a
 # dead fork from a live one. Transcript mtime is the only per-fork heartbeat.

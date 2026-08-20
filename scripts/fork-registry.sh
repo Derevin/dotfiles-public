@@ -98,6 +98,38 @@ SubagentStop)
             fork_transcript: ($p[0].agent_transcript_path // .fork_transcript),
             last_message: ($p[0].last_assistant_message // "")
         }' "$dir/meta.json" >"$tmp" 2>/dev/null && mv "$tmp" "$dir/meta.json"
+
+    # Accounting has to happen here, not at report time: the numbers live in the
+    # fork's transcript, which only exists where the fork ran. A fork dispatched
+    # from a container writes its entry to the shared registry and leaves the
+    # transcript behind.
+    tr_path=$(jq -r '.fork_transcript // empty' "$dir/meta.json" 2>/dev/null)
+    [ -f "$tr_path" ] || exit 0
+
+    # ctx is the whole prompt at that turn, so its growth over the run is what
+    # the fork accumulated and the caller never had to hold.
+    stats=$(jq -s '[.[] | select(.type=="assistant") | .message.usage | select(. != null)
+                    | {ctx: ((.input_tokens // 0) + (.cache_read_input_tokens // 0)
+                             + (.cache_creation_input_tokens // 0)),
+                       out: (.output_tokens // 0)}]
+                   | select(length > 0)
+                   | {turns: length, ctx_start: .[0].ctx, ctx_peak: (map(.ctx) | max),
+                      output: (map(.out) | add)}
+                   | . + {kept: (.ctx_peak - .ctx_start)}' "$tr_path" 2>/dev/null)
+    [ -n "$stats" ] || exit 0
+
+    # returned: the one figure that did land in the caller, sized off the text.
+    jq --argjson t "$stats" \
+        '. + {tokens: ($t + {returned: ((.last_message | length) / 4 | floor)})}' \
+        "$dir/meta.json" >"$tmp" 2>/dev/null && mv "$tmp" "$dir/meta.json"
+
+    jq 'def k: if . >= 10000 then "\(. / 1000 | floor)k"
+               elif . >= 1000 then "\(. / 100 | floor / 10)k"
+               else "\(.)" end;
+        . as $m | (.tokens // empty)
+        | {systemMessage: ("fork \($m.agent_type) kept \(.kept | k) out of the parent context, "
+                           + "returned ~\(.returned | k) (\(.turns) turns, \(.output | k) output) "
+                           + "[\($m.agent_id)]")}' "$dir/meta.json" 2>/dev/null
     ;;
 esac
 
