@@ -82,6 +82,23 @@ wt_pane_busy() {
     [ "$count" -ne 1 ]
 }
 
+# Is a host pane busy? pane_current_command names the foreground process, and
+# that name is "bash" both for an idle shell and for a bash script running in it
+# (a workspace pane's task-watch.sh, say), where send-keys would be swallowed by
+# the running program. The tty's foreground process group separates the two: an
+# idle shell owns it, a foreground child does not. tpgid is the 6th field past
+# the comm, stripped first because a comm can itself hold spaces and parens.
+# Where procfs can't answer (Git Bash), report idle so the command-name check
+# stands as the only signal.
+pane_busy() {
+    local pane_id="$1" pid tpgid
+    pid=$(tmux display-message -t "$pane_id" -p '#{pane_pid}' 2>/dev/null)
+    [ -n "$pid" ] || return 1
+    tpgid=$(sed 's/^[^)]*) //' "/proc/$pid/stat" 2>/dev/null | awk '{print $6}')
+    [ -n "$tpgid" ] || return 1
+    [ "$tpgid" != "$pid" ]
+}
+
 # Send command to first idle pane (>= min index) in a window, or split if all busy
 # Prefers panes in the spatial direction matching SPLIT_BEFORE
 send_to_idle_or_split() {
@@ -363,7 +380,7 @@ if [ -n "$CALLER_PANE_ID" ]; then
             # Background-takeover: send to caller pane if idle bash in single-pane window; else ephemeral split
             c_win_panes=$(tmux display-message -t "$CALLER_PANE_ID" -p '#{window_panes}')
             c_pane_cmd=$(tmux display-message -t "$CALLER_PANE_ID" -p '#{pane_current_command}')
-            if [[ $c_win_panes -eq 1 && "$c_pane_cmd" =~ ^(bash|zsh)$ ]]; then
+            if [[ $c_win_panes -eq 1 && "$c_pane_cmd" =~ ^(bash|zsh)$ ]] && ! pane_busy "$CALLER_PANE_ID"; then
                 tmux send-keys -t "$CALLER_PANE_ID" "cd '$PWD' && $cmd" Enter
             else
                 tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $cmd"
@@ -426,13 +443,13 @@ if [ -n "$CALLER_PANE_ID" ]; then
                 -F '#{pane_id} #{pane_current_command}' \
                 | while read -r pid pcmd; do
                     if [[ "$(tmux show-options -pvt "$pid" @just_caller 2>/dev/null)" == "$CALLER_PANE_ID" ]] \
-                        && [[ "$pcmd" =~ ^(bash|zsh)$ ]]; then
+                        && [[ "$pcmd" =~ ^(bash|zsh)$ ]] && ! pane_busy "$pid"; then
                         echo "$pid"; break
                     fi
                 done)
             if [ -n "$tagged_pane" ]; then
                 tmux send-keys -t "$tagged_pane" "cd '$PWD' && $cmd" Enter
-            elif [[ "$c_pane_cmd" =~ ^(bash|zsh)$ ]]; then
+            elif [[ "$c_pane_cmd" =~ ^(bash|zsh)$ ]] && ! pane_busy "$CALLER_PANE_ID"; then
                 tmux send-keys -t "$CALLER_PANE_ID" "cd '$PWD' && $cmd" Enter
             else
                 target=$(tmux split-window -t "$CALLER_PANE_ID" -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -d -P -F '#{pane_id}' -c "$PWD")
