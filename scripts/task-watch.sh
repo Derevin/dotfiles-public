@@ -57,14 +57,23 @@ signature() {
     find "$TASKS_DIR" -maxdepth 2 -name '*.md' -printf '%P %T@ %s\n' 2>/dev/null | sort
 }
 
+# One fork for both dimensions and no terminfo lookup: stty reads the pane's tty
+# off stdin. Piped stdin has no size, hence the fallback.
+term_size() {
+    local sz
+    sz=$(stty size 2>/dev/null)
+    [[ $sz =~ ^[0-9]+\ [0-9]+$ ]] || sz="24 80"
+    printf '%s' "$sz"
+}
+
 # Trailing status line owns the last row, and the body stays a line short of the
 # pane so printing it can't scroll the top away. The list runs headerless: the
 # status line already names the project, and three rows matter in a short pane.
 render() {
     local out rows avail total
     out=$(task-list.sh --no-header "${LIST_ARGS[@]}" "$PROJECT" 2>&1)
-    rows=$(tput lines 2>/dev/null)
-    [[ $rows =~ ^[0-9]+$ ]] || rows=24
+    size=$(term_size)
+    rows=${size%% *}
     avail=$((rows - 1))
     total=$(wc -l <<<"$out")
     clear
@@ -89,8 +98,8 @@ sig=$(signature)
 render
 
 while :; do
-    # read doubles as the poll timer: a keypress redraws at once, and a resize
-    # lands on the WINCH trap immediately instead of waiting out a sleep.
+    # read doubles as the poll timer: a keypress redraws at once, and the wait is
+    # short enough that a change nothing signalled can't sit stale for long.
     if [[ -t 0 ]]; then
         if read -rsn1 -t "$POLL" key; then
             [[ $key == q ]] && finish
@@ -99,6 +108,13 @@ while :; do
         fi
     else
         sleep "$POLL"
+    fi
+    # A resize is polled rather than left to the WINCH trap above: a shell that
+    # has sat in this loop for hours can end up catching the signal and never
+    # running the trap, leaving the view stale until the next keypress.
+    if [[ "$(term_size)" != "$size" ]]; then
+        render
+        continue
     fi
     if [[ "$(signature)" != "$sig" ]]; then
         sleep "$SETTLE"
