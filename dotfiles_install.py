@@ -54,6 +54,7 @@ COMMON = [
     ("scripts/find-project.sh", ".local/bin/find-project.sh"),
     ("scripts/task-lib.sh", ".local/bin/task-lib.sh"),
     ("scripts/task-list.sh", ".local/bin/task-list.sh"),
+    ("scripts/task-watch.sh", ".local/bin/task-watch.sh"),
     ("scripts/task-claim.sh", ".local/bin/task-claim.sh"),
     ("scripts/task-done.sh", ".local/bin/task-done.sh"),
     ("scripts/task-cancel.sh", ".local/bin/task-cancel.sh"),

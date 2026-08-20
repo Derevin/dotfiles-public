@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# List tasks for a project. Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [PROJECT]
+# List tasks for a project. Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [PROJECT]
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "List tasks for a project (defaults to detected project)."
-    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [PROJECT]"
+    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [PROJECT]"
     echo "Statuses: todo planning planned active done canceled"
+    echo "--no-header drops the project/worker lines, for callers short on rows."
     echo "Shows open statuses only (todo planning planned active); done and"
     echo "canceled need an explicit --status or --all."
     exit 0
@@ -17,6 +18,7 @@ source "$SCRIPT_DIR/task-lib.sh"
 status_list=()
 show_all=false
 verbose=false
+no_header=false
 explicit_project=""
 
 while [[ $# -gt 0 ]]; do
@@ -32,6 +34,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --all) show_all=true; shift ;;
     --verbose) verbose=true; shift ;;
+    --no-header) no_header=true; shift ;;
     *) explicit_project=$1; shift ;;
   esac
 done
@@ -45,7 +48,6 @@ if [[ -n "$explicit_project" ]]; then
 else
   detect_project
 fi
-detect_worker
 
 list_dir() {
   local dir=$1 label=$2
@@ -86,9 +88,14 @@ elif $show_all; then
   statuses=(canceled done active planned planning todo)
 fi
 
-echo "Tasks: $PROJECT"
-echo "Worker: $WORKER"
-echo ""
+# The worker is the header's only consumer, so detecting it is header-only work
+# (it shells out to git).
+if ! $no_header; then
+  detect_worker
+  echo "Tasks: $PROJECT"
+  echo "Worker: $WORKER"
+  echo ""
+fi
 total_shown=0
 for s in "${statuses[@]}"; do
   label=$(echo "$s" | tr '[:lower:]' '[:upper:]')

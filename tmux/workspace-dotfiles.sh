@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
-# Dotfiles workspace: claude on left, two terminals on right, sync strip on top.
+# Dotfiles workspace: claude on left, live task list over a terminal on the
+# right, sync strip on top.
 #
-# Optional args: <extra-repo-path> [window-name] [claude-name]. When given, the
-# bottom-right pane opens in that repo with its own claude instead of a plain
-# dotfiles terminal, the window is named <window-name> (default "dotx"), and that
-# claude's display name is <claude-name> (default: repo basename). A private
-# recipe supplies these.
+# The top-right pane is parked in the workspace's own repo and runs
+# task-watch.sh, a live queue view: the pane is rarely typed in, and Ctrl-C
+# leaves a shell there when it is.
+#
+# Optional args: <extra-repo-path> [window-name] [claude-name]. When given, both
+# right-hand panes are rooted in that repo, the bottom one runs its own claude
+# instead of a plain dotfiles terminal, the window is named <window-name>
+# (default "dotx"), and that claude's display name is <claude-name> (default:
+# repo basename). A private recipe supplies these.
 #
 # Pane references are by pane_id (the stable %N) rather than index, because
 # tmux re-numbers pane indices by spatial position when panes are added or
 # removed — adding the sync strip above pane 1 reshuffles everything otherwise.
 if [[ "${1:-}" == "--help" ]]; then
-    echo "Dotfiles workspace: claude left, two terminals right, sync strip on top."
+    echo "Dotfiles workspace: claude left, live task list over a terminal right."
     echo "Usage: workspace-dotfiles.sh [extra-repo-path] [window-name] [claude-name]"
     exit 0
 fi
@@ -20,10 +25,10 @@ DIR=~/repos/dotfiles
 EXTRA_REPO="${1:-}"
 
 BASE="dotfiles"
-P3DIR="$DIR"
+RIGHT_DIR="$DIR"
 if [[ -n "$EXTRA_REPO" ]]; then
     BASE="${2:-dotx}"
-    P3DIR="$EXTRA_REPO"
+    RIGHT_DIR="$EXTRA_REPO"
     P3NAME="${3:-$(basename "$EXTRA_REPO")}"
 fi
 WINDOW="$BASE"
@@ -58,8 +63,8 @@ tmux setw -t "$W" automatic-rename off
 
 # Lay out three panes and capture each pane_id before adding the sync strip.
 P1=$(tmux display-message -t "$W.1" -p '#{pane_id}')
-P2=$(tmux split-window -h -t "$P1" -c "$DIR" -P -F '#{pane_id}')
-P3=$(tmux split-window -v -t "$P2" -c "$P3DIR" -P -F '#{pane_id}')
+P2=$(tmux split-window -h -t "$P1" -c "$RIGHT_DIR" -P -F '#{pane_id}')
+P3=$(tmux split-window -v -t "$P2" -c "$RIGHT_DIR" -P -F '#{pane_id}')
 
 tmux set-option -pt "$P1" @split-dir down
 tmux set-option -pt "$P2" @split-dir up
@@ -89,6 +94,11 @@ if [[ $TAKEOVER -eq 1 ]]; then
     tmux send-keys -t "$P1" "cd $DIR && CLAUDE_LABEL=dotfiles claude --effort max" Enter
 else
     tmux send-keys -t "$P1" "CLAUDE_LABEL=dotfiles claude --effort max" Enter
+fi
+
+# Guarded on the tasks repo: a clone without it keeps a plain shell here.
+if [[ -d ~/repos/tasks ]]; then
+    tmux send-keys -t "$P2" "task-watch.sh" Enter
 fi
 
 # Extra-repo mode: bottom-right pane runs claude in the given repo.
