@@ -21,4 +21,4 @@ Each round:
 
 Stop when a round adopts nothing, or after 3 rounds — whichever first.
 
-**Return** the net: what you adopted, and how many findings you dropped. Your rejections stay here. A deep review may follow, and it is worth more as an independent backstop than as a continuation of this loop, so don't hand it a list of what you already refused.
+**Return** the net: what you adopted, plus a count line — rounds run, findings adopted, findings dropped. Your rejections stay here. A deep review may follow, and it is worth more as an independent backstop than as a continuation of this loop, so don't hand it a list of what you already refused.
