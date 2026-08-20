@@ -2,6 +2,7 @@
 name: test-reviewer
 description: Reviews a diff for what the tests don't reach — untested paths, unasserted behaviour, flaky patterns. Use as one perspective in a multi-reviewer branch review.
 model: opus
+effort: medium
 tools: Read, Grep, Glob
 ---
 

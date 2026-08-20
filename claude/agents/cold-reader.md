@@ -2,7 +2,7 @@
 name: cold-reader
 description: Judges whether a written brief can be implemented by someone who was not in the conversation that produced it. Use when a plan, task file, or handoff doc must be tested for missing context before someone else picks it up.
 model: opus
-effort: medium
+effort: low
 tools: Read, Grep, Glob
 ---
 

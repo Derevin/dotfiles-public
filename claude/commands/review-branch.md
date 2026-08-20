@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash(cc-review-diff.sh*),Read
-description: Review current branch changes (effort=medium)
+description: Review current branch changes
 effort: medium
 ---
 

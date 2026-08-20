@@ -2,6 +2,7 @@
 name: security-reviewer
 description: Reviews a diff for exploitable weakness — untrusted input, injection, secrets, unsafe file and process handling. Use as one perspective in a multi-reviewer branch review.
 model: opus
+effort: medium
 tools: Read, Grep, Glob
 ---
 

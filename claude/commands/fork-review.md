@@ -13,7 +13,7 @@ Run the deep review in isolation. You start cold, which is what makes this a bac
 
 1. **Find.** Run `task-list.sh --status active`. The first two lines are `Tasks: <project>` and `Worker: <worker>`; take the row whose `[worker]` matches. That's the task the diff is meant to satisfy. Resolve `<project>` via `find-project.sh` to reach the context store at `~/repos/context/<project>/`.
 
-2. **Review.** Invoke `/review-branch-medium`. If a converge loop ran before you, treat it as unrelated: you are the independent backstop, and what it dropped is deliberately not yours to know. Don't skip a perspective because something upstream already called the diff clean.
+2. **Review.** Invoke `/review-branch`. If a converge loop ran before you, treat it as unrelated: you are the independent backstop, and what it dropped is deliberately not yours to know. Don't skip a perspective because something upstream already called the diff clean.
 
 3. **Gate.** Sort every finding on cost of being wrong, not on how weighty the idea sounds. A cheap, locally revertible change is cheaper to make than to return a question about — the user inspects the working tree either way.
 
