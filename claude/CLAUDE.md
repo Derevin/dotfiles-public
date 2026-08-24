@@ -2,7 +2,7 @@
 
 Sacrifice grammar for being concise.
 
-Every prose draft gets a trim pass: could this say the same in half the words? If yes, rewrite and re-ask. Stop when the next cut would drop a claim, not just words.
+Every prose draft gets a trim pass: could this say the same in half the words? Cut whole sentences before reformulating any — one that rephrases the sentence before it, a frame with no claim behind it ("worth dwelling on") — grammar-tightening pays 5%, not 50%. Then re-ask. Stop when a cut would drop a claim, not just words; a claim stated twice is one claim.
 
 Don't open a sentence with a lowercase symbol/path/identifier (`modules/gui/...`, `foo()`) — rephrase so it starts with a capital letter; a lowercase start looks malformed.
 
