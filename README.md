@@ -32,6 +32,7 @@ config leans on for diagnostics in place of the built-in linter — that needs
 - `claude/` — global Claude Code config: `CLAUDE.md`, skills, commands
 - `scripts/` — workflow tooling (sync, project resolution, a task queue, a context store)
 - `just/justfile` — global `just` recipes
+- `docs/` — gotchas worth reading first
 
 ## Task queue & context store
 
