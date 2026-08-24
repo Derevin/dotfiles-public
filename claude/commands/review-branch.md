@@ -37,4 +37,6 @@ Review the current branch's diff against its merge base. Works offline — no PR
    - **Middle Man** — a unit that mostly just delegates onward.
    - **Refused Bequest** — a subclass/implementer ignoring or overriding most of what it inherits.
 
+   Dispatch all five before collecting any, so they run concurrently. Each Agent call hands back an agentId, not a report; collect one `TaskOutput` per agentId (`block: true`, `timeout: 600000`), calling again on any that returns still-running. Nothing notifies a dispatching subagent when its children finish — sleeping or polling hangs until the user kills you.
+
 3. **Synthesize.** Review all subagent feedback. Post only findings you also deem noteworthy. Group by file, quote relevant diff context. Include any domain-term drift or ADR violations from step 1a. End with a short summary and suggested next steps.
