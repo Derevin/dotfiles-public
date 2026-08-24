@@ -37,16 +37,23 @@ fi
 # Single-quote a value for safe embedding in a shell command (mirrors cq()).
 sq() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
 
+# The direnv hook rides on PROMPT_COMMAND, which a non-interactive `bash -lc`
+# never runs, so a dispatched recipe would build with none of the worktree's
+# .envrc (ccache base_dir, max_size). Load it by hand, after any cd into the
+# worktree. Stderr stays visible: a blocked .envrc must not fail silently.
+DIRENV_LOAD='eval "$(direnv export bash)"; '
+
 # Build the in-backend command for --interactive-after: run the recipe, append
 # it verbatim to the history file, then exec an interactive login shell. The
 # recipe runs in a non-interactive `bash -lc` whose in-memory history is lost at
 # exec, so the seed goes through the history FILE, which the fresh login shell
 # reads at startup. HISTFILE is unset in `bash -lc`, so the fallback resolves to
-# the same path the interactive shell defaults to.
+# the same path the interactive shell defaults to. The seed records the bare
+# recipe, so the env load never shows up under Up-arrow.
 seeded_interactive_cmd() {
     local seed
     seed='printf '\''%s\n'\'' '"$(sq "$1")"' >> "${HISTFILE:-$HOME/.bash_history}"'
-    printf 'trap : INT; %s; %s; exec bash -l' "$1" "$seed"
+    printf 'trap : INT; %s%s; %s; exec bash -l' "$DIRENV_LOAD" "$1" "$seed"
 }
 
 case "${WT:0:1}" in
@@ -87,7 +94,7 @@ case "$backend" in
             exec docker exec -it "${DOCKER_ENV[@]}" -w "$WORKDIR" "$CONTAINER" \
                 bash -lc "$(seeded_interactive_cmd "$INNER_CMD")"
         elif [ -n "$INNER_CMD" ]; then
-            exec docker exec -it "${DOCKER_ENV[@]}" -w "$WORKDIR" "$CONTAINER" bash -lc "$INNER_CMD"
+            exec docker exec -it "${DOCKER_ENV[@]}" -w "$WORKDIR" "$CONTAINER" bash -lc "$DIRENV_LOAD$INNER_CMD"
         else
             exec docker exec -it "${DOCKER_ENV[@]}" -w "$WORKDIR" "$CONTAINER" bash -l
         fi
@@ -107,7 +114,7 @@ case "$backend" in
         if [ -n "$INNER_CMD" ] && [ "$INTERACTIVE_AFTER" -eq 1 ]; then
             exec coder ssh "$WORKSPACE" -- "$(cq bash -lc "${EXT_ENV}cd $WORKDIR && $(seeded_interactive_cmd "$INNER_CMD")")"
         elif [ -n "$INNER_CMD" ]; then
-            exec coder ssh "$WORKSPACE" -- "$(cq bash -lc "${EXT_ENV}cd $WORKDIR && $INNER_CMD")"
+            exec coder ssh "$WORKSPACE" -- "$(cq bash -lc "${EXT_ENV}cd $WORKDIR && $DIRENV_LOAD$INNER_CMD")"
         else
             exec coder ssh "$WORKSPACE" -- "$(cq bash -lc "${EXT_ENV}cd $WORKDIR && exec bash -l")"
         fi

@@ -348,6 +348,13 @@ fi
 TMUX=
 CALLER_PANE_ID=$(tmux show-environment -g JUST_CALLER 2>/dev/null | cut -d= -f2-)
 
+# The direnv hook rides on PROMPT_COMMAND, which the non-interactive `$SHELL -c`
+# behind a command-carrying split-window never runs, so a backgrounded recipe
+# would build with none of the worktree's .envrc (ccache base_dir, max_size).
+# The send-keys paths need no such load: they type into an interactive pane that
+# already sits in the target dir. Backend dispatch is wt-shell's own business.
+DIRENV_LOAD='eval "$(direnv export bash)"; '
+
 # Dispatch to target pane if running inside tmux popup with caller context
 if [ -n "$CALLER_PANE_ID" ]; then
     # Determine split direction: explicit @split-dir tag wins, else position heuristic
@@ -383,7 +390,7 @@ if [ -n "$CALLER_PANE_ID" ]; then
             if [[ $c_win_panes -eq 1 && "$c_pane_cmd" =~ ^(bash|zsh)$ ]] && ! pane_busy "$CALLER_PANE_ID"; then
                 tmux send-keys -t "$CALLER_PANE_ID" "cd '$PWD' && $cmd" Enter
             else
-                tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $cmd"
+                tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $DIRENV_LOAD$cmd"
             fi
         fi
     elif [[ $BACKGROUND -eq 1 ]]; then
@@ -391,7 +398,7 @@ if [ -n "$CALLER_PANE_ID" ]; then
             tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "wt-shell $WT \"$cmd\""
         else
             # Background: ephemeral split that auto-closes when command finishes
-            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $cmd"
+            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $DIRENV_LOAD$cmd"
         fi
     elif [ -n "$WT" ]; then
         # Foreground in a worktree backend. pane_current_command on the host
