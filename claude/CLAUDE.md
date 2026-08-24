@@ -2,6 +2,8 @@
 
 Sacrifice grammar for being concise.
 
+Every prose draft gets a trim pass: could this say the same in half the words? If yes, rewrite and re-ask. Stop when the next cut would drop a claim, not just words.
+
 Don't open a sentence with a lowercase symbol/path/identifier (`modules/gui/...`, `foo()`) — rephrase so it starts with a capital letter; a lowercase start looks malformed.
 
 Comments: sparse — don't write one that just narrates the code below it; reserve them for the surprising, the non-obvious, or the *why*.
