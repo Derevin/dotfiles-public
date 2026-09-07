@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cc-review-diff.sh*),Read
+allowed-tools: Bash(cc-review-diff.sh*),Bash(fork-collect.sh*),Read
 description: Review current branch changes
 effort: medium
 ---
@@ -37,6 +37,6 @@ Review the current branch's diff against its merge base. Works offline — no PR
    - **Middle Man** — a unit that mostly just delegates onward.
    - **Refused Bequest** — a subclass/implementer ignoring or overriding most of what it inherits.
 
-   Dispatch all five before collecting any, so they run concurrently. Each Agent call hands back an agentId, not a report; collect one `TaskOutput` per agentId (`block: true`, `timeout: 600000`), calling again on any that returns still-running. Nothing notifies a dispatching subagent when its children finish — sleeping or polling hangs until the user kills you.
+   Dispatch all five before collecting any, so they run concurrently. Hand each a report path — `reports/<perspective>.md` under your scratchpad — and require its final output be that path alone. A child's return lands in the top-level session, never in a dispatching fork: a returned body is both lost to the fork and dumped into the context it was forked to keep clean. A dispatching fork is not reliably notified when a child finishes and has no `TaskOutput`, so collect with `fork-collect.sh <reports-dir> <agentId>:code.md <agentId>:architecture.md ...`, pairing each id the Agent tool returned with the file you gave that reviewer. It waits for every entry to close, prints each report, and names any reviewer it gave up on or that closed without writing one. Sleeping or polling instead hangs until the user kills you.
 
 3. **Synthesize.** Review all subagent feedback. Post only findings you also deem noteworthy. Group by file, quote relevant diff context. Include any domain-term drift or ADR violations from step 1a. End with a short summary and suggested next steps.
