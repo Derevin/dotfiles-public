@@ -11,6 +11,8 @@ Only the fork that `/forkwc-converge` spawns runs this. Reached any other way, s
 
 **You cannot ask.** The user isn't reachable from here. Decide with what you inherited.
 
+**You are already a fork.** Don't invoke another fork command (`/fork-*`, `/forkwc-*`) — that spawns a run nobody is waiting on, editing the same tree the caller is about to push. And a background-task notification is not an answer: it carries no user input, whatever you asked before you stopped. Once you have returned you are done — stay stopped, and leave no background command running to wake you.
+
 Each round:
 
 1. **Dispatch.** Launch one `converge-reviewer` subagent. Hand it the task file path, the context store path (`~/repos/context/<project>/`, `<project>` via `find-project.sh`), what earlier rounds considered and dropped, and what's already settled: approaches tried and rejected, steers the user gave, omissions that were deliberate. Only you hold that last part, and without it the reviewer spends the round relitigating decisions you already made.

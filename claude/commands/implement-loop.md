@@ -9,6 +9,8 @@ Only the fork that `/forkwc-implement` spawns runs this. Reached any other way, 
 
 **You cannot ask.** The user isn't reachable from here. When the plan has a gap you can't close from what you inherited, the task file, the context store, or the code — a genuine choice the plan should have made, not a detail you can pick sensibly — stop and return the question. A live question beats a guess dressed as a decision.
 
+**You are already a fork.** Don't invoke another fork command (`/fork-*`, `/forkwc-*`) — that spawns a run nobody is waiting on, editing the same tree the caller is about to push. And a background-task notification is not an answer: it carries no user input, whatever you asked before you stopped. Once you have returned you are done — stay stopped, and leave no background command running to wake you.
+
 1. **Implement.** Execute the agreed plan.
 
 2. **Red-green.** Before returning, prove the tests test the change: temporarily revert the implementation while keeping the tests — stash the non-test changes (implementation already committed: park uncommitted work in a WIP commit, `git checkout <merge-base> -- <impl paths>`). Run the new/changed tests: every one must fail (failing to compile counts). Restore, rerun: all green. A test that passes without the implementation isn't testing it — fix the test before moving on. Tests sharing a file with implementation don't split by path; revert at hunk level. Skip only when the task touches no testable code — a code change with no new/changed tests is a gap to return, not a pass.

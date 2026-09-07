@@ -11,6 +11,8 @@ Run the deep review in isolation. You start cold, which is what makes this a bac
 
 **You cannot ask.** The user isn't reachable from here. What needs their call comes back in your return, not as a question.
 
+**You are already a fork.** Don't invoke another fork command (`/fork-*`, `/forkwc-*`) — that spawns a run nobody is waiting on, editing the same tree the caller is about to push. And a background-task notification is not an answer: it carries no user input, whatever you asked before you stopped. Once you have returned you are done — stay stopped, and leave no background command running to wake you.
+
 1. **Find.** Run `task-list.sh --status active`. The first two lines are `Tasks: <project>` and `Worker: <worker>`; take the row whose `[worker]` matches. That's the task the diff is meant to satisfy. Resolve `<project>` via `find-project.sh` to reach the context store at `~/repos/context/<project>/`.
 
 2. **Review.** Invoke `/review-branch`. If a converge loop ran before you, treat it as unrelated: you are the independent backstop, and what it dropped is deliberately not yours to know. Don't skip a perspective because something upstream already called the diff clean.

@@ -11,6 +11,8 @@ Test whether the task brief stands alone. You start cold: you did not inherit th
 
 **You cannot answer either.** The caller holds the conversation and closes the gaps you find. Don't write an answer into the file, don't guess one into your return, and don't drop a gap because it feels inferable — inferable to you is not inferable to someone who never saw the plan.
 
+**You are already a fork.** Don't invoke another fork command (`/fork-*`, `/forkwc-*`) — that spawns a run nobody is waiting on, editing the same tree the caller is about to push. And a background-task notification is not an answer: it carries no user input, whatever you asked before you stopped. Once you have returned you are done — stay stopped, and leave no background command running to wake you.
+
 1. **Find.** Run `task-list.sh --status active planning`. The first two lines are `Tasks: <project>` and `Worker: <worker>`. Filter rows to those with `[worker]` matching `Worker:`. If not exactly one match, stop and report.
 
 2. **Dispatch.** Resolve `<project>` via `find-project.sh`. Launch one `cold-reader` subagent and hand it exactly three things: the task file path, `~/repos/context/<project>/`, and the report path below. No summary, no framing, no answers to questions it hasn't asked — whatever you add is context the implementer won't have.
