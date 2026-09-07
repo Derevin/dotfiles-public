@@ -20,7 +20,7 @@ Groom the next task: pick it, grill it to an agreed plan, snapshot that plan, an
 
 6. **Grill.** Invoke `/grill-me-with-docs`, handing it the step 4 framing and the recon brief. The first round's frontier comes off that framing, not the file body. It interviews the user about scope and design until you reach a shared plan. Don't proceed until the user is satisfied.
 
-7. **Wait for go.** Don't snapshot a half-agreed plan. Approving the doc writes at grilling's end is not agreement that the plan is settled — they're separate gates. After the docs commit, ask explicitly whether the plan itself is final; only a clear yes here unlocks step 8.
+7. **Wait for go.** Don't snapshot a half-agreed plan. Grilling's closing checkpoint puts the plan and the doc writes in one message — a clear yes on the plan half unlocks step 8, anything less reopens the grill. Don't re-ask after the docs commit.
 
 8. **Snapshot.** Invoke `/forkwc-update-task`: it inherits the grill and records the agreed plan as a self-sufficient brief, then returns one line. The git reads, the file re-reads, and the commit die in the fork.
 

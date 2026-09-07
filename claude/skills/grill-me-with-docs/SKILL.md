@@ -91,14 +91,23 @@ If a term gets clearly resolved mid-session and you're confident it belongs in t
 
 ### Before handoff to implementation (mandatory)
 
-Before the grilling can end — before summarizing the plan, before the user can sensibly say "go" — STOP and run a checkpoint:
+Before the grilling can end — before the user can sensibly say "go" — STOP and post one checkpoint message. Both halves in one go, split by a rule:
 
-1. List every term sharpened, introduced, or pinned down during the session. Show proposed `CONTEXT.md` diffs.
-2. List every decision that meets the ADR bar (see below). Show proposed ADR drafts.
-3. Get yes/no per item. Write the accepted ones, commit via `context-commit.sh` (format below).
-4. Stop. Ask the user explicitly whether to start implementation. Approving the doc writes is not approval to implement — they're separate steps.
+```
+<proposed CONTEXT.md diffs, proposed ADR drafts>
 
-If nothing qualifies, say so explicitly ("no glossary updates, no ADRs") — don't silently skip.
+---
+
+<the plan as it now stands, whole>
+```
+
+Top half: every term sharpened, introduced, or pinned down this session; every decision that meets the ADR bar (see below). If nothing qualifies, say so explicitly ("no glossary updates, no ADRs") — don't silently skip.
+
+Bottom half: the plan, for the user to call final or reopen.
+
+One reply settles both — yes/no per doc item, plus the plan's verdict. Write the accepted docs, commit via `context-commit.sh` (format below). A reopened plan doesn't hold up the doc writes; the terms already resolved stand.
+
+Then stop and ask explicitly whether to start implementation. A final plan is not approval to implement — separate steps.
 
 ### ADR bar
 
