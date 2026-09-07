@@ -223,9 +223,12 @@ if [ -z "$recipes" ]; then
     exit 0
 fi
 
-# fzf picker with preview
+# fzf picker with preview. tiebreak=begin ranks by match position — the default
+# `length` tiebreak settles ties on total line length, which lets a doc comment
+# two characters longer rank `target-mock` above `mock` for the query "mock".
 selection=$(echo "$recipes" | fzf \
     --prompt "recipe> " \
+    --tiebreak=begin,length \
     --preview 'src={1}; recipe={2}; if [ "$src" = "global" ]; then just -g --show "$recipe" 2>/dev/null; else just --show "$recipe" 2>/dev/null; fi' \
     --preview-window=right:50%:wrap)
 
