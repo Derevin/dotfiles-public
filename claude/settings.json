@@ -66,7 +66,6 @@
       "Bash(wget *| bash*)",
       "Bash(curl *| sh*)",
       "Bash(wget *| sh*)",
-      "Bash(gh pr create *)",
       "Bash(gh pr comment *)",
       "Bash(gh pr close *)",
       "Bash(gh pr merge *)",
