@@ -18,12 +18,14 @@ SETTLE=0.2
 
 WIDTH_BEFORE=$(tmux display-message -p '#{pane_width}')
 tmux resize-pane -Z
-read -r TTY CMD COLS ROWS <<<"$(tmux display-message -p '#{pane_tty} #{pane_current_command} #{pane_width} #{pane_height}')"
+read -r TTY CMD COLS ROWS WT <<<"$(tmux display-message -p '#{pane_tty} #{pane_current_command} #{pane_width} #{pane_height} #{@wt}')"
 
-# Nothing re-wraps unless the width moved (a sole pane zooms to the same size),
-# and only Claude Code re-renders on resize — any other pane just gets a lie.
+# Nothing re-wraps unless the width moved (a sole pane zooms to the same size).
 [[ "$COLS" != "$WIDTH_BEFORE" ]] || exit 0
-[[ "$CMD" == "claude" ]] || exit 0
+# Only Claude Code re-renders on resize — any other pane just gets a lie. A
+# worktree pane runs it inside docker/coder, where the host sees only the client
+# as the pane command, so @wt stands in; the resize is proxied to the backend pty.
+[[ "$CMD" == "claude" || -n "$WT" ]] || exit 0
 
 trap 'stty -F "$TTY" rows "$ROWS" 2>/dev/null' EXIT
 stty -F "$TTY" rows $((ROWS * ROWS_FACTOR))
