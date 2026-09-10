@@ -1,27 +1,20 @@
 #!/usr/bin/env bash
 # Close pane with context-aware behavior (Alt+w).
-# 1. Zoomed         → unzoom
-# 2. Inspect window → toggle back via cc-inspect.sh
-# 3. Default        → kill pane
+# 1. Zoomed  → unzoom
+# 2. Default → kill pane
 
 if [[ "${1:-}" == "--help" ]]; then
-    echo "Close the current pane; zoomed and inspect windows get their own behaviour."
+    echo "Close the current pane; a zoomed pane unzooms instead."
     echo "Usage: cc-close-pane.sh"
     exit 0
 fi
 
-WINDOW_NAME=$(tmux display-message -p '#{window_name}')
 ZOOMED=$(tmux display-message -p '#{window_zoomed_flag}')
 
 # Zoomed → just unzoom
 if [[ "$ZOOMED" == "1" ]]; then
     tmux resize-pane -Z
     exit 0
-fi
-
-# Inspect window → toggle back
-if [[ "$WINDOW_NAME" =~ ^i[0-9]*[1-9]$ ]]; then
-    exec cc-inspect.sh
 fi
 
 # Unclosable pane (e.g. overview originals) → no-op

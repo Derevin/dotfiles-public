@@ -99,22 +99,6 @@ pane_busy() {
     [ "$tpgid" != "$pid" ]
 }
 
-# Send command to first idle pane (>= min index) in a window, or split if all busy
-# Prefers panes in the spatial direction matching SPLIT_BEFORE
-send_to_idle_or_split() {
-    local t="$1" min="$2" target="" sort_flag="-rn"
-    [ -n "$SPLIT_BEFORE" ] && sort_flag="-n"
-    target=$(tmux list-panes -t "$t" -F '#{pane_top} #{pane_index} #{pane_current_command}' \
-        | sort $sort_flag \
-        | awk -v m="$min" '$2 >= m && $3 ~ /^(bash|zsh)$/ {print $2; exit}')
-    if [ -n "$target" ]; then
-        target="$t.$target"
-    else
-        target=$(tmux split-window -t "$t" -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -d -P -F '#{pane_id}' -c "$PWD")
-    fi
-    tmux send-keys -t "$target" "cd '$PWD' && $cmd" Enter
-}
-
 # Hide per-repo recipes whose backing repo isn't checked out. A recipe opts in
 # with a `# requires-repo <name>` body marker (the `@#` form is a silent no-op);
 # we drop it from the listing when ~/repos/<name> is absent — so e.g. recipes
@@ -440,32 +424,27 @@ if [ -n "$CALLER_PANE_ID" ]; then
     else
         # Foreground (default): interactive dispatch to caller's pane
         caller_info=$(tmux display-message -t "$CALLER_PANE_ID" \
-            -p '#{session_name}|#{window_index}|#{window_name}|#{pane_index}|#{pane_current_command}')
-        IFS='|' read -r c_sess c_win_idx c_win_name c_pane_idx c_pane_cmd <<< "$caller_info"
+            -p '#{session_name}|#{window_index}|#{pane_index}|#{pane_current_command}')
+        IFS='|' read -r c_sess c_win_idx c_pane_idx c_pane_cmd <<< "$caller_info"
         caller_target="$c_sess:$c_win_idx"
 
-        if [[ "$c_win_name" =~ ^i[0-9]*[1-9]$ ]]; then
-            # Inspect window: send to first idle console pane (3+)
-            send_to_idle_or_split "$caller_target" 3
+        # Check for a tagged idle pane from a previous recipe run
+        tagged_pane=$(tmux list-panes -t "$caller_target" \
+            -F '#{pane_id} #{pane_current_command}' \
+            | while read -r pid pcmd; do
+                if [[ "$(tmux show-options -pvt "$pid" @just_caller 2>/dev/null)" == "$CALLER_PANE_ID" ]] \
+                    && [[ "$pcmd" =~ ^(bash|zsh)$ ]] && ! pane_busy "$pid"; then
+                    echo "$pid"; break
+                fi
+            done)
+        if [ -n "$tagged_pane" ]; then
+            tmux send-keys -t "$tagged_pane" "cd '$PWD' && $cmd" Enter
+        elif [[ "$c_pane_cmd" =~ ^(bash|zsh)$ ]] && ! pane_busy "$CALLER_PANE_ID"; then
+            tmux send-keys -t "$CALLER_PANE_ID" "cd '$PWD' && $cmd" Enter
         else
-            # Check for a tagged idle pane from a previous recipe run
-            tagged_pane=$(tmux list-panes -t "$caller_target" \
-                -F '#{pane_id} #{pane_current_command}' \
-                | while read -r pid pcmd; do
-                    if [[ "$(tmux show-options -pvt "$pid" @just_caller 2>/dev/null)" == "$CALLER_PANE_ID" ]] \
-                        && [[ "$pcmd" =~ ^(bash|zsh)$ ]] && ! pane_busy "$pid"; then
-                        echo "$pid"; break
-                    fi
-                done)
-            if [ -n "$tagged_pane" ]; then
-                tmux send-keys -t "$tagged_pane" "cd '$PWD' && $cmd" Enter
-            elif [[ "$c_pane_cmd" =~ ^(bash|zsh)$ ]] && ! pane_busy "$CALLER_PANE_ID"; then
-                tmux send-keys -t "$CALLER_PANE_ID" "cd '$PWD' && $cmd" Enter
-            else
-                target=$(tmux split-window -t "$CALLER_PANE_ID" -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -d -P -F '#{pane_id}' -c "$PWD")
-                tmux set-option -pt "$target" @just_caller "$CALLER_PANE_ID"
-                tmux send-keys -t "$target" "cd '$PWD' && $cmd" Enter
-            fi
+            target=$(tmux split-window -t "$CALLER_PANE_ID" -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -d -P -F '#{pane_id}' -c "$PWD")
+            tmux set-option -pt "$target" @just_caller "$CALLER_PANE_ID"
+            tmux send-keys -t "$target" "cd '$PWD' && $cmd" Enter
         fi
     fi
 else

@@ -40,7 +40,6 @@ COMMON = [
     ("tmux/.tmux-base.conf", ".tmux-base.conf"),
     ("tmux/.tmux-popup.conf", ".tmux-popup.conf"),
     ("tmux/overview.sh", ".local/bin/overview.sh"),
-    ("tmux/cc-inspect.sh", ".local/bin/cc-inspect.sh"),
     ("tmux/cc-close-window.sh", ".local/bin/cc-close-window.sh"),
     ("tmux/cc-nav.sh", ".local/bin/cc-nav.sh"),
     ("tmux/cc-just.sh", ".local/bin/cc-just.sh"),
