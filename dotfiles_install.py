@@ -47,6 +47,7 @@ COMMON = [
     ("tmux/save-editor.sh", ".local/bin/save-editor.sh"),
     ("tmux/wt-cleanup.sh", ".local/bin/wt-cleanup.sh"),
     ("tmux/select-pane.sh", ".local/bin/select-pane.sh"),
+    ("tmux/zoom.sh", ".local/bin/zoom.sh"),
     ("tmux/wt-split.sh", ".local/bin/wt-split.sh"),
     ("just/justfile", ".justfile"),
     ("scripts/find-project.sh", ".local/bin/find-project.sh"),
