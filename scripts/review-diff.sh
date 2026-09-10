@@ -4,7 +4,7 @@
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "Branch diff for review: commits + diff merge-base..HEAD (incl. untracked)."
-    echo "Usage: cc-review-diff.sh"
+    echo "Usage: review-diff.sh"
     exit 0
 fi
 

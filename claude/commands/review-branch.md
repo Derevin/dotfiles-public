@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cc-review-diff.sh*),Bash(fork-collect.sh*),Read
+allowed-tools: Bash(review-diff.sh*),Bash(fork-collect.sh*),Read
 description: Review current branch changes
 effort: medium
 ---
@@ -8,7 +8,7 @@ Review the current branch's diff against its merge base. Works offline — no PR
 
 ## Steps
 
-1. **Gather changes.** Run exactly `cc-review-diff.sh` (no arguments, no fallbacks, no shell wrappers) to get the commit log and full diff. The script handles merge-base discovery internally.
+1. **Gather changes.** Run exactly `review-diff.sh` (no arguments, no fallbacks, no shell wrappers) to get the commit log and full diff. The script handles merge-base discovery internally.
 
 1a. **Read project domain docs.** Resolve `<project>` via `find-project.sh`. If `~/repos/context/<project>/CONTEXT.md` (or `CONTEXT-MAP.md` + per-context files) exists, read it and note any terms the diff renames, repurposes, or contradicts. If `adr/` exists, skim for decisions the diff might violate. Hold these findings for step 3. Skip silently if the context store doesn't exist.
 

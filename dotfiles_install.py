@@ -66,7 +66,7 @@ COMMON = [
     ("scripts/task-cleanup-branch.sh", ".local/bin/task-cleanup-branch.sh"),
     ("scripts/sync.sh", ".local/bin/sync.sh"),
     ("scripts/subtrees-push.sh", ".local/bin/subtrees-push.sh"),
-    ("scripts/cc-review-diff.sh", ".local/bin/cc-review-diff.sh"),
+    ("scripts/review-diff.sh", ".local/bin/review-diff.sh"),
     ("scripts/fork-registry.sh", ".local/bin/fork-registry.sh"),
     ("scripts/fork-recover.sh", ".local/bin/fork-recover.sh"),
     ("scripts/fork-collect.sh", ".local/bin/fork-collect.sh"),
