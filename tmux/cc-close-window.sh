@@ -19,7 +19,7 @@ if [[ "$WINDOW_NAME" =~ ^i[0-9]*[1-9]$ ]]; then
         INSPECT_CLAUDE_PANE=$(tmux display-message -t ":${WINDOW_NAME}.2" -p '#{pane_id}')
         tmux swap-pane -s "$STORED_PANE" -t "$INSPECT_CLAUDE_PANE"
     fi
-elif [[ "$WINDOW_NAME" != "scratch" ]]; then
+else
     # Reap each worktree pane's in-backend process tree before the window dies —
     # kill-window only SIGHUPs the local docker-exec/coder-ssh clients, orphaning
     # everything inside the container/workspace (see cc-wt-cleanup.sh). Detached

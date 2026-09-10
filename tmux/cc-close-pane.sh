@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # Close pane with context-aware behavior (Alt+w).
-# 1. Scratch        → kill pane if idle, return to caller
-# 2. Zoomed other   → unzoom
-# 3. Inspect window → toggle back via cc-inspect.sh
-# 4. Default        → kill pane
+# 1. Zoomed         → unzoom
+# 2. Inspect window → toggle back via cc-inspect.sh
+# 3. Default        → kill pane
 
 if [[ "${1:-}" == "--help" ]]; then
-    echo "Close the current pane; scratch, zoomed, and inspect windows get their own behaviour."
+    echo "Close the current pane; zoomed and inspect windows get their own behaviour."
     echo "Usage: cc-close-pane.sh"
     exit 0
 fi
@@ -14,22 +13,7 @@ fi
 WINDOW_NAME=$(tmux display-message -p '#{window_name}')
 ZOOMED=$(tmux display-message -p '#{window_zoomed_flag}')
 
-# Scratch → kill pane if idle, return to previous window
-if [[ "$WINDOW_NAME" == "scratch" ]]; then
-    [[ "$ZOOMED" == "1" ]] && tmux resize-pane -Z
-    # Capture target BEFORE kill — tmux's last-window updates if the kill destroys scratch.
-    TARGET=$(tmux display-message -t '{last}' -p '#{window_id}' 2>/dev/null)
-    PANE_CMD=$(tmux display-message -p '#{pane_current_command}')
-    [[ "$PANE_CMD" =~ ^(bash|zsh)$ ]] && tmux kill-pane
-    # If still on scratch (busy pane skipped kill, or other panes alive), navigate to target.
-    # If scratch died, tmux already auto-focused to last-window (= captured target).
-    if [[ -n "$TARGET" ]] && [[ "$(tmux display-message -p '#{window_name}')" == "scratch" ]]; then
-        tmux select-window -t "$TARGET" 2>/dev/null
-    fi
-    exit 0
-fi
-
-# Zoomed (not scratch) → just unzoom
+# Zoomed → just unzoom
 if [[ "$ZOOMED" == "1" ]]; then
     tmux resize-pane -Z
     exit 0
