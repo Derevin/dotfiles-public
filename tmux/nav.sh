@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Navigate to next/prev window, skipping any window tagged with @hidden.
-# Usage: cc-nav.sh next|prev
+# Usage: nav.sh next|prev
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "Navigate to next/prev window, skipping windows tagged with @hidden."
-    echo "Usage: cc-nav.sh next|prev"
+    echo "Usage: nav.sh next|prev"
     exit 0
 fi
 

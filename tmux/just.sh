@@ -3,7 +3,7 @@
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "Fuzzy just-recipe picker merging project and global justfiles."
-    echo "Usage: cc-just.sh"
+    echo "Usage: just.sh"
     exit 0
 fi
 

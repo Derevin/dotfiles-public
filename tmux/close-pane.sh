@@ -5,7 +5,7 @@
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "Close the current pane; a zoomed pane unzooms instead."
-    echo "Usage: cc-close-pane.sh"
+    echo "Usage: close-pane.sh"
     exit 0
 fi
 
@@ -24,12 +24,12 @@ fi
 
 # Default → save editor (if any), reap any in-backend process tree, then kill pane.
 # A docker-exec/coder-ssh worktree pane leaves its in-container processes running
-# on kill-pane (the client has no signal proxying); cc-wt-cleanup.sh SIGTERMs them
+# on kill-pane (the client has no signal proxying); wt-cleanup.sh SIGTERMs them
 # by their inherited WT_PANE_ID tag. Detached so the pane closes instantly.
-cc-save-editor.sh
+save-editor.sh
 WT=$(tmux show-options -pv @wt 2>/dev/null)
 if [[ -n "$WT" ]]; then
     PANE_ID=$(tmux display-message -p '#{pane_id}')
-    setsid cc-wt-cleanup.sh "$WT" "$PANE_ID" </dev/null >/dev/null 2>&1 &
+    setsid wt-cleanup.sh "$WT" "$PANE_ID" </dev/null >/dev/null 2>&1 &
 fi
 tmux kill-pane

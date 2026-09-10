@@ -1,7 +1,7 @@
 # tmux gotchas
 
 Hard-won behaviour of tmux itself. Worth a read before editing `tmux/.tmux*.conf`
-or a script that drives tmux (`tmux/cc-*.sh`, anything spawning popups or hooks).
+or a script that drives tmux (`tmux/*.sh`, anything spawning popups or hooks).
 
 **Terminal type.** `.tmux-base.conf` prefers `tmux-256color` (it has `Sync`,
 synchronized output, which fixes irregular redraw and cursor flicker in fzf and

@@ -9,7 +9,7 @@
 # child inherits it, even after reparenting to init (so a host-side pstree walk
 # would miss them). Match on it, SIGTERM, then SIGKILL stragglers.
 #
-# Usage: cc-wt-cleanup.sh <wt-slot> <pane-id>
+# Usage: wt-cleanup.sh <wt-slot> <pane-id>
 #   wt-slot:  dwtN | cwtN  (backend from first letter: d→docker, c→coder)
 #   pane-id:  tmux pane id, e.g. %12  (matches WT_PANE_ID set at launch)
 #
@@ -19,14 +19,14 @@ set -euo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     echo "Kill the in-backend process tree of a closing worktree pane (by WT_PANE_ID)."
-    echo "Usage: cc-wt-cleanup.sh <wt-slot> <pane-id>"
+    echo "Usage: wt-cleanup.sh <wt-slot> <pane-id>"
     exit 0
 fi
 
 WT="${1:-}"
 PANE_ID="${2:-}"
 if [[ -z "$WT" || -z "$PANE_ID" ]]; then
-    echo "usage: cc-wt-cleanup.sh <wt-slot> <pane-id>" >&2
+    echo "usage: wt-cleanup.sh <wt-slot> <pane-id>" >&2
     exit 2
 fi
 

@@ -24,7 +24,7 @@ esac
 shift
 
 # Vertical splits honor the caller's @split-dir tag so manual splits land on the
-# same side as justfile dispatch (keep in sync with cc-just.sh): up → new pane
+# same side as justfile dispatch (keep in sync with just.sh): up → new pane
 # above, down → below. Untagged panes keep the default (below) unless small and
 # in the upper half.
 BEFORE=""

@@ -26,7 +26,7 @@ config leans on for diagnostics in place of the built-in linter — that needs
 ## What's inside
 
 - `bash/` — shell config, prompt, a direnv hook
-- `tmux/` — tmux config and an Alt-driven pane/window workflow (`cc-*`, worktree dispatch)
+- `tmux/` — tmux config and an Alt-driven pane/window workflow (worktree dispatch)
 - `alacritty/`, `windows-terminal/` — terminal config per platform
 - `micro/` — the micro editor
 - `claude/` — global Claude Code config: `CLAUDE.md`, skills, commands

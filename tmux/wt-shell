@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Open a shell into a worktree backend.
 # Backend derived from the slot name's first letter: d → docker, c → coder.
-# Sets the @wt tmux pane option so cc-just.sh routes recipe dispatch correctly.
+# Sets the @wt tmux pane option so just.sh routes recipe dispatch correctly.
 set -euo pipefail
 if [[ "${1:-}" == "--help" ]]; then
     echo "Open a shell into a worktree backend: d -> docker, c -> coder."
@@ -17,7 +17,7 @@ WT_DOCKER_WORKDIR_PREFIX="${WT_DOCKER_WORKDIR_PREFIX:-}"
 
 # --interactive-after: after running the inner cmd, drop into an interactive
 # login shell with the cmd recorded in its history (Up-arrow recalls it). Used
-# by cc-just's foreground recipe dispatch so the split pane shows what it ran.
+# by just.sh's foreground recipe dispatch so the split pane shows what it ran.
 INTERACTIVE_AFTER=0
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -85,7 +85,7 @@ case "$backend" in
         fi
 
         DOCKER_ENV=(-e "TERM=${TERM:-xterm-256color}")
-        # Propagate the multiplexer pane id so cc-just.sh can detect busy
+        # Propagate the multiplexer pane id so just.sh can detect busy
         # panes by counting in-container processes that inherited it.
         if [ -n "$PANE_ID_FOR_CONTAINER" ]; then
             DOCKER_ENV+=(-e "WT_PANE_ID=$PANE_ID_FOR_CONTAINER")

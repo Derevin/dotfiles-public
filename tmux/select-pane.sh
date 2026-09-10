@@ -1,11 +1,11 @@
 #!/bin/bash
 # Select a pane by quadrant tag (fallback index), or move focus in a direction.
 # Keeps the window zoomed either way.
-# Usage: cc-select-pane.sh <number|L|R|U|D>
+# Usage: select-pane.sh <number|L|R|U|D>
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "Select a pane by quadrant tag/index, or move focus L/R/U/D. Keeps the window zoomed."
-    echo "Usage: cc-select-pane.sh <number|L|R|U|D>"
+    echo "Usage: select-pane.sh <number|L|R|U|D>"
     exit 0
 fi
 
