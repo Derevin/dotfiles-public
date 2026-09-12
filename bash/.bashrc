@@ -5,6 +5,10 @@
 # Local scripts
 [[ -d ~/.local/bin ]] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && PATH="$HOME/.local/bin:$PATH"
 
+# Editor
+export EDITOR=micro
+export VISUAL=micro
+
 # Rust (rustup)
 [[ -f ~/.cargo/env ]] && . ~/.cargo/env
 
