@@ -403,6 +403,31 @@ def apply_gnome_keybindings(dry_run: bool, verbose: bool = False):
         action(f"  warn: gnome keybindings apply failed ({script})")
 
 
+def reload_tmux_conf(dry_run: bool, verbose: bool = False):
+    """Re-source ~/.tmux.conf in a running tmux server. A server holds its
+    bindings in memory, so a pull that rewrites the conf — or renames a script
+    the conf calls — leaves every key firing the old command until the server
+    dies. The symlink is already correct in that case, so no other step here
+    notices; the reload is unconditional whenever a server is up."""
+    conf = HOME / ".tmux.conf"
+    if not conf.exists() or shutil.which("tmux") is None:
+        return
+    # source-file would spawn a server if none is running; only reload a live one.
+    probe = subprocess.run(
+        ["tmux", "list-sessions"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    if probe.returncode != 0:
+        return
+    if dry_run:
+        action(f"  reload tmux conf ({conf})")
+        return
+    if verbose:
+        print(f"  reload tmux conf ({conf})")
+    if subprocess.run(["tmux", "source-file", str(conf)]).returncode != 0:
+        action(f"  warn: tmux conf reload failed ({conf})")
+
+
 def main(extra_layers=(), install_root=None, provision=None):
     layers = [own_layer(), *extra_layers]
     if install_root is None:
@@ -474,6 +499,7 @@ def main(extra_layers=(), install_root=None, provision=None):
         link(src, dst, args.dry_run, args.verbose)
 
     apply_gnome_keybindings(args.dry_run, args.verbose)
+    reload_tmux_conf(args.dry_run, args.verbose)
 
     if _actions_taken == 0:
         print("install: ✓")
