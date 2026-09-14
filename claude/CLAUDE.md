@@ -54,8 +54,6 @@ Prefer built-in tools (Read, Grep, Glob) and CLI tools (jq, sort, cut, tr, uniq,
 
 Just run commands directly — the working directory is already set. No `cd dir && cmd`, no `git -C`, no `git --git-dir`, no path workarounds. Run `pwd` first if unsure. If you genuinely need a different directory, run `cd` as a separate command first.
 
-Don't use `$(...)` command substitution — each subshell is a separate permission prompt. Hardcode values (e.g. `-j4`, not `-j$(nproc)`).
-
 Never poll for a command you started — run it with `run_in_background`, wait for the exit notification. Hand-rolled wait loops busy-spin (foreground `sleep` is blocked) and never time out.
 
 `pgrep -f` / `pkill -f` match the matcher's own command line — `pgrep -f ctest` in a shell whose argv contains "ctest" never goes false. Match exact name (`-x`), or exclude `$$`.
