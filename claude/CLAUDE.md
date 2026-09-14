@@ -56,6 +56,10 @@ Just run commands directly — the working directory is already set. No `cd dir 
 
 Don't use `$(...)` command substitution — each subshell is a separate permission prompt. Hardcode values (e.g. `-j4`, not `-j$(nproc)`).
 
+Never poll for a command you started — run it with `run_in_background`, wait for the exit notification. Hand-rolled wait loops busy-spin (foreground `sleep` is blocked) and never time out.
+
+`pgrep -f` / `pkill -f` match the matcher's own command line — `pgrep -f ctest` in a shell whose argv contains "ctest" never goes false. Match exact name (`-x`), or exclude `$$`.
+
 ## Output handling
 
 Large command output: dump once to `/tmp` (`> /tmp/<name>.out 2>&1`), re-read slices via `Read` offset/limit. Don't rerun command with different ranges.
