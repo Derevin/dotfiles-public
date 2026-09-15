@@ -15,7 +15,9 @@ Act immediately: no clarifying questions, no approval step, no preamble. The tit
 - The one and only stop condition: `$argument` is empty or whitespace-only → fail with "title required", write nothing. Anything non-empty gets filed.
 - Detect project via `task-list.sh`. Create `~/repos/tasks/$PROJECT/{todo,planning,planned,active,done,canceled}` if missing.
 - Get next ID via `task-next-id.sh <project>` — never scan by hand.
-- Default priority N. Inline hints like "urgent:", "high priority:", "low:" map to the letter prefix per `~/repos/tasks/CLAUDE.md` (H/N/U); strip the hint from the title before slugging.
+- Default priority N. A priority hint at either end of `$argument` sets the letter and is stripped — with its separator (`:`, `,`, `-`) — before slugging. A hint mid-title is title text, not a hint.
+  - Bare letter + "priority"/"prio", either order → that letter verbatim, any A-Z. `K priority, fix-network-checks` files `K012-fix-network-checks.md`; the hint never survives into the slug as `k-prio-…`.
+  - Word hints ("urgent", "high priority", "low") → H/N/U per `~/repos/tasks/CLAUDE.md`.
 - Write `~/repos/tasks/<project>/todo/<letter><NNN>-<slug>.md` containing just `# Title`.
 - `task-commit.sh "Add: <slug>"`.
 - Report the created filename.
