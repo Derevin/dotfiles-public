@@ -16,6 +16,16 @@ WINDOW="overview"
 LAUNCH_CLAUDE=0
 DIRS=()
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# lab-lib.sh sits beside this script once installed; in the repo the tmux and
+# script helpers are kept apart, and the private tmux scripts a level further.
+for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts"; do
+    [ -f "$d/lab-lib.sh" ] && { source "$d/lab-lib.sh"; break; }
+done
+# A miss is otherwise silent: every lab_* call expands to nothing and the caller
+# degrades instead of stopping — a pane with no Claude, a recipe on the host.
+declare -F lab_resolve >/dev/null || { echo "overview.sh: cannot find lab-lib.sh" >&2; exit 1; }
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --window) WINDOW="$2"; shift 2 ;;
@@ -107,7 +117,7 @@ if [[ $LAUNCH_CLAUDE -eq 1 ]]; then
         name="${d##*/}"
         [[ "$name" =~ -[a-z]?wt[0-9]+$ ]] && name="${name##*-}"
         id=$(tmux list-panes -t "$W" -F '#{@quadrant} #{pane_id}' | awk -v n="$q" '$1==n{print $2; exit}')
-        tmux send-keys -t "${id:-$W.$q}" "CLAUDE_LABEL=$name claude --effort max" Enter
+        tmux send-keys -t "${id:-$W.$q}" "$(lab_claude_cmd "$name")" Enter
     done
 fi
 

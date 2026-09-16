@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
-# Open a shell into a worktree backend.
-# Backend derived from the slot name's first letter: d → docker, c → coder.
-# Sets the @wt tmux pane option so just.sh routes recipe dispatch correctly.
+# Open a shell in a lab.
+# Backend comes from the name's first letter: h → host, d → docker, c → coder.
+# Sets the @lab and @backend tmux pane options so just.sh routes recipe dispatch
+# correctly and lab-release.sh knows what the pane is showing.
 set -euo pipefail
 if [[ "${1:-}" == "--help" ]]; then
-    echo "Open a shell into a worktree backend: d -> docker, c -> coder."
-    echo "Usage: wt-shell [--interactive-after] <wt> [cmd...]"
+    echo "Open a shell in a lab: h -> host, d -> docker, c -> coder."
+    echo "Usage: lab-shell [--interactive-after] <lab> [cmd...]"
     exit 0
 fi
 
-# Worktree backend config (private; absent on public installs → empty defaults).
-WT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"
-[ -f "$WT_CONF" ] && . "$WT_CONF"
-WT_CONTAINER_PREFIX="${WT_CONTAINER_PREFIX:-}"
-WT_DOCKER_WORKDIR_PREFIX="${WT_DOCKER_WORKDIR_PREFIX:-}"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# lab-lib.sh sits beside this script once installed; in the repo the tmux and
+# script helpers are kept apart, and the private tmux scripts a level further.
+for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts"; do
+    [ -f "$d/lab-lib.sh" ] && { source "$d/lab-lib.sh"; break; }
+done
+# A miss is otherwise silent: every lab_* call expands to nothing and the caller
+# degrades instead of stopping — a pane with no Claude, a recipe on the host.
+declare -F lab_resolve >/dev/null || { echo "lab-shell: cannot find lab-lib.sh" >&2; exit 1; }
 
 # --interactive-after: after running the inner cmd, drop into an interactive
 # login shell with the cmd recorded in its history (Up-arrow recalls it). Used
@@ -27,20 +32,19 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-WT="${1:-}"
+LAB="${1:-}"
 INNER_CMD="${2:-}"
-if [ -z "$WT" ]; then
-    echo "usage: wt-shell [--interactive-after] <dwtN|cwtN> [inner-cmd]"
+if [ -z "$LAB" ]; then
+    echo "usage: lab-shell [--interactive-after] <lab> [inner-cmd]"
     exit 1
 fi
 
-# Single-quote a value for safe embedding in a shell command (mirrors cq()).
-sq() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
+lab_resolve "$LAB" || exit 1
 
 # The direnv hook rides on PROMPT_COMMAND, which a non-interactive `bash -lc`
-# never runs, so a dispatched recipe would build with none of the worktree's
-# .envrc (ccache base_dir, max_size). Load it by hand, after any cd into the
-# worktree. Stderr stays visible: a blocked .envrc must not fail silently.
+# never runs, so a dispatched recipe would build with none of the lab's .envrc
+# (ccache base_dir, max_size). Load it by hand, after any cd into the worktree.
+# Stderr stays visible: a blocked .envrc must not fail silently.
 DIRENV_LOAD='eval "$(direnv export bash)"; '
 
 # Build the in-backend command for --interactive-after: run the recipe, append
@@ -52,32 +56,40 @@ DIRENV_LOAD='eval "$(direnv export bash)"; '
 # recipe, so the env load never shows up under Up-arrow.
 seeded_interactive_cmd() {
     local seed
-    seed='printf '\''%s\n'\'' '"$(sq "$1")"' >> "${HISTFILE:-$HOME/.bash_history}"'
+    seed='printf '\''%s\n'\'' '"$(lab_sq "$1")"' >> "${HISTFILE:-$HOME/.bash_history}"'
     printf 'trap : INT; %s%s; %s; exec bash -l' "$DIRENV_LOAD" "$1" "$seed"
 }
 
-case "${WT:0:1}" in
-    d) backend="docker" ;;
-    c) backend="coder" ;;
-    *) echo "wt-shell: unknown backend prefix for slot '$WT' (expected dwt* or cwt*)" >&2; exit 1 ;;
-esac
-
 if [ -n "${TMUX:-}" ] && [ -n "${TMUX_PANE:-}" ]; then
-    tmux set-option -pt "$TMUX_PANE" @wt "$WT" 2>/dev/null || true
+    tmux set-option -pt "$TMUX_PANE" @lab "$LAB" 2>/dev/null || true
+    tmux set-option -pt "$TMUX_PANE" @backend "$LAB_BACKEND" 2>/dev/null || true
 fi
 
-# Container busy-check uses WT_PANE_ID — set to the tmux pane id when present.
+# Container busy-check uses LAB_PANE_ID — set to the tmux pane id when present.
 PANE_ID_FOR_CONTAINER="${TMUX_PANE:-}"
 
-case "$backend" in
+case "$LAB_BACKEND" in
+    host)
+        [ -d "$LAB_WORKTREE" ] || { echo "lab-shell: no worktree at $LAB_WORKTREE" >&2; exit 1; }
+        cd "$LAB_WORKTREE"
+        # No LAB_PANE_ID export: a host lab's processes are ordinary children of
+        # the pane, so kill-pane reaps them and lab-cleanup.sh has nothing to do.
+        if [ -n "$INNER_CMD" ] && [ "$INTERACTIVE_AFTER" -eq 1 ]; then
+            exec bash -lc "$(seeded_interactive_cmd "$INNER_CMD")"
+        elif [ -n "$INNER_CMD" ]; then
+            exec bash -lc "$DIRENV_LOAD$INNER_CMD"
+        else
+            exec bash -l
+        fi
+        ;;
     docker)
-        CONTAINER="${WT_CONTAINER_PREFIX}$WT"
+        CONTAINER="$LAB_CONTAINER"
         # Use the host-shaped path so claude keys per-project state under the
         # same encoded cwd as host runs (~/.claude/projects/-home-...).
-        WORKDIR="${WT_DOCKER_WORKDIR_PREFIX}$WT"
+        WORKDIR="$LAB_WORKTREE"
 
         if ! docker container inspect "$CONTAINER" >/dev/null 2>&1; then
-            echo "Container $CONTAINER does not exist. Run 'just dwt-up' to create it."
+            echo "Container $CONTAINER does not exist."
             exit 1
         fi
         if [ "$(docker container inspect -f '{{.State.Running}}' "$CONTAINER")" != "true" ]; then
@@ -88,7 +100,7 @@ case "$backend" in
         # Propagate the multiplexer pane id so just.sh can detect busy
         # panes by counting in-container processes that inherited it.
         if [ -n "$PANE_ID_FOR_CONTAINER" ]; then
-            DOCKER_ENV+=(-e "WT_PANE_ID=$PANE_ID_FOR_CONTAINER")
+            DOCKER_ENV+=(-e "LAB_PANE_ID=$PANE_ID_FOR_CONTAINER")
         fi
         if [ -n "$INNER_CMD" ] && [ "$INTERACTIVE_AFTER" -eq 1 ]; then
             exec docker exec -it "${DOCKER_ENV[@]}" -w "$WORKDIR" "$CONTAINER" \
@@ -100,17 +112,17 @@ case "$backend" in
         fi
         ;;
     coder)
-        WORKSPACE="${WT_CONTAINER_PREFIX}$WT"
+        WORKSPACE="$LAB_CONTAINER"
         # Coder workspaces clone the repo at /workspace (set by coder_agent.dir).
         # cd there directly — no host-shape worktree symlink any more.
         EXT_ENV=""
-        [ -n "$PANE_ID_FOR_CONTAINER" ] && EXT_ENV="export WT_PANE_ID='$PANE_ID_FOR_CONTAINER'; "
+        [ -n "$PANE_ID_FOR_CONTAINER" ] && EXT_ENV="export LAB_PANE_ID='$PANE_ID_FOR_CONTAINER'; "
         WORKDIR="/workspace"
         # coder ssh space-joins remote argv without re-quoting, so a bare
         # `bash -lc "<script>"` gets mangled — bash -lc grabs only the first
-        # word and the WT_PANE_ID export is silently dropped. Pre-quote each
+        # word and the LAB_PANE_ID export is silently dropped. Pre-quote each
         # token so the workspace shell re-parses it into the original words.
-        cq() { local a out=""; for a in "$@"; do out+=" '${a//\'/\'\\\'\'}'"; done; printf '%s' "$out"; }
+        cq() { local a out=""; for a in "$@"; do out+=" $(lab_sq "$a")"; done; printf '%s' "$out"; }
         if [ -n "$INNER_CMD" ] && [ "$INTERACTIVE_AFTER" -eq 1 ]; then
             exec coder ssh "$WORKSPACE" -- "$(cq bash -lc "${EXT_ENV}cd $WORKDIR && $(seeded_interactive_cmd "$INNER_CMD")")"
         elif [ -n "$INNER_CMD" ]; then

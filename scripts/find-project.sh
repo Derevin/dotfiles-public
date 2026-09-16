@@ -2,7 +2,8 @@
 # Print the project name for the current git repo.
 # A .find-project.conf in $PWD or any ancestor overrides everything; otherwise
 # looks up ~/repos/dotfiles/projects.conf, falling back to lowercase basename.
-# Worktree suffixes -hwt<N>, -dwt<slot>, -cwt<slot> are stripped before lookup.
+# Lab suffixes -{h,d,c}lab-<name> and the legacy -hwt<N>/-dwt<N>/-cwt<N> are
+# stripped before lookup.
 
 set -euo pipefail
 
@@ -64,6 +65,9 @@ basename=$(basename "$logical_top")
 stripped=${basename%%-hwt[0-9]*}
 stripped=${stripped%%-dwt*}
 stripped=${stripped%%-cwt*}
+stripped=${stripped%%-hlab-*}
+stripped=${stripped%%-dlab-*}
+stripped=${stripped%%-clab-*}
 
 if [[ -f "$PROJECTS_CONF" ]]; then
   project_name=$(grep -v '^#' "$PROJECTS_CONF" \

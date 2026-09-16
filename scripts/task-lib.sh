@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared functions for task management scripts. Source, don't execute.
 
-TASKS_ROOT=~/repos/tasks
+TASKS_ROOT="${TASKS_ROOT:-$HOME/repos/tasks}"
 
 # detect_project — sets PROJECT and TASKS_DIR
 detect_project() {
@@ -15,17 +15,32 @@ detect_project() {
 
 # detect_worker — sets WORKER
 detect_worker() {
-  # Worktree backend config (private; absent on public installs → empty default).
-  local wt_conf="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"
-  [ -f "$wt_conf" ] && . "$wt_conf"
-  # Inside a coder workspace, the cwd is /workspace (no per-worktree symlink) —
-  # take the slot from CODER_WORKSPACE_NAME directly. Same idea for docker dwts.
-  if [[ -n "${CODER_WORKSPACE_NAME:-}" ]]; then
-    WORKER="${CODER_WORKSPACE_NAME#${WT_CONTAINER_PREFIX:-}}"
-    return
+  # Required, not optional: the name derivations below are lab-lib.sh's. An
+  # install that predates it — a dwt container only relinks on the dho4 refresh
+  # strip — must say so, because the alternative is a worker stamped from a
+  # half-derivation, which is the silent mis-stamp this function exists to end.
+  local lab_lib="$(dirname "${BASH_SOURCE[0]}")/lab-lib.sh"
+  if [[ ! -f "$lab_lib" ]]; then
+    echo "task-lib: $lab_lib is missing — re-run dotfiles_install.py" >&2
+    return 1
   fi
-  if [[ -n "${DWT_NAME:-}" ]]; then
-    WORKER="$DWT_NAME"
+  source "$lab_lib"
+
+  # Inside a coder workspace the cwd is /workspace, with no path to read the
+  # name back out of — take it from the workspace name. A docker lab exports
+  # LAB_NAME for the same reason; the twelve legacy containers have DWT_NAME
+  # baked in at create and it cannot be changed, so that read stays as long as
+  # they do.
+  local name=""
+  if [[ -n "${CODER_WORKSPACE_NAME:-}" ]]; then
+    name=$(lab_strip_prefix "$CODER_WORKSPACE_NAME")
+  elif [[ -n "${LAB_NAME:-}" ]]; then
+    name="$LAB_NAME"
+  elif [[ -n "${DWT_NAME:-}" ]]; then
+    name="$DWT_NAME"
+  fi
+  if [[ -n "$name" ]]; then
+    WORKER=$(lab_head "$name")
     return
   fi
 
@@ -40,7 +55,11 @@ detect_worker() {
     dirname=$(basename "$logical_top")
   fi
 
+  # The stamp is the head only — it lands in Worker: lines and in commit
+  # subjects, where the slug would be noise.
   if [[ "${dirname:-}" =~ -([hdc]wt[0-9]+)$ ]]; then
+    WORKER="${BASH_REMATCH[1]}"
+  elif [[ "${dirname:-}" =~ -([hdc]lab-(tmp[0-9]+|[0-9]{3}))(-|$) ]]; then
     WORKER="${BASH_REMATCH[1]}"
   else
     WORKER="main"

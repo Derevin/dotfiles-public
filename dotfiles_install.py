@@ -45,19 +45,21 @@ COMMON = [
     ("tmux/just.sh", ".local/bin/just.sh"),
     ("tmux/close-pane.sh", ".local/bin/close-pane.sh"),
     ("tmux/save-editor.sh", ".local/bin/save-editor.sh"),
-    ("tmux/wt-cleanup.sh", ".local/bin/wt-cleanup.sh"),
+    ("tmux/lab-cleanup.sh", ".local/bin/lab-cleanup.sh"),
     ("tmux/select-pane.sh", ".local/bin/select-pane.sh"),
     ("tmux/zoom.sh", ".local/bin/zoom.sh"),
-    ("tmux/wt-split.sh", ".local/bin/wt-split.sh"),
+    ("tmux/lab-split.sh", ".local/bin/lab-split.sh"),
     ("just/justfile", ".justfile"),
     ("scripts/find-project.sh", ".local/bin/find-project.sh"),
     ("scripts/task-lib.sh", ".local/bin/task-lib.sh"),
+    ("scripts/lab-lib.sh", ".local/bin/lab-lib.sh"),
     ("scripts/task-list.sh", ".local/bin/task-list.sh"),
     ("scripts/task-watch.sh", ".local/bin/task-watch.sh"),
     ("scripts/task-claim.sh", ".local/bin/task-claim.sh"),
     ("scripts/task-done.sh", ".local/bin/task-done.sh"),
     ("scripts/task-cancel.sh", ".local/bin/task-cancel.sh"),
     ("scripts/task-unclaim.sh", ".local/bin/task-unclaim.sh"),
+    ("scripts/task-restamp.sh", ".local/bin/task-restamp.sh"),
     ("scripts/task-next-id.sh", ".local/bin/task-next-id.sh"),
     ("scripts/task-planned.sh", ".local/bin/task-planned.sh"),
     ("scripts/task-reprioritize.sh", ".local/bin/task-reprioritize.sh"),
@@ -107,11 +109,34 @@ LINUX_ONLY = [
     ("scripts/micro-fzf.sh", ".local/bin/micro-fzf.sh"),
     ("scripts/micro-yazi.sh", ".local/bin/micro-yazi.sh"),
     ("scripts/micro-lastfile.sh", ".local/bin/micro-lastfile.sh"),
-    ("tmux/wt-shell", ".local/bin/wt-shell"),
-    ("tmux/wt-run", ".local/bin/wt-run"),
-    ("tmux/wt-popup", ".local/bin/wt-popup"),
+    ("tmux/lab-shell", ".local/bin/lab-shell"),
+    ("tmux/lab-run", ".local/bin/lab-run"),
+    ("tmux/lab-popup", ".local/bin/lab-popup"),
+    ("tmux/lab-attach.sh", ".local/bin/lab-attach.sh"),
+    ("tmux/lab-release.sh", ".local/bin/lab-release.sh"),
+    ("tmux/lab-restore.sh", ".local/bin/lab-restore.sh"),
+    ("tmux/lab-inflight.sh", ".local/bin/lab-inflight.sh"),
+    ("tmux/lab-start.sh", ".local/bin/lab-start.sh"),
+    ("tmux/launchpad.sh", ".local/bin/launchpad.sh"),
+    ("scripts/lab-new.sh", ".local/bin/lab-new.sh"),
+    ("scripts/lab-claim.sh", ".local/bin/lab-claim.sh"),
+    ("scripts/lab-drop.sh", ".local/bin/lab-drop.sh"),
+    ("scripts/lab-list.sh", ".local/bin/lab-list.sh"),
+    ("scripts/lab-current.sh", ".local/bin/lab-current.sh"),
     ("tmux/park-host-worktrees.sh", ".local/bin/park-host-worktrees.sh"),
     ("scripts/apply-gnome-keybindings.sh", ".local/bin/apply-gnome-keybindings.sh"),
+]
+
+# Symlinks a previous version of this installer created, under names nothing
+# maps to any more. It links by name, so a renamed script leaves its old link
+# behind, still resolving and still first on PATH for anything that kept calling
+# it. Only removed when the link still points into the dotfiles tree.
+REMOVED = [
+    ".local/bin/wt-shell",
+    ".local/bin/wt-run",
+    ".local/bin/wt-popup",
+    ".local/bin/wt-split.sh",
+    ".local/bin/wt-cleanup.sh",
 ]
 
 # Sibling repos under ~/repos are declared in each layer's repos.conf (shared
@@ -124,13 +149,14 @@ class Layer:
     later layer wins on a dst collision. A standalone install is one layer (this
     file's own dir); the private superproject adds its own via main(extra_layers)."""
 
-    def __init__(self, root, common=(), windows_only=(), linux_only=(), tarballs=(), url_artifacts=()):
+    def __init__(self, root, common=(), windows_only=(), linux_only=(), tarballs=(), url_artifacts=(), removed=()):
         self.root = Path(root)
         self.common = list(common)
         self.windows_only = list(windows_only)
         self.linux_only = list(linux_only)
         self.tarballs = list(tarballs)
         self.url_artifacts = list(url_artifacts)
+        self.removed = list(removed)
 
     def mappings(self):
         return self.common + (self.windows_only if IS_WINDOWS else self.linux_only)
@@ -142,7 +168,7 @@ class Layer:
 
 def own_layer():
     """The layer rooted at this installer's own directory."""
-    return Layer(DOTFILES, COMMON, WINDOWS_ONLY, LINUX_ONLY, LINUX_TARBALLS, LINUX_URL_ARTIFACTS)
+    return Layer(DOTFILES, COMMON, WINDOWS_ONLY, LINUX_ONLY, LINUX_TARBALLS, LINUX_URL_ARTIFACTS, REMOVED)
 
 
 def merge_mappings(layers):
@@ -385,6 +411,29 @@ def link(src: Path, dst: Path, dry_run: bool, verbose: bool = False):
             dst.symlink_to(src)
 
 
+def prune(root: Path, dst_rels, dry_run: bool, verbose: bool = False):
+    """Remove symlinks a previous version of this layer created. Only links that
+    still point inside the layer's own root — anything else is the user's file,
+    or another layer's, and is left alone. A dangling link still resolves to the
+    path it names, so a removed source is pruned too."""
+    # Both sides resolved, or a dotfiles tree reached through a symlink never
+    # matches and every stale link survives a run that reports success.
+    root = Path(root).resolve()
+    for rel in dst_rels:
+        dst = HOME / rel
+        if not dst.is_symlink():
+            continue
+        try:
+            target = dst.resolve()
+        except OSError:
+            continue
+        if root not in target.parents:
+            continue
+        action(f"  remove stale link {dst}")
+        if not dry_run:
+            dst.unlink(missing_ok=True)
+
+
 def apply_gnome_keybindings(dry_run: bool, verbose: bool = False):
     """Apply GNOME keybinding policy via gsettings. GNOME settings live in a
     binary dconf DB and can't be symlinked, so the repo declares them in an
@@ -497,6 +546,9 @@ def main(extra_layers=(), install_root=None, provision=None):
             action(f"  warn: source not found {src}")
             continue
         link(src, dst, args.dry_run, args.verbose)
+
+    for layer in layers:
+        prune(layer.root, layer.removed, args.dry_run, args.verbose)
 
     apply_gnome_keybindings(args.dry_run, args.verbose)
     reload_tmux_conf(args.dry_run, args.verbose)

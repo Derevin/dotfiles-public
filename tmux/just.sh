@@ -19,11 +19,15 @@ if ! command -v fzf >/dev/null 2>&1; then
     exit 1
 fi
 
-# Worktree backend config (private; absent on public installs → empty defaults).
-WT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"
-[ -f "$WT_CONF" ] && . "$WT_CONF"
-WT_CONTAINER_PREFIX="${WT_CONTAINER_PREFIX:-}"
-WT_DOCKER_WORKDIR_PREFIX="${WT_DOCKER_WORKDIR_PREFIX:-}"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# lab-lib.sh sits beside this script once installed; in the repo the tmux and
+# script helpers are kept apart, and the private tmux scripts a level further.
+for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts"; do
+    [ -f "$d/lab-lib.sh" ] && { source "$d/lab-lib.sh"; break; }
+done
+# A miss is otherwise silent: every lab_* call expands to nothing and the caller
+# degrades instead of stopping — a pane with no Claude, a recipe on the host.
+declare -F lab_resolve >/dev/null || { echo "just.sh: cannot find lab-lib.sh" >&2; exit 1; }
 
 # Dispatch splits open minimal — 1 row — so a long-running recipe doesn't eat
 # the window; zoom/resize the pane when the output matters.
@@ -40,39 +44,37 @@ _coder_cmdline() {
     printf '%s' "$out"
 }
 
-# Run a command inside a worktree backend. Backend derived from slot prefix:
-# d → docker, c → coder.
-wt_exec() {
-    local wt="$1"; shift
-    case "${wt:0:1}" in
-        d) docker exec "${WT_CONTAINER_PREFIX}$wt" "$@" ;;
-        c) coder ssh "${WT_CONTAINER_PREFIX}$wt" -- "$(_coder_cmdline "$@")" ;;
+# Run a command inside a lab's backend. Only the containerized ones route here:
+# a host lab runs in the caller pane, on the host, against its worktree.
+lab_exec() {
+    case "$LAB_BACKEND" in
+        docker) docker exec "$LAB_CONTAINER" "$@" ;;
+        coder) coder ssh "$LAB_CONTAINER" -- "$(_coder_cmdline "$@")" ;;
         *) return 1 ;;
     esac
 }
 
-# Worktree path inside the backend — backend-shaped. Docker bind-mounts the
-# host path 1:1; coder workspaces use /workspace directly (no host-shape symlink).
-wt_worktree() {
-    local wt="$1"
-    case "${wt:0:1}" in
-        c) echo "/workspace" ;;
-        *) echo "${WT_DOCKER_WORKDIR_PREFIX}$wt" ;;
+# The lab's path as seen from inside its backend. Docker bind-mounts the host
+# path 1:1; coder workspaces use /workspace directly (no host-shape symlink).
+lab_backend_dir() {
+    case "$LAB_BACKEND" in
+        coder) echo "/workspace" ;;
+        *) echo "$LAB_WORKTREE" ;;
     esac
 }
 
-# Is a worktree pane busy? Count in-backend processes whose WT_PANE_ID env
-# matches the pane. wt-shell sets this on the leader bash; any child command
+# Is a lab pane busy? Count in-backend processes whose LAB_PANE_ID env
+# matches the pane. lab-shell sets this on the leader bash; any child command
 # inherits it. count == 1 means only leader (idle); >1 means something
 # running. count == 0 means no process tagged with this pane — either a
-# legacy pane (pre-WT_PANE_ID wt-shell) or a torn-down pane. Treat as
+# legacy pane (pre-LAB_PANE_ID lab-shell) or a torn-down pane. Treat as
 # busy in that case so we split a fresh pane rather than blindly send-keys
 # into something that might be running.
-wt_pane_busy() {
-    local pane_id="$1" wt="$2" count
+lab_pane_busy() {
+    local pane_id="$1" count
     # -z anchors the match on the value end so %1 doesn't also count %12/%13
     # (environ entries are NUL-separated, so the trailing $ binds to the value).
-    count=$(wt_exec "$wt" bash -c "grep -alz 'WT_PANE_ID=$pane_id$' /proc/*/environ 2>/dev/null | wc -l" 2>/dev/null)
+    count=$(lab_exec bash -c "grep -alz 'LAB_PANE_ID=$pane_id$' /proc/*/environ 2>/dev/null | wc -l" 2>/dev/null)
     # coder ssh returns CRLF, so $() leaves a trailing \r — strip every
     # non-digit before the integer test (a bare `[ 0$'\r' -ne 1 ]` errors).
     count=${count//[!0-9]/}
@@ -322,7 +324,7 @@ if echo "$show" | grep -qE '^[[:space:]]*@?#[[:space:]]*background_takeover\b'; 
 elif echo "$show" | grep -qE '^[[:space:]]*@?#[[:space:]]*background\b'; then
     BACKGROUND=1
 fi
-# host_only: skip wt-shell routing even if caller pane is bound to a workspace.
+# host_only: skip lab routing even if the caller pane is bound to a lab.
 # For recipes whose body only makes sense on the laptop (e.g. opening a VNC
 # window, port-forwarding, anything talking to the local Coder server).
 if echo "$show" | grep -qE '^[[:space:]]*@?#[[:space:]]*host_only\b'; then
@@ -339,7 +341,7 @@ CALLER_PANE_ID=$(tmux show-environment -g JUST_CALLER 2>/dev/null | cut -d= -f2-
 # behind a command-carrying split-window never runs, so a backgrounded recipe
 # would build with none of the worktree's .envrc (ccache base_dir, max_size).
 # The send-keys paths need no such load: they type into an interactive pane that
-# already sits in the target dir. Backend dispatch is wt-shell's own business.
+# already sits in the target dir. Backend dispatch is lab-shell's own business.
 DIRENV_LOAD='eval "$(direnv export bash)"; '
 
 # Dispatch to target pane if running inside tmux popup with caller context
@@ -358,18 +360,33 @@ if [ -n "$CALLER_PANE_ID" ]; then
         fi
     fi
 
-    # If the caller pane is bound to a containerized worktree, route dispatch through
-    # wt-shell so commands run inside the right container at the right cwd.
+    # If the caller pane is bound to a containerized lab, route dispatch through
+    # lab-shell so commands run inside the right container at the right cwd.
     # Global recipes always run on the host — by definition they're not project-local.
     # Recipes with `# host_only` also stay on the host regardless of caller binding.
-    WT=""
+    #
+    # The gate is the BACKEND, not @lab being set: a host lab sets @lab too, and
+    # its recipes belong in the caller pane, on the host, against its worktree —
+    # which is where the popup's $PWD already points.
+    LAB=""
     if [ "$source" != "global" ] && [ "$HOST_ONLY" -eq 0 ]; then
-        WT=$(tmux show-options -pvt "$CALLER_PANE_ID" @wt 2>/dev/null)
+        LAB=$(tmux show-options -pvt "$CALLER_PANE_ID" @lab 2>/dev/null)
+    fi
+    if [ -n "$LAB" ]; then
+        # "cannot resolve" and "host lab" are not the same answer. Falling back
+        # to the host for both would run a build on the laptop, against the
+        # popup's $PWD, with nothing to say it never entered the container — the
+        # case a lab dropped from another pane leaves behind.
+        if ! lab_resolve "$LAB" 2>/dev/null; then
+            tmux display-message -t "$CALLER_PANE_ID" "just: pane is bound to '$LAB', which does not resolve — not dispatching"
+            exit 1
+        fi
+        [ "${LAB_BACKEND:-}" = host ] && LAB=""
     fi
 
     if [[ $BACKGROUND_TAKEOVER -eq 1 ]]; then
-        if [ -n "$WT" ]; then
-            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "wt-shell $WT \"$cmd\""
+        if [ -n "$LAB" ]; then
+            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "lab-shell $LAB \"$cmd\""
         else
             # Background-takeover: send to caller pane if idle bash in single-pane window; else ephemeral split
             c_win_panes=$(tmux display-message -t "$CALLER_PANE_ID" -p '#{window_panes}')
@@ -381,14 +398,14 @@ if [ -n "$CALLER_PANE_ID" ]; then
             fi
         fi
     elif [[ $BACKGROUND -eq 1 ]]; then
-        if [ -n "$WT" ]; then
-            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "wt-shell $WT \"$cmd\""
+        if [ -n "$LAB" ]; then
+            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "lab-shell $LAB \"$cmd\""
         else
             # Background: ephemeral split that auto-closes when command finishes
             tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $DIRENV_LOAD$cmd"
         fi
-    elif [ -n "$WT" ]; then
-        # Foreground in a worktree backend. pane_current_command on the host
+    elif [ -n "$LAB" ]; then
+        # Foreground in a lab backend. pane_current_command on the host
         # is always 'docker' (or 'coder'), so use tmux options + in-backend
         # env-based busy check:
         #   - Normalize caller: if caller is itself a child pane, treat its
@@ -399,7 +416,7 @@ if [ -n "$CALLER_PANE_ID" ]; then
         #   - Else, send-keys directly to main's container bash.
         # Backend-shaped cwd: docker uses host paths via bind mount, coder
         # uses /workspace directly (no host-shape symlink there).
-        wt_dir=$(wt_worktree "$WT")
+        lab_dir=$(lab_backend_dir)
         main_pane=$(tmux show-options -pvt "$CALLER_PANE_ID" @just_caller 2>/dev/null)
         main_pane="${main_pane:-$CALLER_PANE_ID}"
 
@@ -407,19 +424,20 @@ if [ -n "$CALLER_PANE_ID" ]; then
         tagged_pane=""
         while read -r pid; do
             [[ "$(tmux show-options -pvt "$pid" @just_caller 2>/dev/null)" == "$main_pane" ]] || continue
-            wt_pane_busy "$pid" "$WT" && continue
+            lab_pane_busy "$pid" && continue
             tagged_pane="$pid"; break
         done < <(tmux list-panes -t "$caller_target" -F '#{pane_id}')
 
         if [ -n "$tagged_pane" ]; then
-            tmux send-keys -t "$tagged_pane" "cd '$wt_dir' && $cmd" Enter
-        elif wt_pane_busy "$main_pane" "$WT"; then
+            tmux send-keys -t "$tagged_pane" "cd '$lab_dir' && $cmd" Enter
+        elif lab_pane_busy "$main_pane"; then
             target=$(tmux split-window -t "$main_pane" -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -d -P -F '#{pane_id}' \
-                "wt-shell --interactive-after $WT \"$cmd\"")
-            tmux set-option -pt "$target" @wt "$WT"
+                "lab-shell --interactive-after $LAB \"$cmd\"")
+            tmux set-option -pt "$target" @lab "$LAB"
+            tmux set-option -pt "$target" @backend "$LAB_BACKEND"
             tmux set-option -pt "$target" @just_caller "$main_pane"
         else
-            tmux send-keys -t "$main_pane" "cd '$wt_dir' && $cmd" Enter
+            tmux send-keys -t "$main_pane" "cd '$lab_dir' && $cmd" Enter
         fi
     else
         # Foreground (default): interactive dispatch to caller's pane

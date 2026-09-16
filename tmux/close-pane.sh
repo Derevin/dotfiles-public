@@ -23,13 +23,14 @@ if [[ "$(tmux show-options -pv @unclosable 2>/dev/null)" == "1" ]]; then
 fi
 
 # Default → save editor (if any), reap any in-backend process tree, then kill pane.
-# A docker-exec/coder-ssh worktree pane leaves its in-container processes running
-# on kill-pane (the client has no signal proxying); wt-cleanup.sh SIGTERMs them
-# by their inherited WT_PANE_ID tag. Detached so the pane closes instantly.
+# A docker-exec/coder-ssh lab pane leaves its in-container processes running on
+# kill-pane (the client has no signal proxying); lab-cleanup.sh SIGTERMs them by
+# their inherited LAB_PANE_ID tag. Detached so the pane closes instantly. The
+# lab itself is untouched — closing a pane is not a teardown.
 save-editor.sh
-WT=$(tmux show-options -pv @wt 2>/dev/null)
-if [[ -n "$WT" ]]; then
+LAB=$(tmux show-options -pv @lab 2>/dev/null)
+if [[ -n "$LAB" ]]; then
     PANE_ID=$(tmux display-message -p '#{pane_id}')
-    setsid wt-cleanup.sh "$WT" "$PANE_ID" </dev/null >/dev/null 2>&1 &
+    setsid lab-cleanup.sh "$LAB" "$PANE_ID" </dev/null >/dev/null 2>&1 &
 fi
 tmux kill-pane

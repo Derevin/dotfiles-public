@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# lab-popup <caller-pane-id|@VAR> -- <cmd> [args...]
+#
+# Host-side popup-launch wrapper for tools that should follow the caller pane's
+# lab. Reads @lab from the caller pane via the main tmux server and routes by
+# backend:
+#
+#   - No @lab (plain host pane), or an hlab: exec the command locally. The
+#     pane's cwd is the real one and the popup already opened there, so the
+#     worktree root would be coarser rather than better.
+#   - docker: the worktree is on the host — a dlab bind-mounts it at an
+#     identical path — so run the command on the HOST in that path. Same files,
+#     and crucially host tmux stays reachable: the container has no tmux server
+#     (compose mounts no tmux socket; IN_CONTAINER suppresses tmux), so a tool
+#     that send-keys back to the caller pane (e.g. diffview's "send") silently
+#     no-ops if run inside it. Equivalent to a host run, as the compose file
+#     intends.
+#   - coder: the worktree is remote, so dispatch via lab-run, which runs the
+#     tool in the workspace and tunnels host tmux over its ssh master — so a
+#     send-keys back to the caller pane still lands.
+#
+# Caller forms:
+#   lab-popup %42 -- cmd ...                pane id directly
+#   lab-popup @DIFFVIEW_CALLER -- cmd ...   reads pane id from tmux global env var
+#                                           (needed under `display-popup -E`, which
+#                                           doesn't expand #{pane_id} formats)
+set -euo pipefail
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Popup-launch wrapper running a command in the caller pane's lab."
+    echo "Usage: lab-popup <caller-pane-id|@VAR> -- <cmd> [args...]"
+    exit 0
+fi
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# lab-lib.sh sits beside this script once installed; in the repo the tmux and
+# script helpers are kept apart, and the private tmux scripts a level further.
+for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts"; do
+    [ -f "$d/lab-lib.sh" ] && { source "$d/lab-lib.sh"; break; }
+done
+# A miss is otherwise silent: every lab_* call expands to nothing and the caller
+# degrades instead of stopping — a pane with no Claude, a recipe on the host.
+declare -F lab_resolve >/dev/null || { echo "lab-popup: cannot find lab-lib.sh" >&2; exit 1; }
+
+PANE="${1:-}"
+shift || true
+if [ "${1:-}" = "--" ]; then shift; fi
+
+# Always talk to the main tmux server, not the popup one we're running inside.
+export TMUX=
+
+if [[ "$PANE" == @* ]]; then
+    VAR="${PANE#@}"
+    PANE=$(tmux show-environment -g "$VAR" 2>/dev/null | cut -d= -f2-)
+fi
+
+if [ -z "$PANE" ] || [ $# -eq 0 ]; then
+    echo "lab-popup: usage: lab-popup <caller-pane-id|@VAR> -- <cmd> [args...]" >&2
+    exit 2
+fi
+
+LAB=$(tmux show-options -pvt "$PANE" @lab 2>/dev/null || true)
+
+if [ -z "$LAB" ]; then
+    exec "$@"
+fi
+
+# An hlab pane reports its own cwd, so there is nothing to substitute for it.
+if [ "$(lab_backend "$LAB")" = host ]; then
+    exec "$@"
+fi
+
+# docker: run on the host at the bind-mounted worktree path (keeps host tmux
+# reachable). The dir check also guards an unresolvable lab — falls back to
+# lab-run, which fails the same way the in-backend path would.
+if lab_resolve "$LAB" 2>/dev/null && [ "$LAB_BACKEND" = docker ] && [ -d "$LAB_WORKTREE" ]; then
+    cd "$LAB_WORKTREE"
+    exec "$@"
+fi
+
+exec lab-run "$LAB" -- "$@"

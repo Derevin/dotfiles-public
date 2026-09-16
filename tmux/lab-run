@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Run a single command in a worktree's backend.
-# Usage: wt-run <wt> -- <cmd> [args...]
-#        wt-run "" -- <cmd> [args...]   # native: exec locally
+# Run a single command in a lab's backend.
+# Usage: lab-run <lab> -- <cmd> [args...]
+#        lab-run "" -- <cmd> [args...]   # native: exec locally
 #
-# Backend derived from the slot name's first letter: d → docker, c → coder.
-# Empty <wt> means "no backend, run on host". This is what callers pass when
-# the originating pane has no @wt option set.
+# Backend derived from the lab name's first letter: h → host, d → docker,
+# c → coder. Empty <lab> means "no lab, run here". This is what callers pass
+# when the originating pane has no @lab option set.
 #
 # For coder backends, manages a long-lived ssh ControlMaster whose master
 # connection carries `-R /tmp/tmux-1000/default:/tmp/tmux-1000/default` so
@@ -13,54 +13,56 @@
 # transparently. Slave connections multiplex over the master and are cheap.
 set -euo pipefail
 if [[ "${1:-}" == "--help" ]]; then
-    echo "Run one command in a worktree backend: d -> docker, c -> coder, empty -> host."
-    echo "Usage: wt-run <wt> -- <cmd> [args...]"
+    echo "Run one command in a lab: h -> host, d -> docker, c -> coder, empty -> here."
+    echo "Usage: lab-run <lab> -- <cmd> [args...]"
     exit 0
 fi
 
-# Worktree backend config (private; absent on public installs → empty defaults).
-WT_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/worktree.conf"
-[ -f "$WT_CONF" ] && . "$WT_CONF"
-WT_CONTAINER_PREFIX="${WT_CONTAINER_PREFIX:-}"
-WT_DOCKER_WORKDIR_PREFIX="${WT_DOCKER_WORKDIR_PREFIX:-}"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# lab-lib.sh sits beside this script once installed; in the repo the tmux and
+# script helpers are kept apart, and the private tmux scripts a level further.
+for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts"; do
+    [ -f "$d/lab-lib.sh" ] && { source "$d/lab-lib.sh"; break; }
+done
+# A miss is otherwise silent: every lab_* call expands to nothing and the caller
+# degrades instead of stopping — a pane with no Claude, a recipe on the host.
+declare -F lab_resolve >/dev/null || { echo "lab-run: cannot find lab-lib.sh" >&2; exit 1; }
 
-WT="${1:-}"
+LAB="${1:-}"
 shift || true
 if [ "${1:-}" = "--" ]; then shift; fi
 
 if [ $# -eq 0 ]; then
-    echo "wt-run: no command after --" >&2
+    echo "lab-run: no command after --" >&2
     exit 2
 fi
 
-if [ -z "$WT" ]; then
+if [ -z "$LAB" ]; then
     exec "$@"
 fi
 
-case "${WT:0:1}" in
-    d) backend="docker" ;;
-    c) backend="coder" ;;
-    *) echo "wt-run: unknown backend prefix for slot '$WT' (expected dwt* or cwt*)" >&2; exit 1 ;;
-esac
+lab_resolve "$LAB" || exit 1
 
-case "$backend" in
+case "$LAB_BACKEND" in
+    host)
+        cd "$LAB_WORKTREE"
+        exec "$@"
+        ;;
     docker)
-        CONTAINER="${WT_CONTAINER_PREFIX}$WT"
-        WORKDIR="${WT_DOCKER_WORKDIR_PREFIX}$WT"
         DOCKER_FLAGS=(-i)
         [ -t 0 ] && DOCKER_FLAGS+=(-t)
         DOCKER_FLAGS+=(-e "TERM=${TERM:-xterm-256color}")
         PANE_ID="${TMUX_PANE:-}"
-        [ -n "$PANE_ID" ] && DOCKER_FLAGS+=(-e "WT_PANE_ID=$PANE_ID")
-        exec docker exec "${DOCKER_FLAGS[@]}" -w "$WORKDIR" "$CONTAINER" "$@"
+        [ -n "$PANE_ID" ] && DOCKER_FLAGS+=(-e "LAB_PANE_ID=$PANE_ID")
+        exec docker exec "${DOCKER_FLAGS[@]}" -w "$LAB_WORKTREE" "$LAB_CONTAINER" "$@"
         ;;
     coder)
-        WORKSPACE="${WT_CONTAINER_PREFIX}$WT"
+        WORKSPACE="$LAB_CONTAINER"
         HOST="$WORKSPACE.coder"
         # Coder workspaces clone the repo at /workspace (set by coder_agent.dir).
         # cd there directly — no host-shape worktree symlink any more.
         WORKDIR="/workspace"
-        SSHMUX_DIR="$HOME/.cache/wt-run-sshmux"
+        SSHMUX_DIR="$HOME/.cache/lab-run-sshmux"
         mkdir -p "$SSHMUX_DIR"
         SOCKET="$SSHMUX_DIR/${WORKSPACE}.sock"
 
@@ -84,7 +86,7 @@ case "$backend" in
         done
         EXT_ENV=""
         PANE_ID="${TMUX_PANE:-}"
-        [ -n "$PANE_ID" ] && EXT_ENV="export WT_PANE_ID='$PANE_ID'; "
+        [ -n "$PANE_ID" ] && EXT_ENV="export LAB_PANE_ID='$PANE_ID'; "
         SSH_TTY=()
         [ -t 0 ] && SSH_TTY=(-t)
         exec ssh "${SSH_TTY[@]}" -o "ControlPath=$SOCKET" "$HOST" -- \

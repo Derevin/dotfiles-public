@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# List tasks for a project. Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [PROJECT]
+# List tasks for a project. Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [PROJECT]
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "List tasks for a project (defaults to detected project)."
-    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [PROJECT]"
+    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [PROJECT]"
     echo "Statuses: todo planning planned active done canceled"
     echo "--no-header drops the project/worker lines, for callers short on rows."
+    echo "--ids prints bare <id>-<slug> lines, for fzf choosers."
     echo "Shows open statuses only (todo planning planned active); done and"
     echo "canceled need an explicit --status or --all."
     exit 0
@@ -19,6 +20,7 @@ status_list=()
 show_all=false
 verbose=false
 no_header=false
+ids_only=false
 explicit_project=""
 
 while [[ $# -gt 0 ]]; do
@@ -35,6 +37,7 @@ while [[ $# -gt 0 ]]; do
     --all) show_all=true; shift ;;
     --verbose) verbose=true; shift ;;
     --no-header) no_header=true; shift ;;
+    --ids) ids_only=true; shift ;;
     *) explicit_project=$1; shift ;;
   esac
 done
@@ -63,6 +66,16 @@ list_dir() {
   [[ ${#files[@]} -eq 0 ]] && return
   total_shown=$((total_shown + ${#files[@]}))
 
+  # --ids: just the identity, one per line, nothing to strip. The letter prefix
+  # is priority and task-reprioritize.sh rewrites it, so it is dropped here.
+  if $ids_only; then
+    for f in "${files[@]}"; do
+      f=${f%.md}
+      echo "${f#[A-Z]}"
+    done
+    return
+  fi
+
   echo "${label} (${#files[@]})"
   for f in "${files[@]}"; do
     local suffix=""
@@ -90,7 +103,7 @@ fi
 
 # The worker is the header's only consumer, so detecting it is header-only work
 # (it shells out to git).
-if ! $no_header; then
+if ! $no_header && ! $ids_only; then
   detect_worker
   echo "Tasks: $PROJECT"
   echo "Worker: $WORKER"
@@ -101,6 +114,6 @@ for s in "${statuses[@]}"; do
   label=$(echo "$s" | tr '[:lower:]' '[:upper:]')
   list_dir "$s" "$label"
 done
-if [[ $total_shown -eq 0 ]]; then
+if [[ $total_shown -eq 0 ]] && ! $ids_only; then
   echo "(none)"
 fi

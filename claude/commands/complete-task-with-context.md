@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(task-*),Bash(git *),Bash(gh *),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
+allowed-tools: Bash(task-*),Bash(lab-current.sh),Bash(git *),Bash(gh *),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
 description: Mark current task as completed
 disable-model-invocation: true
 ---
@@ -15,3 +15,5 @@ Complete the current active task.
 4. **Done.** Run `task-done.sh <filename>` — moves to done, commits, pushes.
 
 5. **Cleanup.** Run `task-cleanup-branch.sh` — detaches to `origin/<base>` and deletes the task branch. Refuses if PR isn't merged or if not on a branch.
+
+6. **Offer the drop.** Run `lab-current.sh`. If it prints a name, print `lab-drop.sh <name>` for the user to paste — do NOT run it. Dropping is irreversible and always theirs to trigger.

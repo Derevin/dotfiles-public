@@ -13,6 +13,16 @@ BASE="$(basename "$DIR")"
 WINDOW="$BASE"
 TAKEOVER=0
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# lab-lib.sh sits beside this script once installed; in the repo the tmux and
+# script helpers are kept apart, and the private tmux scripts a level further.
+for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts"; do
+    [ -f "$d/lab-lib.sh" ] && { source "$d/lab-lib.sh"; break; }
+done
+# A miss is otherwise silent: every lab_* call expands to nothing and the caller
+# degrades instead of stopping — a pane with no Claude, a recipe on the host.
+declare -F lab_resolve >/dev/null || { echo "workspace-dual.sh: cannot find lab-lib.sh" >&2; exit 1; }
+
 if [[ -n "$TMUX" ]]; then
     # Disambiguate window name: <base> → <base>2 → <base>3 ...
     while tmux list-windows -F '#{window_name}' | grep -qx "$WINDOW"; do
@@ -54,12 +64,12 @@ tmux set-option -pt "$W.4" @unclosable 1
 
 if [[ $TAKEOVER -eq 1 ]]; then
     # Script is running in pane 1 — queue cd + claude for after it exits
-    tmux send-keys -t "$W.1" "cd $DIR && CLAUDE_LABEL=${BASE}1 claude --effort max" Enter
+    tmux send-keys -t "$W.1" "cd $DIR && $(lab_claude_cmd "${BASE}1")" Enter
 else
-    tmux send-keys -t "$W.1" "CLAUDE_LABEL=${BASE}1 claude --effort max" Enter
+    tmux send-keys -t "$W.1" "$(lab_claude_cmd "${BASE}1")" Enter
 fi
 
-tmux send-keys -t "$W.2" "CLAUDE_LABEL=${BASE}2 claude --effort max" Enter
+tmux send-keys -t "$W.2" "$(lab_claude_cmd "${BASE}2")" Enter
 
 tmux select-pane -t "$W.1"
 

@@ -6,9 +6,9 @@ disable-model-invocation: true
 
 Pick a groomed task from `planned/` and implement it from its snapshotted plan. The task file plus the context store is your entire brief.
 
-1. **List.** Run `task-list.sh --status planned` to see groomed tasks (highest priority first).
+1. **List.** Run `task-list.sh --status planned` to see groomed tasks (highest priority first). Skip when an id was given.
 
-2. **Pick.** Take the first one, or the one the user names.
+2. **Pick.** An id in the arguments (`039`, or `039-some-slug`) names the task: resolve it to the filename in `planned/` and go straight to step 3. Otherwise take the first one, or the one the user names.
 
 3. **Claim.** Run `task-claim.sh <filename>` — syncs, moves planned/ → active/, stamps you as worker, outputs task content.
 

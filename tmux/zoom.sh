@@ -18,14 +18,17 @@ SETTLE=0.2
 
 WIDTH_BEFORE=$(tmux display-message -p '#{pane_width}')
 tmux resize-pane -Z
-read -r TTY CMD COLS ROWS WT <<<"$(tmux display-message -p '#{pane_tty} #{pane_current_command} #{pane_width} #{pane_height} #{@wt}')"
+# '|' rather than spaces: @backend and @lab are both empty off a lab, and default
+# IFS collapses the gap and shifts every field after it.
+IFS='|' read -r TTY CMD COLS ROWS BACKEND LAB <<<"$(tmux display-message -p '#{pane_tty}|#{pane_current_command}|#{pane_width}|#{pane_height}|#{@backend}|#{@lab}')"
 
 # Nothing re-wraps unless the width moved (a sole pane zooms to the same size).
 [[ "$COLS" != "$WIDTH_BEFORE" ]] || exit 0
 # Only Claude Code re-renders on resize — any other pane just gets a lie. A
-# worktree pane runs it inside docker/coder, where the host sees only the client
-# as the pane command, so @wt stands in; the resize is proxied to the backend pty.
-[[ "$CMD" == "claude" || -n "$WT" ]] || exit 0
+# docker/coder lab runs it behind a client, which is all the host sees as the
+# pane command, so @lab stands in and the resize proxies to the backend pty. A
+# host lab reports its own command and needs no stand-in.
+[[ "$CMD" == "claude" || ( -n "$LAB" && "$BACKEND" != host ) ]] || exit 0
 
 trap 'stty -F "$TTY" rows "$ROWS" 2>/dev/null' EXIT
 stty -F "$TTY" rows $((ROWS * ROWS_FACTOR))
