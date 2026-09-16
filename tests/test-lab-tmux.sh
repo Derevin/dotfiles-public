@@ -164,6 +164,9 @@ tmux send-keys -t "$P2" "lab-release.sh" Enter
 wait_for unplaced "$B"
 ok "release from inside untags the pane" "$(yn untagged "$P2")" y
 ok "release from inside drops the placement" "$(yn unplaced "$B")" y
+# A launchpad names no backend either, or the quadrant still answers for a lab
+# it stopped showing.
+ok "release from inside clears the backend" "$(pane_opt "$P2" @backend)" ""
 
 # --- drop reverts a pane still showing the lab --------------------------------
 # Otherwise the quadrant keeps a Claude running in a worktree that no longer

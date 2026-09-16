@@ -63,11 +63,9 @@ fi
 tmux respawn-pane -k -c "$LAB_CHECKOUT" -t "$PANE" "$LAUNCHPAD_CMD"
 tmux set-option -pu -t "$PANE" @lab
 
-# The launchpad's backend is the window's, not the released lab's: attaching a
-# dwt1 to an hhl4 quadrant must not leave that quadrant creating docker labs.
-# Only a window that never declared one falls back to what was just released.
-WINDOW_BACKEND=$(tmux show-options -wvt "$PANE" @backend 2>/dev/null || true)
-tmux set-option -pt "$PANE" @backend "${WINDOW_BACKEND:-$LAB_BACKEND}"
+# A launchpad names no backend, so the released lab's goes with it. Leaving one
+# behind would have the quadrant answering for a lab it no longer shows.
+tmux set-option -pu -t "$PANE" @backend
 
 # A launchpad is the absence of a row, so the release leaves nothing behind.
 IFS='|' read -r WINDOW QUADRANT <<<"$(tmux display-message -t "$PANE" -p '#{window_name}|#{@quadrant}')"

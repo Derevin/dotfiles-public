@@ -2,19 +2,21 @@
 # Open a lab window: four launchpad quadrants, then restore whatever was last
 # put in them.
 #
-# A launchpad is a plain shell at the project's main checkout with a backend set
-# and no lab attached — what a quadrant is before and after a lab.
+# A launchpad is a plain shell at the project's main checkout with no lab
+# attached — what a quadrant is before and after a lab. It stands for no backend:
+# which one a lab lives in is decided when the lab is created, not by the
+# quadrant it was started from.
 # lab-attach.sh converts one in place; lab-release.sh converts it back.
 #
 # Four quadrants is the cap, and they are @unclosable: a quadrant changes what
 # it shows, not whether it exists.
 #
-# Usage: launchpad.sh <host|docker|coder> <checkout> [--window NAME]
+# Usage: launchpad.sh <checkout> [--window NAME]
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     echo "Open a 2x2 lab window of launchpads for a project, then restore its labs."
-    echo "Usage: launchpad.sh <host|docker|coder> <checkout> [--window NAME]"
+    echo "Usage: launchpad.sh <checkout> [--window NAME]"
     exit 0
 fi
 
@@ -28,10 +30,9 @@ done
 # degrades instead of stopping — a pane with no Claude, a recipe on the host.
 declare -F lab_resolve >/dev/null || { echo "launchpad.sh: cannot find lab-lib.sh" >&2; exit 1; }
 
-BACKEND=$(lab_backend "${1:-}") || { echo "usage: launchpad.sh <host|docker|coder> <checkout> [--window NAME]" >&2; exit 2; }
-DIR="${2:-}"
-[ -d "$DIR" ] || { echo "launchpad: no checkout at '$DIR'" >&2; exit 1; }
-shift 2
+DIR="${1:-}"
+[ -d "$DIR" ] || { echo "launchpad: no checkout at '${DIR}'" >&2; exit 1; }
+shift
 WINDOW="labs"
 [ "${1:-}" = "--window" ] && { WINDOW="${2:-labs}"; shift 2; }
 
@@ -58,10 +59,6 @@ fi
 W=$(tmux display-message -p '#{session_name}' 2>/dev/null || echo "$WINDOW")
 W="${W}:${WINDOW}"
 tmux setw -t "$W" automatic-rename off
-# On the window, so releasing a quadrant reverts it to the backend the window
-# opened with rather than to whatever lab last occupied it.
-tmux set-option -wt "$W" @backend "$BACKEND"
-
 # Row-based 2x2 so the horizontal mid-line is shared and up/down resize moves
 # both columns together. Spatial: 1 TL, 2 BL, 3 TR, 4 BR. Pane ids, not indices
 # — tmux renumbers indices by position as panes are added.
@@ -80,7 +77,6 @@ for ID in "$P1" "$P2" "$P3" "$P4"; do
     else
         tmux set-option -pt "$ID" @split-dir down
     fi
-    tmux set-option -pt "$ID" @backend "$BACKEND"
     q=$((q + 1))
 done
 

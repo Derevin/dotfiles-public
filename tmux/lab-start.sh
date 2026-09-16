@@ -4,11 +4,11 @@
 #
 # The task id is bare (238) because ids repeat across projects — the caller
 # pane's cwd is what says which project, exactly as it does for the task
-# scripts. The backend comes off the caller pane's @backend, so which launchpad
-# you stood on decides where the work lands.
+# scripts. The backend is named outright, because creating the lab is the moment
+# it is decided and a launchpad stands for no backend.
 #
 # Usage: lab-start.sh <task-id> <prompt> [backend]
-#   backend  fallback for a pane with no @backend (a bare new window).
+#   backend  omit only from a pane already showing a lab, whose backend stands in.
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
@@ -47,9 +47,12 @@ CALLER=$(tmux show-environment -g JUST_CALLER 2>/dev/null | cut -d= -f2-) || tru
 [ -n "$CALLER" ] || CALLER="${TMUX_PANE:-}"
 [ -n "$CALLER" ] || { echo "lab-start: no caller pane" >&2; exit 1; }
 
-BACKEND=$(tmux show-options -pvt "$CALLER" @backend 2>/dev/null || true)
-[ -n "$BACKEND" ] || BACKEND="$BACKEND_ARG"
-BACKEND=$(lab_backend "$BACKEND") || { echo "lab-start: no backend on the caller pane and none given" >&2; exit 1; }
+# Said outright, because a launchpad is a plain host shell and stands for no
+# backend at all. A pane already showing a lab still answers, which is what makes
+# the bare form work from inside one.
+BACKEND="$BACKEND_ARG"
+[ -n "$BACKEND" ] || BACKEND=$(tmux show-options -pvt "$CALLER" @backend 2>/dev/null || true)
+BACKEND=$(lab_backend "$BACKEND") || { echo "lab-start: no backend given, and the caller pane names none" >&2; exit 1; }
 
 PROJECT=$(lab_project_from_cwd) || { echo "lab-start: not in a project checkout" >&2; exit 1; }
 lab_project_paths "$PROJECT"
