@@ -7,7 +7,7 @@ if [[ "${1:-}" == "--help" ]]; then
     echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [PROJECT]"
     echo "Statuses: todo planning planned active done canceled"
     echo "--no-header drops the project/worker lines, for callers short on rows."
-    echo "--ids prints bare <id>-<slug> lines, for fzf choosers."
+    echo "--ids prints bare <letter><id>-<slug> lines, for fzf choosers."
     echo "Shows open statuses only (todo planning planned active); done and"
     echo "canceled need an explicit --status or --all."
     exit 0
@@ -66,12 +66,11 @@ list_dir() {
   [[ ${#files[@]} -eq 0 ]] && return
   total_shown=$((total_shown + ${#files[@]}))
 
-  # --ids: just the identity, one per line, nothing to strip. The letter prefix
-  # is priority and task-reprioritize.sh rewrites it, so it is dropped here.
+  # --ids: the filename, one line each, nothing else to strip. The letter prefix
+  # stays so a chooser shows priority; readers take the id back out themselves.
   if $ids_only; then
     for f in "${files[@]}"; do
-      f=${f%.md}
-      echo "${f#[A-Z]}"
+      echo "${f%.md}"
     done
     return
   fi

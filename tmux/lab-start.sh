@@ -34,7 +34,7 @@ BACKEND_ARG="${3:-}"
 [ -n "$ID" ] && [ -n "$PROMPT" ] || { echo "usage: lab-start.sh <task-id> <prompt> [backend]" >&2; exit 2; }
 
 # Accept anything the id can be read out of, so a chooser can show something
-# readable (238-fix-the-nasty-bug) rather than three bare digits: a filename, a
+# readable (N238-fix-the-nasty-bug) rather than three bare digits: a filename, a
 # path, or the id alone. The letter prefix is priority, never identity.
 ID="${ID##*/}"
 ID="${ID%.md}"

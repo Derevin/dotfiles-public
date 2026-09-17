@@ -8,7 +8,7 @@ Groom the next task: pick it, grill it to an agreed plan, snapshot that plan, an
 
 1. **List.** Run `task-list.sh --status todo` to see available tasks. Skip when an id was given.
 
-2. **Pick.** An id in the arguments (`039`, or `039-some-slug`) names the task: resolve it to the filename in `todo/` and go straight to step 3. Otherwise take the first one (highest priority). If it has `Depends:`, check if those IDs exist in done/ (use `task-list.sh --status done` or read the file).
+2. **Pick.** An id in the arguments (`039`, `039-some-slug`, or the filename `N039-some-slug`) names the task: resolve it to the filename in `todo/` and go straight to step 3. Otherwise take the first one (highest priority). If it has `Depends:`, check if those IDs exist in done/ (use `task-list.sh --status done` or read the file).
 
 3. **Claim.** Run `task-claim.sh <filename>` — syncs, moves to planning/, commits, and outputs task content.
 
