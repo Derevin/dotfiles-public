@@ -153,7 +153,6 @@ lab_strip_prefix() {
 lab_current() {
   if [ -n "${CODER_WORKSPACE_NAME:-}" ]; then lab_strip_prefix "$CODER_WORKSPACE_NAME"; return 0; fi
   if [ -n "${LAB_NAME:-}" ]; then printf '%s' "$LAB_NAME"; return 0; fi
-  if [ -n "${DWT_NAME:-}" ]; then printf '%s' "$DWT_NAME"; return 0; fi
   # A host lab has no env marker: the worktree dir is the name. Walk up rather
   # than resolving the toplevel, so a symlinked checkout keeps its own spelling.
   local dir=$PWD base

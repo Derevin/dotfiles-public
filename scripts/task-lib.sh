@@ -16,9 +16,9 @@ detect_project() {
 # detect_worker — sets WORKER
 detect_worker() {
   # Required, not optional: the name derivations below are lab-lib.sh's. An
-  # install that predates it — a dwt container only relinks on the dho4 refresh
-  # strip — must say so, because the alternative is a worker stamped from a
-  # half-derivation, which is the silent mis-stamp this function exists to end.
+  # install that predates it — a docker backend only relinks on `just
+  # dwt-refresh` — must say so, because the alternative is a worker stamped
+  # from a half-derivation, which is the silent mis-stamp this function ends.
   local lab_lib="$(dirname "${BASH_SOURCE[0]}")/lab-lib.sh"
   if [[ ! -f "$lab_lib" ]]; then
     echo "task-lib: $lab_lib is missing — re-run dotfiles_install.py" >&2
@@ -28,16 +28,12 @@ detect_worker() {
 
   # Inside a coder workspace the cwd is /workspace, with no path to read the
   # name back out of — take it from the workspace name. A docker lab exports
-  # LAB_NAME for the same reason; the twelve legacy containers have DWT_NAME
-  # baked in at create and it cannot be changed, so that read stays as long as
-  # they do.
+  # LAB_NAME for the same reason.
   local name=""
   if [[ -n "${CODER_WORKSPACE_NAME:-}" ]]; then
     name=$(lab_strip_prefix "$CODER_WORKSPACE_NAME")
   elif [[ -n "${LAB_NAME:-}" ]]; then
     name="$LAB_NAME"
-  elif [[ -n "${DWT_NAME:-}" ]]; then
-    name="$DWT_NAME"
   fi
   if [[ -n "$name" ]]; then
     WORKER=$(lab_head "$name")

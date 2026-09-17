@@ -144,7 +144,6 @@ fails lab_task_find proj 039 todo
 # --- current lab ------------------------------------------------------------
 ok "current from coder" "$(CODER_WORKSPACE_NAME=two-clab-001-x lab_current)" clab-001-x
 ok "current from docker" "$(LAB_NAME=dlab-238-x lab_current)" dlab-238-x
-ok "current from legacy docker" "$(DWT_NAME=dwt3 lab_current)" dwt3
 # A host lab has no env marker: the worktree dir is the name, from anywhere inside it.
 mkdir -p "$TMP/one/Proj-hlab-tmp4/modules/gui"
 ok "current from a host lab subdir" \
