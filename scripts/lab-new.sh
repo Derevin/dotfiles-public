@@ -57,7 +57,18 @@ fi
 if [ -n "$LAB_PROVISIONER" ]; then
     [ -x "$LAB_PROVISIONER" ] || { echo "lab-new: provisioner not executable: $LAB_PROVISIONER" >&2; exit 1; }
     if ! "$LAB_PROVISIONER" "$BACKEND" "$NAME" "$WORKTREE" >&2; then
-        echo "lab-new: provisioning failed — removing $WORKTREE" >&2
+        # The backend goes back too, not just the worktree: bringing it up is the
+        # provisioner's first step and seeding it the last, so a failure usually
+        # leaves one standing — and a half-provisioned backend holds the name
+        # against every later attempt while being unusable itself. Destroying it
+        # blind rather than after an existence check: lab_workspace_exists caches
+        # the workspace list from the free-index scan, which ran before this one
+        # was created.
+        echo "lab-new: provisioning failed — rolling back $NAME" >&2
+        case "$BACKEND" in
+            docker) docker rm -f "$LAB_PREFIX$NAME" >/dev/null 2>&1 || true ;;
+            coder) coder delete "$LAB_PREFIX$NAME" -y >/dev/null 2>&1 || true ;;
+        esac
         [ "$BACKEND" != coder ] && git -C "$LAB_CHECKOUT" worktree remove --force "$WORKTREE" >/dev/null 2>&1
         exit 1
     fi

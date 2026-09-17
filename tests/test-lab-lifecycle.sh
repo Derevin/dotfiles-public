@@ -86,6 +86,7 @@ CONF
 cat > "$TMP/provision.sh" <<'PROV'
 #!/usr/bin/env bash
 printf '%s %s %s\n' "$1" "$2" "$3" >> "$(dirname "$0")/provision.log"
+[ -z "${PROVISION_FAIL:-}" ] || exit 1
 PROV
 chmod +x "$TMP/provision.sh"
 
@@ -207,5 +208,16 @@ ok "an unstamped task reaches no commit" "$(git -C "$TMP/tasks" rev-parse HEAD)"
 
 mv "$TASK240" "$TMP/tasks/widget/done/"
 lab-drop.sh "$OUT4" >/dev/null
+
+# --- provisioning that fails rolls the whole lab back ------------------------
+# Bringing the backend up is the provisioner's first step and seeding it the
+# last, so a failure usually leaves one standing. Left there it holds the name
+# against every retry while being unusable itself — the free-index scan reads it
+# as a lab that exists.
+: > "$TMP/stub.log"
+PROVISION_FAIL=1 lab-new.sh docker >/dev/null 2>&1
+ok "a failed provision leaves no worktree" "$([ -d "$TMP/Widget-dlab-tmp1" ] && echo y)" ""
+ok "a failed provision destroys the container" \
+    "$(grep -c '^docker rm -f widget-dlab-tmp1$' "$TMP/stub.log")" 1
 
 report

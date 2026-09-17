@@ -181,4 +181,43 @@ wait_for untagged "$P5"
 ok "drop reverts the pane showing the lab" "$(yn untagged "$P5")" y
 ok "drop drops the placement" "$(yn unplaced "$E")" y
 
+# --- what a background split leaves behind ------------------------------------
+# The split is ephemeral, so a recipe that fails would take its own error
+# message off the screen with it. Driving just.sh needs the two commands it
+# shells out to: `just`, answering the listing, the --show and the recipe run,
+# and `fzf`, picking the recipe FZF_PICK names.
+cat > "$TMP/bin/just" <<'STUB'
+#!/usr/bin/env bash
+GLOBAL=0
+for a in "$@"; do [ "$a" = -g ] && GLOBAL=1; done
+case "$*" in
+    *--dump*) [ "$GLOBAL" = 1 ] && echo '{}'; exit 0 ;;
+    *--list*) [ "$GLOBAL" = 1 ] && printf 'boom\nfine\n'; exit 0 ;;
+    *--show*) printf '%s:\n    @# background\n' "${@: -1}"; exit 0 ;;
+esac
+[ "${@: -1}" = boom ] || exit 0
+echo "recipe blew up" >&2
+exit 3
+STUB
+printf '#!/usr/bin/env bash\ngrep -m1 -- "$FZF_PICK"\n' > "$TMP/bin/fzf"
+chmod +x "$TMP/bin/just" "$TMP/bin/fzf"
+
+split_of() { tmux list-panes -t "$1" -F '#{pane_id}' | grep -vx "$1" | head -1; }
+pane_shows() { tmux capture-pane -p -t "$1" 2>/dev/null | grep -q -- "$2"; }
+alone() { [ "$(tmux list-panes -t "$1" -F x | wc -l)" = 1 ]; }
+
+P6=$(new_pane)
+tmux set-environment -g JUST_CALLER "$P6"
+FZF_PICK=boom just.sh >/dev/null 2>&1
+S6=$(split_of "$P6")
+ok "a failed background recipe keeps its split" "$(yn wait_for pane_shows "$S6" 'recipe blew up')" y
+ok "the kept split names the exit status" "$(yn wait_for pane_shows "$S6" 'exit 3')" y
+tmux kill-pane -t "$S6" 2>/dev/null
+
+P7=$(new_pane)
+tmux set-environment -g JUST_CALLER "$P7"
+FZF_PICK=fine just.sh >/dev/null 2>&1
+ok "a background recipe that succeeds closes its split" "$(yn wait_for alone "$P7")" y
+tmux set-environment -gu JUST_CALLER
+
 report

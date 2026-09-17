@@ -32,6 +32,18 @@ declare -F lab_resolve >/dev/null || { echo "just.sh: cannot find lab-lib.sh" >&
 # Dispatch splits open minimal — 1 row — so a long-running recipe doesn't eat
 # the window; zoom/resize the pane when the output matters.
 SPLIT_SIZE=1
+# What a failed one grows to, its error being the reason to look at it.
+FAIL_SIZE=15
+
+# A dispatch split closes when its command exits, taking any error with it, and
+# SPLIT_SIZE leaves one row to read it in. Wrap the command so a non-zero exit
+# grows the pane and holds it for a keypress. The wrapper runs in the pane's own
+# host shell for the lab forms too: the pane runs lab-shell, and only what
+# lab-shell execs is inside the backend.
+hold_on_fail() {
+    printf '%s; rc=$?; [ "$rc" = 0 ] || { tmux resize-pane -t "$TMUX_PANE" -y %s; printf "\\n[exit %%s: press any key to close] " "$rc"; read -rn1; }' \
+        "$1" "$FAIL_SIZE"
+}
 
 # Build one POSIX-quoted command line from argv. `coder ssh -- argv...`
 # space-joins the remote argv WITHOUT re-quoting and lets the workspace shell
@@ -386,7 +398,7 @@ if [ -n "$CALLER_PANE_ID" ]; then
 
     if [[ $BACKGROUND_TAKEOVER -eq 1 ]]; then
         if [ -n "$LAB" ]; then
-            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "lab-shell $LAB \"$cmd\""
+            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "$(hold_on_fail "lab-shell $LAB \"$cmd\"")"
         else
             # Background-takeover: send to caller pane if idle bash in single-pane window; else ephemeral split
             c_win_panes=$(tmux display-message -t "$CALLER_PANE_ID" -p '#{window_panes}')
@@ -394,15 +406,15 @@ if [ -n "$CALLER_PANE_ID" ]; then
             if [[ $c_win_panes -eq 1 && "$c_pane_cmd" =~ ^(bash|zsh)$ ]] && ! pane_busy "$CALLER_PANE_ID"; then
                 tmux send-keys -t "$CALLER_PANE_ID" "cd '$PWD' && $cmd" Enter
             else
-                tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $DIRENV_LOAD$cmd"
+                tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "$(hold_on_fail "cd '$PWD' && $DIRENV_LOAD$cmd")"
             fi
         fi
     elif [[ $BACKGROUND -eq 1 ]]; then
         if [ -n "$LAB" ]; then
-            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "lab-shell $LAB \"$cmd\""
+            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" "$(hold_on_fail "lab-shell $LAB \"$cmd\"")"
         else
-            # Background: ephemeral split that auto-closes when command finishes
-            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "cd '$PWD' && $DIRENV_LOAD$cmd"
+            # Background: ephemeral split that closes itself once the command succeeds
+            tmux split-window -d -v $SPLIT_BEFORE -l "$SPLIT_SIZE" -t "$CALLER_PANE_ID" -c "$PWD" "$(hold_on_fail "cd '$PWD' && $DIRENV_LOAD$cmd")"
         fi
     elif [ -n "$LAB" ]; then
         # Foreground in a lab backend. pane_current_command on the host
