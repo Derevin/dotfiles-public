@@ -83,13 +83,13 @@ tmux set-option -pt "$P1" @unclosable 1
 tmux set-option -pt "$P2" @unclosable 1
 tmux set-option -pt "$P3" @unclosable 1
 
-# Sync strip ABOVE pane 1 (-b = before target for -v = vertical split).
-# remain-on-exit=failed: closes on exit 0 (sync clean), stays open otherwise
-# so the user can inspect what wasn't up to date. Splitting before send-keys
-# so claude in pane 1 starts at its final height.
-SYNC_ID=$(tmux split-window -vb -t "$P1" -l 4 -P -F '#{pane_id}' \
-    "sync.sh")
-tmux set-option -p -t "$SYNC_ID" remain-on-exit failed
+# A dispatch pane ABOVE pane 1 (-b = before target for -v = vertical split),
+# running sync: it closes itself once everything is up to date and holds
+# otherwise, so the user can see what wasn't. The side is passed rather than
+# derived — pane 1 is tagged @split-dir down for the recipes that anchor on it,
+# and this one belongs above. Created before send-keys so claude in pane 1
+# starts at its final height.
+pane_dispatch "$P1" "sync.sh" "" -b
 
 # Pin the vertical divider to floor(width/2). A bare `split-window -h` is 50/50
 # at creation, but if the client width changed between creation and now (e.g. an

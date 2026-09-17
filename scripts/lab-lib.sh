@@ -7,6 +7,12 @@
 # one renames it to <b>lab-<id>-<slug>. The name is the path, so every derivation
 # below is a pure function of it plus the project's four config keys.
 
+# Pane creation lives next door, in the repo and once installed. The dependency
+# runs one way only: pane-lib knows nothing about labs.
+# shellcheck disable=SC1091
+. "$(dirname "${BASH_SOURCE[0]}")/pane-lib.sh" || true
+declare -F pane_split >/dev/null || { echo "lab-lib.sh: cannot find pane-lib.sh beside it" >&2; return 1; }
+
 LAB_CONF="${LAB_CONF:-${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/lab.conf}"
 LAB_STATE_DIR="${LAB_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/labs}"
 

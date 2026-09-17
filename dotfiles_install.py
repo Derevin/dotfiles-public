@@ -48,11 +48,12 @@ COMMON = [
     ("tmux/lab-cleanup.sh", ".local/bin/lab-cleanup.sh"),
     ("tmux/select-pane.sh", ".local/bin/select-pane.sh"),
     ("tmux/zoom.sh", ".local/bin/zoom.sh"),
-    ("tmux/lab-split.sh", ".local/bin/lab-split.sh"),
+    ("tmux/pane-split.sh", ".local/bin/pane-split.sh"),
     ("just/justfile", ".justfile"),
     ("scripts/find-project.sh", ".local/bin/find-project.sh"),
     ("scripts/task-lib.sh", ".local/bin/task-lib.sh"),
     ("scripts/lab-lib.sh", ".local/bin/lab-lib.sh"),
+    ("scripts/pane-lib.sh", ".local/bin/pane-lib.sh"),
     ("scripts/task-list.sh", ".local/bin/task-list.sh"),
     ("scripts/task-watch.sh", ".local/bin/task-watch.sh"),
     ("scripts/task-claim.sh", ".local/bin/task-claim.sh"),
@@ -137,6 +138,7 @@ REMOVED = [
     ".local/bin/wt-popup",
     ".local/bin/wt-split.sh",
     ".local/bin/wt-cleanup.sh",
+    ".local/bin/lab-split.sh",
 ]
 
 # Sibling repos under ~/repos are declared in each layer's repos.conf (shared

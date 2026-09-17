@@ -38,6 +38,12 @@ export TMUX_TMPDIR="$TMP/tmux"
 mkdir -p "$TMUX_TMPDIR"
 unset TMUX
 
+# Two of the pane assertions below call the library directly rather than through
+# a script — the split-empty ordering is the thing under test, not its callers.
+# Sourced past the two lines above, so anything it ever runs at source time is
+# already pinned to this test's own server.
+source "$SCRIPT_DIR/../scripts/pane-lib.sh"
+
 # A home of our own. The panes run `bash -l`, and the real profile prepends
 # ~/.local/bin — which holds an installed claude that would shadow the stub and
 # start a session for real. No profile to read, no shadowing.
@@ -203,15 +209,25 @@ printf '#!/usr/bin/env bash\ngrep -m1 -- "$FZF_PICK"\n' > "$TMP/bin/fzf"
 chmod +x "$TMP/bin/just" "$TMP/bin/fzf"
 
 split_of() { tmux list-panes -t "$1" -F '#{pane_id}' | grep -vx "$1" | head -1; }
-pane_shows() { tmux capture-pane -p -t "$1" 2>/dev/null | grep -q -- "$2"; }
-alone() { [ "$(tmux list-panes -t "$1" -F x | wc -l)" = 1 ]; }
+# tmux reads an empty -t as "the active pane", so an assertion handed the id of
+# a split that never happened would quietly answer about some other pane — and
+# pass. Every question below goes through here first.
+is_pane() { [ -n "$1" ] && tmux display-message -pt "$1" -p '#{pane_id}' 2>/dev/null | grep -qx -- "$1"; }
+# -S -: the whole history. A dispatch pane is three rows and tmux scrolls one
+# off to write the dead-pane banner at the bottom, so the error a two-line
+# command printed is already out of the visible screen by the time we look.
+pane_shows() { is_pane "$1" && tmux capture-pane -p -S - -t "$1" 2>/dev/null | grep -q -- "$2"; }
+alone() { is_pane "$1" && [ "$(tmux list-panes -t "$1" -F x | wc -l)" = 1 ]; }
+dead() { is_pane "$1" && [ "$(tmux display-message -pt "$1" -p '#{pane_dead}')" = 1 ]; }
+alive() { is_pane "$1" && [ "$(tmux display-message -pt "$1" -p '#{pane_dead}')" = 0 ]; }
+tag_cleared() { alive "$1" && [ -z "$(pane_opt "$1" "$2")" ]; }
 
 P6=$(new_pane)
 tmux set-environment -g JUST_CALLER "$P6"
 FZF_PICK=boom just.sh >/dev/null 2>&1
 S6=$(split_of "$P6")
 ok "a failed background recipe keeps its split" "$(yn wait_for pane_shows "$S6" 'recipe blew up')" y
-ok "the kept split names the exit status" "$(yn wait_for pane_shows "$S6" 'exit 3')" y
+ok "the kept split names the exit status" "$(yn wait_for pane_shows "$S6" 'status 3')" y
 tmux kill-pane -t "$S6" 2>/dev/null
 
 P7=$(new_pane)
@@ -219,5 +235,46 @@ tmux set-environment -g JUST_CALLER "$P7"
 FZF_PICK=fine just.sh >/dev/null 2>&1
 ok "a background recipe that succeeds closes its split" "$(yn wait_for alone "$P7")" y
 tmux set-environment -gu JUST_CALLER
+
+# --- a dispatch pane outlives a command that fails instantly ------------------
+# The race the split-empty order closes. Handed straight to split-window, a
+# command this fast destroys its own pane before remain-on-exit lands, and the
+# error goes with it — there is nothing left to set the option on. Split empty
+# and the option is already in force when the command dies.
+P8=$(new_pane)
+pane_dispatch "$P8" 'echo "instant boom" >&2; exit 3'
+D8=$(split_of "$P8")
+ok "a dispatch pane outlives an instant failure" "$(yn wait_for dead "$D8")" y
+ok "the held pane keeps the error" "$(yn wait_for pane_shows "$D8" 'instant boom')" y
+ok "the held pane names the exit status" "$(yn wait_for pane_shows "$D8" 'status 3')" y
+tmux kill-pane -t "$D8" 2>/dev/null
+
+# --- a split pane whose lab cannot be entered degrades -----------------------
+# Quadrants are @unclosable, so a dead one cannot be cleared with M-w and the
+# slot is lost until the window is rebuilt. The pane must stay interactive, keep
+# the error above the prompt, and shed the tag — or just.sh goes on routing
+# recipes at a lab that is not there.
+F=$(lab-new.sh host 2>/dev/null)
+rm -rf "$TMP/Widget-$F"
+
+P9=$(new_pane)
+pane_split -d "$P9" "lab-shell $F" >/dev/null
+S9=$(split_of "$P9")
+ok "a pane whose lab will not open says so" "$(yn wait_for pane_shows "$S9" 'no worktree at')" y
+ok "a pane whose lab will not open stays alive" "$(yn alive "$S9")" y
+ok "a pane whose lab will not open sheds the tag" "$(yn wait_for tag_cleared "$S9" @lab)" y
+ok "a pane whose lab will not open sheds the backend" "$(yn tag_cleared "$S9" @backend)" y
+
+# --- the same lab in a dispatch pane holds instead of degrading ---------------
+# The other half of the rule above, and the half that carries the cost of being
+# wrong: handed an inner command, lab-shell is running in a dispatch pane. A
+# shell there would neither run the command nor ever close, so remain-on-exit
+# has to be what keeps the error.
+PA=$(new_pane)
+pane_dispatch "$PA" "lab-shell $F true"
+DA=$(split_of "$PA")
+ok "a dispatch pane's lab-shell does not degrade" "$(yn wait_for dead "$DA")" y
+ok "the held dispatch pane keeps the lab error" "$(yn wait_for pane_shows "$DA" 'no worktree at')" y
+tmux kill-pane -t "$DA" 2>/dev/null
 
 report

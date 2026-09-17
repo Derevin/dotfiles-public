@@ -39,7 +39,30 @@ if [ -z "$LAB" ]; then
     exit 1
 fi
 
-lab_resolve "$LAB" || exit 1
+# A pane that is meant to stay interactive must not die before it opens: a
+# quadrant is @unclosable, so close-pane.sh cannot clear a dead one and the slot
+# is lost until the window is rebuilt. Say what failed, drop the tags so just.sh
+# stops routing recipes at a lab that is not there, and hand the pane a plain
+# host shell with the error sitting above the prompt.
+#
+# A bare inner command is the exception. That pane is a DISPATCH pane: its
+# remain-on-exit is what holds the error, and a shell there would neither run
+# the command nor ever close.
+degrade_or_exit() {
+    echo "lab-shell: $1" >&2
+    [ -z "$INNER_CMD" ] || [ "$INTERACTIVE_AFTER" -eq 1 ] || exit 1
+    if [ -n "${TMUX:-}" ] && [ -n "${TMUX_PANE:-}" ]; then
+        tmux set-option -pu -t "$TMUX_PANE" @lab 2>/dev/null || true
+        tmux set-option -pu -t "$TMUX_PANE" @backend 2>/dev/null || true
+    fi
+    # Land in the project's main checkout where there is one. Failing to resolve
+    # is what leaves no project, so that caller passes none and the pane keeps
+    # whatever cwd it was created with.
+    [ -n "${2:-}" ] && [ -d "$2" ] && cd "$2"
+    exec bash -l
+}
+
+lab_resolve "$LAB" || degrade_or_exit "cannot resolve '$LAB'"
 
 # The direnv hook rides on PROMPT_COMMAND, which a non-interactive `bash -lc`
 # never runs, so a dispatched recipe would build with none of the lab's .envrc
@@ -70,7 +93,7 @@ PANE_ID_FOR_CONTAINER="${TMUX_PANE:-}"
 
 case "$LAB_BACKEND" in
     host)
-        [ -d "$LAB_WORKTREE" ] || { echo "lab-shell: no worktree at $LAB_WORKTREE" >&2; exit 1; }
+        [ -d "$LAB_WORKTREE" ] || degrade_or_exit "no worktree at $LAB_WORKTREE" "$LAB_CHECKOUT"
         cd "$LAB_WORKTREE"
         # No LAB_PANE_ID export: a host lab's processes are ordinary children of
         # the pane, so kill-pane reaps them and lab-cleanup.sh has nothing to do.
@@ -89,11 +112,11 @@ case "$LAB_BACKEND" in
         WORKDIR="$LAB_WORKTREE"
 
         if ! docker container inspect "$CONTAINER" >/dev/null 2>&1; then
-            echo "Container $CONTAINER does not exist."
-            exit 1
+            degrade_or_exit "container $CONTAINER does not exist" "$LAB_CHECKOUT"
         fi
         if [ "$(docker container inspect -f '{{.State.Running}}' "$CONTAINER")" != "true" ]; then
-            docker start "$CONTAINER" >/dev/null
+            docker start "$CONTAINER" >/dev/null \
+                || degrade_or_exit "cannot start container $CONTAINER" "$LAB_CHECKOUT"
         fi
 
         DOCKER_ENV=(-e "TERM=${TERM:-xterm-256color}")
