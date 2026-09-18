@@ -107,8 +107,11 @@ else
 fi
 
 # Guarded on the tasks repo: a clone without it keeps a plain shell here.
+# --with is unconditional: in extra-repo mode this pane is parked in that repo
+# and the dotfiles queue would otherwise be invisible, and outside it the
+# second column is the same project and collapses away.
 if [[ -d ~/repos/tasks ]]; then
-    tmux send-keys -t "$P2" "task-watch.sh" Enter
+    tmux send-keys -t "$P2" "task-watch.sh --with dotfiles" Enter
 fi
 
 # Extra-repo mode: bottom-right pane runs claude in the given repo.
