@@ -19,6 +19,49 @@ if ! command -v fzf >/dev/null 2>&1; then
     exit 1
 fi
 
+run_just() {
+    local scope=$1; shift
+    if [ "$scope" = global ]; then just -g "$@"; else just "$@"; fi
+}
+
+# `just --show` renders the header as `name p1 p2='default':`, and its params
+# are what the picker has to fill.
+recipe_params() {
+    printf '%s\n' "$2" | grep -m1 "^${1}\b" |
+        sed -n 's/^[^ ]* \(.*\):$/\1/p' | tr ' ' '\n' | grep -v '^[[:space:]]*$'
+}
+
+# The value a defaulted param is filled with when nothing asks: the chooser's
+# first line, since a chooser leads with the answer it would pick, else the
+# default the recipe itself names.
+param_fill() {
+    local scope=$1 recipe=$2 name=$3 default=$4 first
+    first=$(run_just "$scope" "_${recipe}-${name}" 2>/dev/null | head -1)
+    printf '%s' "${first:-$default}"
+}
+
+# `just.sh --preview <scope> <recipe>` — the pane beside the listing: the recipe
+# as just renders it, then what Enter would pass for the params it defaults.
+# A header reading `backend=''` says nothing about where a lab would land; the
+# chooser, which is what knows, says host.
+if [ "${1:-}" = --preview ]; then
+    show=$(run_just "${2:-}" --show "${3:-}" 2>/dev/null) || exit 0
+    printf '%s\n' "$show"
+    fills=""
+    while IFS= read -r param; do
+        [[ "$param" == [\*+\$]* ]] && continue
+        [[ "$param" == *"="* ]] || continue
+        name="${param%%=*}"
+        default="${param#*=}"
+        # Nothing to fill it with is nothing to say: the recipe resolves the
+        # empty value itself, or stops on it.
+        fill=$(param_fill "$2" "$3" "$name" "${default//\'/}")
+        [ -n "$fill" ] && fills+=" ${name}=${fill}"
+    done < <(recipe_params "${3:-}" "$show")
+    [ -n "$fills" ] && printf '\nenter passes:%s   (ctrl-o to choose)\n' "$fills"
+    exit 0
+fi
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # lab-lib.sh sits beside this script once installed; in the repo the tmux and
 # script helpers are kept apart, and the private tmux scripts a level further.
@@ -218,7 +261,7 @@ selection=$(echo "$recipes" | fzf \
     --header 'enter: run    ctrl-o: fill in optional args' \
     --expect=ctrl-o \
     --tiebreak=begin,length \
-    --preview 'src={1}; recipe={2}; if [ "$src" = "global" ]; then just -g --show "$recipe" 2>/dev/null; else just --show "$recipe" 2>/dev/null; fi' \
+    --preview "\"$SCRIPT_DIR/just.sh\" --preview {1} {2}" \
     --preview-window=right:50%:wrap)
 
 # --expect puts the accepting key on a line of its own above the selection,
@@ -238,9 +281,7 @@ else
     show=$(just --show "$recipe" 2>/dev/null)
 fi
 
-# Extract parameter names from the recipe header (grep for it — head -1 may hit a comment)
-header=$(echo "$show" | grep -m1 "^${recipe}\\b")
-params=$(echo "$header" | sed -n 's/^[^ ]* \(.*\):$/\1/p' | tr ' ' '\n' | grep -v '^\s*$')
+params=$(recipe_params "$recipe" "$show")
 
 args=()
 if [ -n "$params" ]; then
@@ -265,7 +306,7 @@ if [ -n "$params" ]; then
         # one likely outcome. ctrl-o on the recipe is where the other answers
         # live — for an empty default, the recipe's own fallback decides.
         if [ "$has_default" -eq 1 ] && [ "$ASK_OPTIONAL" -eq 0 ]; then
-            args+=("$default")
+            args+=("$(param_fill "$source" "$recipe" "$name" "$default")")
             continue
         fi
 

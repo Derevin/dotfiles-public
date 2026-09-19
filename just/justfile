@@ -8,7 +8,8 @@ task-list:
     task-list.sh --status todo active
 
 # A chooser for a param the recipe defaults (see `model` below) only opens when
-# the M-j picker's recipe is accepted with ctrl-o; plain Enter takes the default.
+# the M-j picker's recipe is accepted with ctrl-o. Plain Enter takes its first
+# line, which the picker's preview shows — so lead with the usual answer.
 [private]
 _claude-model:
     #!/usr/bin/env bash

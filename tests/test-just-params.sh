@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Unit test for just.sh's parameter handling: which params it asks about.
 #
-# A param the recipe gives a default is filled with it and never asked; ctrl-o
-# on the recipe picker is what asks for those too. A param without one is asked
-# either way.
+# A param the recipe gives a default is filled without asking — from the
+# chooser's first line where there is one, else the default itself — and ctrl-o
+# on the recipe picker is what asks. A param with no default is asked either
+# way. The preview names the value that will be passed, so the choice is
+# visible before it is made.
 #
 # Self-contained: stub `just` and `fzf`, so no real recipe is ever listed or
 # run. TMUX_TMPDIR points at a socket dir inside the temp dir and TMUX is unset,
@@ -33,8 +35,9 @@ export TMUX_TMPDIR="$TMP/tmux"
 mkdir -p "$TMUX_TMPDIR"
 unset TMUX
 
-# One global recipe with a required param and a defaulted one, and a chooser for
-# the defaulted one — the shape every lab recipe has.
+# Two global recipes: one with a required param and a chooser behind its
+# defaulted one — the shape every lab recipe has — and one whose default has no
+# chooser at all.
 mkdir -p "$TMP/bin"
 cat > "$TMP/bin/just" <<'STUB'
 #!/usr/bin/env bash
@@ -43,13 +46,20 @@ for a in "$@"; do [ "$a" = -g ] && GLOBAL=1; done
 case "$*" in
     *--dump*)
         [ "$GLOBAL" = 1 ] &&
-            echo '{"source":"g","recipes":{"lab":{"body":[]},"_lab-backend":{"body":[]}}}' ||
+            echo '{"source":"g","recipes":{"lab":{"body":[]},"_lab-backend":{"body":[]},"solo":{"body":[]}}}' ||
             echo '{"source":"p","recipes":{}}'
         exit 0 ;;
-    *--list*) [ "$GLOBAL" = 1 ] && echo lab; exit 0 ;;
-    *--show*) printf "lab id backend='':\n    @# host_only\n"; exit 0 ;;
+    *--list*) [ "$GLOBAL" = 1 ] && printf '%s\n' lab solo; exit 0 ;;
+    *--show*)
+        case "${*: -1}" in
+            lab) printf "lab id backend='':\n    @# host_only\n" ;;
+            solo) printf "solo model='haiku':\n    @# host_only\n" ;;
+        esac
+        exit 0 ;;
 esac
 [ "${*: -1}" = _lab-backend ] && { printf '%s\n' host docker coder; exit 0; }
+# Any other private recipe is absent, and absent is what just says loudly.
+case "${*: -1}" in _*) echo "error: unknown recipe" >&2; exit 1 ;; esac
 # The run. Each argument bracketed: an empty one has to be visible.
 printf 'RUN'; printf ' [%s]' "$@"; printf '\n'
 STUB
@@ -59,7 +69,7 @@ cat > "$TMP/bin/fzf" <<'STUB'
 # accepting key on a line of its own before the selection. Anything else is a
 # chooser, which takes the top entry.
 case "$*" in
-    *--expect=*) printf '%s\n' "${FZF_KEY:-}"; grep -m1 -- lab ;;
+    *--expect=*) printf '%s\n' "${FZF_KEY:-}"; grep -m1 -- "$FZF_PICK" ;;
     *) head -1 ;;
 esac
 STUB
@@ -67,15 +77,30 @@ chmod +x "$TMP/bin/just" "$TMP/bin/fzf"
 
 # No caller pane and no server to name one, so just.sh runs the recipe inline
 # and the run reaches stdout. The id has no default, so it is typed.
-run() { PATH="$TMP/bin:$PATH" FZF_KEY="${1:-}" bash "$SCRIPT_DIR/../tmux/just.sh" <<< 238; }
+run() {
+    PATH="$TMP/bin:$PATH" FZF_KEY="${1:-}" FZF_PICK="${2:-lab}" \
+        bash "$SCRIPT_DIR/../tmux/just.sh" <<< 238
+}
 
 out=$(run)
 ok "a param with no default is asked" "$(grep -c '^id: ' <<< "$out")" 1
-ok "a defaulted param is filled, not asked" "$(grep -o 'RUN.*' <<< "$out")" \
-    "RUN [-g] [lab] [238] []"
+# A chooser leads with the answer it would pick, so taking its first line is
+# what keeps the previewed value and the passed one the same value.
+ok "a defaulted param takes the chooser's first line" "$(grep -o 'RUN.*' <<< "$out")" \
+    "RUN [-g] [lab] [238] [host]"
 
 out=$(run ctrl-o)
-ok "ctrl-o asks for the defaulted one" "$(grep -o 'RUN.*' <<< "$out")" \
-    "RUN [-g] [lab] [238] [host]"
+ok "ctrl-o still asks" "$(grep -o 'RUN.*' <<< "$out")" "RUN [-g] [lab] [238] [host]"
+
+out=$(run '' solo)
+ok "a default with no chooser is passed as written" "$(grep -o 'RUN.*' <<< "$out")" \
+    "RUN [-g] [solo] [haiku]"
+
+# The preview is where the value has to show: `backend=''` in the header is
+# exactly what says nothing.
+out=$(PATH="$TMP/bin:$PATH" bash "$SCRIPT_DIR/../tmux/just.sh" --preview global lab)
+ok "the preview names what enter passes" "$(grep -o 'enter passes:.*' <<< "$out")" \
+    "enter passes: backend=host   (ctrl-o to choose)"
+ok "the preview still shows the recipe" "$(grep -c "^lab id backend=''" <<< "$out")" 1
 
 report
