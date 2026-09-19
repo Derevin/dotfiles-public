@@ -276,6 +276,18 @@ lab_project_paths() {
   [ -n "$LAB_CHECKOUT" ] || { echo "lab: no checkout configured for project '$1' (see $LAB_CONF)" >&2; return 1; }
 }
 
+# lab_backend_fallback [caller-pane] — the backend a creation path takes when
+# none is named: the caller pane's lab, else the project's declared default.
+# Empty when neither answers — nothing here invents one. Needs the project
+# resolved first (LAB_DEFAULT_BACKEND), and TMUX cleared by the caller, since a
+# popup's own server knows nothing about the pane it was opened from.
+lab_backend_fallback() {
+  local pane=${1:-} b=""
+  [ -n "$pane" ] && b=$(tmux show-options -pvt "$pane" @backend 2>/dev/null)
+  [ -n "$b" ] || b="${LAB_DEFAULT_BACKEND:-}"
+  printf '%s' "$b"
+}
+
 # --- existence --------------------------------------------------------------
 
 # lab_container_exists <container> / lab_workspace_exists <workspace>

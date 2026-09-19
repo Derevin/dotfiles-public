@@ -123,6 +123,7 @@ LINUX_ONLY = [
     ("scripts/lab-claim.sh", ".local/bin/lab-claim.sh"),
     ("scripts/lab-drop.sh", ".local/bin/lab-drop.sh"),
     ("scripts/lab-list.sh", ".local/bin/lab-list.sh"),
+    ("scripts/lab-backends.sh", ".local/bin/lab-backends.sh"),
     ("scripts/lab-current.sh", ".local/bin/lab-current.sh"),
     ("tmux/park-host-worktrees.sh", ".local/bin/park-host-worktrees.sh"),
     ("scripts/apply-gnome-keybindings.sh", ".local/bin/apply-gnome-keybindings.sh"),

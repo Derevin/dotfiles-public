@@ -115,6 +115,18 @@ ok "project default backend" "$LAB_DEFAULT_BACKEND" docker
 lab_project_paths two
 ok "no default backend declared" "$LAB_DEFAULT_BACKEND" ""
 
+# What a creation path takes when nothing names a backend. The caller pane's
+# lab answers first: standing in one backend and asking for a task is not a
+# request to leave it. Stubbed rather than served — a real pane needs a server,
+# and this suite starts none.
+tmux() { [ "$*" = "show-options -pvt %9 @backend" ] && printf 'coder\n'; }
+lab_project_paths one
+ok "pane answers before the project" "$(lab_backend_fallback %9)" coder
+ok "no pane leaves the project's" "$(lab_backend_fallback)" docker
+lab_project_paths two
+ok "neither answers" "$(lab_backend_fallback %1)" ""
+unset -f tmux
+
 
 # --- quadrant state ---------------------------------------------------------
 lab_state_put proj labs 1 dlab-238-x

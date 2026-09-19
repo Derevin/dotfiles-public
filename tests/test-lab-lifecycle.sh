@@ -232,4 +232,16 @@ lab-drop.sh "$N5" >/dev/null
 grep -v '_BACKEND=' "$TMP/lab.conf" > "$TMP/lab-nodefault.conf"
 fails env LAB_CONF="$TMP/lab-nodefault.conf" lab-new.sh
 
+# The chooser feeds the picker, whose first line is what Enter passes — so the
+# project's backend leads, and the rest follow in case it is the exception.
+ok "backends lead with the project's" "$(lab-backends.sh | tr '\n' ' ')" "host docker coder "
+# Offering a backend the project cannot provision is offering a failure: the
+# creation would stop at the missing provisioner.
+grep -v '_PROVISIONER=' "$TMP/lab.conf" > "$TMP/lab-hostonly.conf"
+ok "no provisioner leaves only host" \
+    "$(LAB_CONF="$TMP/lab-hostonly.conf" lab-backends.sh)" host
+# Nothing to lead with is nothing to offer: the recipes this feeds cannot run
+# outside a configured project anyway.
+ok "no default, no list" "$(LAB_CONF="$TMP/lab-nodefault.conf" lab-backends.sh)" ""
+
 report
