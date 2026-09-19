@@ -33,11 +33,33 @@ recipe_params() {
 
 # The value a defaulted param is filled with when nothing asks: the chooser's
 # first line, since a chooser leads with the answer it would pick, else the
-# default the recipe itself names.
+# default the recipe itself names. The value goes to stdout either way; the exit
+# status says whether a chooser answered, so the listing and the preview rewrite
+# only what they would change.
+#
+# One run per chooser, keyed on its body where the dump knows it: the three lab
+# recipes name three choosers running one script, and the listing would
+# otherwise run it once per row.
+declare -A fill_cache fill_file
 param_fill() {
-    local scope=$1 recipe=$2 name=$3 default=$4 first
-    first=$(run_just "$scope" "_${recipe}-${name}" 2>/dev/null | head -1)
-    printf '%s' "${first:-$default}"
+    local scope=$1 recipe=$2 name=$3 default=$4 chooser="_${2}-${3}" body key
+    if [ "$scope" = global ]; then body=${g_body[$chooser]:-}; else body=${p_body[$chooser]:-}; fi
+    key="$scope|${body:-$chooser}"
+    if [ -z "${fill_cache[$key]+x}" ]; then
+        # Primed and waited for, so an empty file is an answer of none rather
+        # than one still coming.
+        if [ -f "${fill_file[$key]:-/nonexistent}" ]; then
+            fill_cache[$key]=$(< "${fill_file[$key]}")
+        else
+            fill_cache[$key]=$(run_just "$scope" "$chooser" 2>/dev/null | head -1)
+        fi
+    fi
+    if [ -n "${fill_cache[$key]}" ]; then
+        printf '%s' "${fill_cache[$key]}"
+        return 0
+    fi
+    printf '%s' "$default"
+    return 1
 }
 
 # `just.sh --preview <scope> <recipe>` — the pane beside the listing: the recipe
@@ -52,11 +74,9 @@ if [ "${1:-}" = --preview ]; then
         [[ "$param" == [\*+\$]* ]] && continue
         [[ "$param" == *"="* ]] || continue
         name="${param%%=*}"
-        default="${param#*=}"
-        # Nothing to fill it with is nothing to say: the recipe resolves the
-        # empty value itself, or stops on it.
-        fill=$(param_fill "$2" "$3" "$name" "${default//\'/}")
-        [ -n "$fill" ] && fills+=" ${name}=${fill}"
+        # Only a chooser's answer is worth a line: a default with nothing behind
+        # it is already shown, in the header, exactly as it will be passed.
+        fill=$(param_fill "$2" "$3" "$name" "") && fills+=" ${name}=${fill}"
     done < <(recipe_params "${3:-}" "$show")
     [ -n "$fills" ] && printf '\nenter passes:%s   (ctrl-o to choose)\n' "$fills"
     exit 0
@@ -156,7 +176,7 @@ pane_busy() {
 # make the listing visibly slow. Without jq, fall back to per-recipe shows.
 HAVE_JQ=0
 command -v jq >/dev/null 2>&1 && HAVE_JQ=1
-declare -A p_req p_body g_req g_body
+declare -A p_req p_body p_par g_req g_body g_par
 
 drop_missing_repos() {
     local scope="$1" listing="$2" line name show repo kept=""
@@ -182,6 +202,53 @@ drop_missing_repos() {
     printf '%s' "${kept%$'\n'}"
 }
 
+# just renders a recipe's params into the listing, so the row for a lab reads
+# `new-lab backend=''` — which says nothing about where the lab would land. Show
+# the chooser's answer there instead: the row is what gets read, and the preview
+# is a second look. A default with no chooser behind it is left as just wrote
+# it, being already what will be passed.
+# Start every chooser the listing needs, all at once. Each costs a just startup
+# on top of its own work, and run one after another they are the slowest thing
+# between M-j and the picker. Keyed on the body, so the three lab recipes naming
+# one script start it once.
+prime_fills() {
+    local scope="$1" listing="$2" line name pars p chooser body key
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        name=${line%%[[:space:]]*}
+        if [ "$scope" = global ]; then pars=${g_par[$name]:-}; else pars=${p_par[$name]:-}; fi
+        for p in ${pars//,/ }; do
+            chooser="_${name}-${p}"
+            if [ "$scope" = global ]; then body=${g_body[$chooser]:-}; else body=${p_body[$chooser]:-}; fi
+            [ -n "$body" ] || continue
+            key="$scope|$body"
+            [ -n "${fill_file[$key]+x}" ] && continue
+            [ -n "$FILL_DIR" ] || { FILL_DIR=$(mktemp -d); trap 'rm -rf "$FILL_DIR"' EXIT; }
+            fill_file[$key]="$FILL_DIR/${#fill_file[@]}"
+            run_just "$scope" "$chooser" 2>/dev/null | head -1 > "${fill_file[$key]}" &
+        done
+    done <<< "$listing"
+}
+
+annotate_fills() {
+    local scope="$1" listing="$2" line name pars p fill re kept=""
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        name=${line%%[[:space:]]*}
+        if [ "$scope" = global ]; then pars=${g_par[$name]:-}; else pars=${p_par[$name]:-}; fi
+        for p in ${pars//,/ }; do
+            fill=$(param_fill "$scope" "$name" "$p" "") || continue
+            # The rendered default is quoted ('' or 'haiku') or bare, and only
+            # this param's own is replaced — another param may end the same way.
+            re="(^| )${p}=('[^']*'|[^ ]*)"
+            [[ "$line" =~ $re ]] || continue
+            line=${line/"${BASH_REMATCH[0]}"/"${BASH_REMATCH[1]}${p}=${fill}"}
+        done
+        kept+="$line"$'\n'
+    done <<< "$listing"
+    printf '%s' "${kept%$'\n'}"
+}
+
 # Collect recipes: "source recipe  # description"
 recipes=""
 
@@ -200,12 +267,13 @@ if [ "$HAVE_JQ" -eq 1 ]; then
     dump_meta='.recipes | to_entries[] | [.key,
         ([.value.body[][]? | strings
           | capture("^\\s*@?#\\s*requires-repo\\s+(?<r>\\S+)").r] | first // "-"),
-        (.value | tojson)] | @tsv'
+        (.value | tojson),
+        ([.value.parameters[]? | select(.default != null) | .name] | join(","))] | @tsv'
     pdump=$(just --dump --dump-format json 2>/dev/null)
     gdump=$(just -g --dump --dump-format json 2>/dev/null)
-    while IFS=$'\t' read -r n r b; do p_req[$n]=$r; p_body[$n]=$b; done \
+    while IFS=$'\t' read -r n r b pars; do p_req[$n]=$r; p_body[$n]=$b; p_par[$n]=$pars; done \
         < <(jq -r "$dump_meta" <<<"$pdump" 2>/dev/null)
-    while IFS=$'\t' read -r n r b; do g_req[$n]=$r; g_body[$n]=$b; done \
+    while IFS=$'\t' read -r n r b pars; do g_req[$n]=$r; g_body[$n]=$b; g_par[$n]=$pars; done \
         < <(jq -r "$dump_meta" <<<"$gdump" 2>/dev/null)
 
     # A dir without its own justfile resolves the project scope to ~/.justfile
@@ -221,6 +289,15 @@ fi
 # Drop recipes that require an absent ~/repos/<name> (see drop_missing_repos).
 project=$(drop_missing_repos project "$project")
 global=$(drop_missing_repos global "$global")
+
+# Say what each row would run with (see annotate_fills). Both scopes' choosers
+# start before either listing is rewritten, so they overlap.
+FILL_DIR=""
+prime_fills project "$project"
+prime_fills global "$global"
+wait
+project=$(annotate_fills project "$project")
+global=$(annotate_fills global "$global")
 
 # Deduplicate: if a recipe name appears in both and the body is identical, drop from project (global wins)
 if [ -n "$global" ] && [ -n "$project" ]; then
@@ -252,6 +329,22 @@ if [ -z "$recipes" ]; then
     read -n1
     exit 0
 fi
+
+# A fill is rarely as wide as the default it replaced, and just padded each
+# scope separately anyway, so the descriptions line up once over the merged
+# listing. Matched on the first run of spaces before a #, and the rest of the
+# line is kept whole — a description may hold one too.
+recipes=$(printf '%s\n' "$recipes" | awk '
+    { head = $0; desc[NR] = ""
+      if (match(head, / +# /)) {
+          desc[NR] = substr(head, RSTART + RLENGTH)
+          head = substr(head, 1, RSTART - 1)
+      }
+      col[NR] = head
+      if (length(head) > w) w = length(head) }
+    END { for (i = 1; i <= NR; i++)
+              if (desc[i] != "") printf "%-*s # %s\n", w, col[i], desc[i]
+              else print col[i] }')
 
 # fzf picker with preview. tiebreak=begin ranks by match position — the default
 # `length` tiebreak settles ties on total line length, which lets a doc comment

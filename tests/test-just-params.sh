@@ -46,10 +46,19 @@ for a in "$@"; do [ "$a" = -g ] && GLOBAL=1; done
 case "$*" in
     *--dump*)
         [ "$GLOBAL" = 1 ] &&
-            echo '{"source":"g","recipes":{"lab":{"body":[]},"_lab-backend":{"body":[]},"solo":{"body":[]}}}' ||
+            echo '{"source":"g","recipes":{
+                "lab":{"body":[],"parameters":[{"name":"id","default":null},{"name":"backend","default":""}]},
+                "_lab-backend":{"body":[]},
+                "solo":{"body":[],"parameters":[{"name":"model","default":"haiku"}]}}}' ||
             echo '{"source":"p","recipes":{}}'
         exit 0 ;;
-    *--list*) [ "$GLOBAL" = 1 ] && printf '%s\n' lab solo; exit 0 ;;
+    *--list*)
+        # just renders each recipe's params into the row, and pads to align the
+        # descriptions.
+        [ "$GLOBAL" = 1 ] && printf '%s\n' \
+            "lab id backend=''  # A lab recipe" \
+            "solo model='haiku' # A solo recipe"
+        exit 0 ;;
     *--show*)
         case "${*: -1}" in
             lab) printf "lab id backend='':\n    @# host_only\n" ;;
@@ -69,7 +78,7 @@ cat > "$TMP/bin/fzf" <<'STUB'
 # accepting key on a line of its own before the selection. Anything else is a
 # chooser, which takes the top entry.
 case "$*" in
-    *--expect=*) printf '%s\n' "${FZF_KEY:-}"; grep -m1 -- "$FZF_PICK" ;;
+    *--expect=*) printf '%s\n' "${FZF_KEY:-}"; tee "$FZF_LIST" | grep -m1 -- "$FZF_PICK" ;;
     *) head -1 ;;
 esac
 STUB
@@ -78,7 +87,7 @@ chmod +x "$TMP/bin/just" "$TMP/bin/fzf"
 # No caller pane and no server to name one, so just.sh runs the recipe inline
 # and the run reaches stdout. The id has no default, so it is typed.
 run() {
-    PATH="$TMP/bin:$PATH" FZF_KEY="${1:-}" FZF_PICK="${2:-lab}" \
+    PATH="$TMP/bin:$PATH" FZF_KEY="${1:-}" FZF_PICK="${2:-lab}" FZF_LIST="$TMP/listing" \
         bash "$SCRIPT_DIR/../tmux/just.sh" <<< 238
 }
 
@@ -96,8 +105,17 @@ out=$(run '' solo)
 ok "a default with no chooser is passed as written" "$(grep -o 'RUN.*' <<< "$out")" \
     "RUN [-g] [solo] [haiku]"
 
-# The preview is where the value has to show: `backend=''` in the header is
-# exactly what says nothing.
+# The listing is the row that gets read, so the value shows there first. A
+# default with no chooser stays as just rendered it — already what is passed.
+ok "the row names the value enter passes" \
+    "$(grep -c 'lab id backend=host' "$TMP/listing")" 1
+ok "a default with no chooser is left alone" \
+    "$(grep -c "solo model='haiku'" "$TMP/listing")" 1
+# Substituting a value of another width would leave the descriptions ragged.
+ok "the descriptions stay in one column" \
+    "$(awk '{print index($0, "#")}' "$TMP/listing" | sort -u | wc -l)" 1
+
+# And again in the preview, for the recipe under the cursor.
 out=$(PATH="$TMP/bin:$PATH" bash "$SCRIPT_DIR/../tmux/just.sh" --preview global lab)
 ok "the preview names what enter passes" "$(grep -o 'enter passes:.*' <<< "$out")" \
     "enter passes: backend=host   (ctrl-o to choose)"

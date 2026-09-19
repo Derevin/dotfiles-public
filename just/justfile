@@ -9,7 +9,8 @@ task-list:
 
 # A chooser for a param the recipe defaults (see `model` below) only opens when
 # the M-j picker's recipe is accepted with ctrl-o. Plain Enter takes its first
-# line, which the picker's preview shows — so lead with the usual answer.
+# line, and the picker shows that line in place of the default — so lead with
+# the usual answer, and keep the chooser cheap enough to run per listing.
 [private]
 _claude-model:
     #!/usr/bin/env bash
