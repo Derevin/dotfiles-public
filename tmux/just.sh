@@ -215,10 +215,17 @@ fi
 # two characters longer rank `target-mock` above `mock` for the query "mock".
 selection=$(echo "$recipes" | fzf \
     --prompt "recipe> " \
+    --header 'enter: run    ctrl-o: fill in optional args' \
+    --expect=ctrl-o \
     --tiebreak=begin,length \
     --preview 'src={1}; recipe={2}; if [ "$src" = "global" ]; then just -g --show "$recipe" 2>/dev/null; else just --show "$recipe" 2>/dev/null; fi' \
     --preview-window=right:50%:wrap)
 
+# --expect puts the accepting key on a line of its own above the selection,
+# empty for a plain Enter.
+ASK_OPTIONAL=0
+[ "$(head -1 <<< "$selection")" = ctrl-o ] && ASK_OPTIONAL=1
+selection=$(sed -n 2p <<< "$selection")
 [ -z "$selection" ] && exit 0
 
 source=$(echo "$selection" | awk '{print $1}')
@@ -246,9 +253,20 @@ if [ -n "$params" ]; then
             name="${param%%=*}"
             default="${param#*=}"
             default="${default//\'/}"
+            has_default=1
         else
             name="$param"
             default=""
+            has_default=0
+        fi
+
+        # A param the recipe gives a default is filled, not asked: the default
+        # is the answer nearly every time, and a chooser for it is a popup with
+        # one likely outcome. ctrl-o on the recipe is where the other answers
+        # live — for an empty default, the recipe's own fallback decides.
+        if [ "$has_default" -eq 1 ] && [ "$ASK_OPTIONAL" -eq 0 ]; then
+            args+=("$default")
+            continue
         fi
 
         # Check for chooser recipe: _recipe-param (provides fzf values). With

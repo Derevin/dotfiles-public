@@ -7,12 +7,14 @@ sync:
 task-list:
     task-list.sh --status todo active
 
+# A chooser for a param the recipe defaults (see `model` below) only opens when
+# the M-j picker's recipe is accepted with ctrl-o; plain Enter takes the default.
 [private]
 _claude-model:
     #!/usr/bin/env bash
     printf '%s\n' haiku sonnet opus
 
-# Fresh claude at a chosen model
+# Fresh claude at haiku (ctrl-o in the picker for another model)
 [no-cd]
 claude model='haiku':
     #!/usr/bin/env bash

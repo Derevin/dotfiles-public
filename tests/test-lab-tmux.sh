@@ -191,7 +191,8 @@ ok "drop drops the placement" "$(yn unplaced "$E")" y
 # The split is ephemeral, so a recipe that fails would take its own error
 # message off the screen with it. Driving just.sh needs the two commands it
 # shells out to: `just`, answering the listing, the --show and the recipe run,
-# and `fzf`, picking the recipe FZF_PICK names.
+# and `fzf`, picking the recipe FZF_PICK names — under --expect it prints the
+# accepting key on a line of its own first, empty for a plain Enter.
 cat > "$TMP/bin/just" <<'STUB'
 #!/usr/bin/env bash
 GLOBAL=0
@@ -205,7 +206,11 @@ esac
 echo "recipe blew up" >&2
 exit 3
 STUB
-printf '#!/usr/bin/env bash\ngrep -m1 -- "$FZF_PICK"\n' > "$TMP/bin/fzf"
+cat > "$TMP/bin/fzf" <<'STUB'
+#!/usr/bin/env bash
+case "$*" in *--expect=*) printf '%s\n' "${FZF_KEY:-}" ;; esac
+grep -m1 -- "$FZF_PICK"
+STUB
 chmod +x "$TMP/bin/just" "$TMP/bin/fzf"
 
 split_of() { tmux list-panes -t "$1" -F '#{pane_id}' | grep -vx "$1" | head -1; }
