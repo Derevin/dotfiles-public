@@ -87,12 +87,33 @@ fi
 # Before the destroy rather than after, because reverting a quadrant resolves the
 # lab it is reverting — which stops working the moment the backend is gone.
 # No server to ask, or no pane showing it, and list-panes simply yields nothing.
+PANES=()
+SHOWS_SELF=0
 if command -v tmux >/dev/null 2>&1; then
     while read -r pane lab; do
         [ "$lab" = "$NAME" ] || continue
-        lab-release.sh --pane "$pane" >/dev/null
+        PANES+=("$pane")
+        [ "$pane" = "${TMUX_PANE:-}" ] && SHOWS_SELF=1
     done < <(TMUX= tmux list-panes -a -F '#{pane_id} #{@lab}' 2>/dev/null)
 fi
+
+# Typed inside the lab it destroys. Releasing this pane respawns it and kills
+# the process group this script runs in, so the rest goes to a copy outside that
+# group. TMUX_PANE goes with it: kept, the release would defer itself the same
+# way, and that copy loses its race with the destroy below and leaves the pane
+# tagged for a lab nothing can resolve. The guards are already past, so a
+# refusal has been reported before any of this.
+if [ "$SHOWS_SELF" -eq 1 ]; then
+    args=("$NAME")
+    [ "$FORCE" -eq 1 ] && args=(--force "$NAME")
+    TMUX_PANE= setsid "$SCRIPT_DIR/lab-drop.sh" "${args[@]}" </dev/null >/dev/null 2>&1 &
+    echo "dropping $NAME"
+    exit 0
+fi
+
+for pane in ${PANES+"${PANES[@]}"}; do
+    lab-release.sh --pane "$pane" >/dev/null
+done
 
 case "$LAB_BACKEND" in
     docker) lab_container_exists "$LAB_CONTAINER" && docker rm -f "$LAB_CONTAINER" >/dev/null ;;

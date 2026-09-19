@@ -99,6 +99,7 @@ tagged() { [ "$(pane_opt "$1" @lab)" = "$2" ]; }
 untagged() { [ -z "$(pane_opt "$1" @lab)" ]; }
 placed() { cut -f3 "$TMP/state/widget.tsv" 2>/dev/null | grep -qx "$1"; }
 unplaced() { ! placed "$1"; }
+gone() { [ ! -d "$TMP/Widget-$1" ]; }
 
 # -a: append after the current window rather than claim an index already taken.
 # The name is fixed because the placement row is keyed on it and automatic-rename
@@ -186,6 +187,21 @@ lab-drop.sh "$E" >/dev/null 2>&1
 wait_for untagged "$P5"
 ok "drop reverts the pane showing the lab" "$(yn untagged "$P5")" y
 ok "drop drops the placement" "$(yn unplaced "$E")" y
+
+# --- drop typed inside the pane showing the lab -------------------------------
+# Releasing that pane respawns it, which kills the process group the drop itself
+# is running in. Everything past the release — the worktree, the placement — has
+# to land anyway, or the lab is half gone and nothing says so.
+P6=$(new_pane)
+tmux set-option -pt "$P6" @quadrant 6
+F=$(lab-new.sh host 2>/dev/null)
+lab-attach.sh --pane "$P6" "$F" >/dev/null 2>&1
+wait_for claude_ran "$F"
+tmux send-keys -t "$P6" "lab-drop.sh $F" Enter
+wait_for gone "$F"
+ok "drop from inside removes the worktree" "$(yn gone "$F")" y
+ok "drop from inside drops the placement" "$(yn unplaced "$F")" y
+ok "drop from inside reverts the pane" "$(yn untagged "$P6")" y
 
 # --- what a background split leaves behind ------------------------------------
 # The split is ephemeral, so a recipe that fails would take its own error
