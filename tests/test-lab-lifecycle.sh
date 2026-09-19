@@ -82,6 +82,7 @@ cat > "$TMP/lab.conf" <<CONF
 LAB_WIDGET_CHECKOUT=$TMP/Widget
 LAB_WIDGET_CONTAINER_PREFIX=widget-
 LAB_WIDGET_PROVISIONER=$TMP/provision.sh
+LAB_WIDGET_BACKEND=host
 CONF
 cat > "$TMP/provision.sh" <<'PROV'
 #!/usr/bin/env bash
@@ -219,5 +220,16 @@ PROVISION_FAIL=1 lab-new.sh docker >/dev/null 2>&1
 ok "a failed provision leaves no worktree" "$([ -d "$TMP/Widget-dlab-tmp1" ] && echo y)" ""
 ok "a failed provision destroys the container" \
     "$(grep -c '^docker rm -f widget-dlab-tmp1$' "$TMP/stub.log")" 1
+
+# --- the backend a project declares ------------------------------------------
+# Creating the lab is the moment the backend is decided, and for a project that
+# only ever uses one, deciding is a step with one answer.
+N5=$(lab-new.sh 2>/dev/null)
+ok "new with no backend takes the project's" "$N5" hlab-tmp1
+lab-drop.sh "$N5" >/dev/null
+# Nothing to fall back to is not permission to guess: a lab in the wrong backend
+# is provisioned, named and claimed before anyone notices.
+grep -v '_BACKEND=' "$TMP/lab.conf" > "$TMP/lab-nodefault.conf"
+fails env LAB_CONF="$TMP/lab-nodefault.conf" lab-new.sh
 
 report

@@ -5,7 +5,7 @@
 # carried by the name's first letter: hlab (host worktree), dlab (docker over a
 # worktree), clab (coder workspace). Anonymous labs are <b>lab-tmp<N>; claiming
 # one renames it to <b>lab-<id>-<slug>. The name is the path, so every derivation
-# below is a pure function of it plus the project's four config keys.
+# below is a pure function of it plus the project's five config keys.
 
 # Pane creation lives next door, in the repo and once installed. The dependency
 # runs one way only: pane-lib knows nothing about labs.
@@ -172,7 +172,10 @@ lab_project_from_cwd() { find-project.sh 2>/dev/null; }
 
 # lab_resolve <name> — set every derived path for a lab or legacy fixture:
 #   LAB_PROJECT LAB_PROJECT_KEY LAB_CHECKOUT LAB_PREFIX LAB_PROVISIONER
-#   LAB_BASE_OVERRIDE LAB_BACKEND LAB_WORKTREE LAB_CONTAINER
+#   LAB_BASE_OVERRIDE LAB_DEFAULT_BACKEND LAB_BACKEND LAB_WORKTREE LAB_CONTAINER
+#
+# LAB_BACKEND is this lab's, read off its name; LAB_DEFAULT_BACKEND is the
+# project's, and only the creation paths have any use for it.
 #
 # The name carries the backend but not the project, so the project comes from
 # whichever declared one owns it: a single declared project is unambiguous, else
@@ -236,6 +239,7 @@ lab_resolve() {
   LAB_PREFIX=$(lab_conf_key "$key" CONTAINER_PREFIX)
   LAB_PROVISIONER=$(lab_conf_key "$key" PROVISIONER)
   LAB_BASE_OVERRIDE=$(lab_conf_key "$key" BASE)
+  LAB_DEFAULT_BACKEND=$(lab_conf_key "$key" BACKEND)
   if [ -z "$LAB_CHECKOUT" ]; then
     echo "lab: no checkout configured for project '$(printf '%s' "$key" | tr '[:upper:]' '[:lower:]')' (see $LAB_CONF)" >&2
     return 1
@@ -268,6 +272,7 @@ lab_project_paths() {
   LAB_PREFIX=$(lab_conf_key "$LAB_PROJECT_KEY" CONTAINER_PREFIX)
   LAB_PROVISIONER=$(lab_conf_key "$LAB_PROJECT_KEY" PROVISIONER)
   LAB_BASE_OVERRIDE=$(lab_conf_key "$LAB_PROJECT_KEY" BASE)
+  LAB_DEFAULT_BACKEND=$(lab_conf_key "$LAB_PROJECT_KEY" BACKEND)
   [ -n "$LAB_CHECKOUT" ] || { echo "lab: no checkout configured for project '$1' (see $LAB_CONF)" >&2; return 1; }
 }
 

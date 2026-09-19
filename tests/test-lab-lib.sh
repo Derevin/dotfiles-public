@@ -23,6 +23,7 @@ cat > "$TMP/lab.conf" <<CONF
 LAB_ONE_CHECKOUT=$TMP/one/Proj
 LAB_ONE_CONTAINER_PREFIX=one-
 LAB_ONE_PROVISIONER=$TMP/provision.sh
+LAB_ONE_BACKEND=docker
 LAB_TWO_CHECKOUT=$TMP/two/Two
 LAB_TWO_CONTAINER_PREFIX=two-
 CONF
@@ -106,6 +107,13 @@ ok "cwd decides when nothing local says" \
 # A cwd whose project is not configured is just a shell that happens to be
 # elsewhere, not an answer.
 fails bash -c 'cd /tmp && source "'"$SCRIPT_DIR"'/../scripts/lab-lib.sh" && lab_resolve hlab-tmp9'
+
+# The backend a project's labs land in when nothing else says. A project that
+# declares none gets none invented for it — creation asks there instead.
+lab_project_paths one
+ok "project default backend" "$LAB_DEFAULT_BACKEND" docker
+lab_project_paths two
+ok "no default backend declared" "$LAB_DEFAULT_BACKEND" ""
 
 
 # --- quadrant state ---------------------------------------------------------
