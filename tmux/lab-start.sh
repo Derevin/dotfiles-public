@@ -27,7 +27,6 @@ for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts";
 done
 [ -n "$LIB_DIR" ] || { echo "lab-start: cannot find lab-lib.sh" >&2; exit 1; }
 source "$LIB_DIR/lab-lib.sh"
-source "$LIB_DIR/task-lib.sh"
 
 ID="${1:-}"
 PROMPT="${2:-}"
@@ -61,13 +60,19 @@ BACKEND="$BACKEND_ARG"
 [ -n "$BACKEND" ] || { echo "lab-start: no backend given, the caller pane names none, and $PROJECT declares none (see $LAB_CONF)" >&2; exit 1; }
 BACKEND=$(lab_backend "$BACKEND") || { echo "lab-start: unknown backend '$BACKEND'" >&2; exit 1; }
 
-TASK_PATH=$(lab_task_find "$PROJECT" "$ID")
-SLUG=$(slug_from_filename "$(basename "$TASK_PATH")")
-NAME=$(lab_claimed_name "$BACKEND" "$ID" "$SLUG" "$LAB_PREFIX")
+# Resolved before anything is created: the claim looks the task up again, but by
+# then lab-new.sh has made a lab that a missing or ambiguous id would strand as
+# an anonymous one.
+lab_task_find "$PROJECT" "$ID" >/dev/null
 
-# One lab per (backend, task): reuse the existing one rather than growing a
-# suffix that would stop the id identifying the lab.
-if ! LAB_PROJECT_OVERRIDE="$PROJECT" lab_exists "$NAME"; then
+# One lab per (backend, task), keyed on the id. A task retitled since its lab was
+# claimed derives a different name now, and asking after that name would mint a
+# second lab beside the one already holding the work — grooming and
+# implementation are separate claims, so the rename lands right between them. The
+# lab keeps the name it was claimed under: re-slugging it means recreating the
+# backend under whatever else is attached, and the slug was never the identity.
+NAME=$(lab_task_lab "$BACKEND" "$ID")
+if [ -z "$NAME" ]; then
     NEW=$(LAB_PROJECT_OVERRIDE="$PROJECT" lab-new.sh "$BACKEND")
     NAME=$(LAB_PROJECT_OVERRIDE="$PROJECT" lab-claim.sh "$NEW" "$ID")
 fi

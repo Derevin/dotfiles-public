@@ -161,6 +161,34 @@ ok "task found in an explicit dir" "$(lab_task_find proj 039 planned)" \
     "$TMP/tasks/proj/planned/N039-settle-agent-environment-flow.md"
 fails lab_task_find proj 039 todo
 
+# --- the lab of a task ------------------------------------------------------
+# The id identifies a lab and the slug is decoration, so this lookup takes no
+# slug at all. A task renamed between grooming and implementation derives a
+# different name for the same lab, and a probe on the whole derived name misses
+# the lab already holding the work and mints a second one beside it.
+lab_project_paths one
+mkdir -p "$TMP/one/Proj-hlab-041-the-old-title"
+ok "lab found by task id alone" "$(lab_task_lab host 041)" hlab-041-the-old-title
+ok "no lab for the task" "$(lab_task_lab host 900)" ""
+
+# Per backend, from the registry lab_exists would ask: worktree dirs for host,
+# the container list for docker, the workspace list for coder. The prefix is one
+# project's, so another project's lab cannot answer for this one.
+docker() { [ "$*" = "ps -a --format {{.Names}}" ] && printf 'one-dlab-041-other-slug\ntwo-dlab-041-elsewhere\nunrelated\n'; }
+ok "docker reads the container list" "$(lab_task_lab docker 041)" dlab-041-other-slug
+ok "host reads the worktrees" "$(lab_task_lab host 041)" hlab-041-the-old-title
+unset -f docker
+# Cached for the process, so the backend with no local evidence stays off the
+# network here too.
+LAB_WORKSPACES=''
+ok "a backend with no lab for it" "$(lab_task_lab coder 041)" ""
+
+# Two labs for one task is the state this lookup exists to prevent, and picking
+# one is the guess lab_task_find refuses to make in the other direction.
+mkdir -p "$TMP/one/Proj-hlab-041-the-new-title"
+fails lab_task_lab host 041
+rmdir "$TMP/one/Proj-hlab-041-the-new-title"
+
 # --- current lab ------------------------------------------------------------
 ok "current from coder" "$(CODER_WORKSPACE_NAME=two-clab-001-x lab_current)" clab-001-x
 ok "current from docker" "$(LAB_NAME=dlab-238-x lab_current)" dlab-238-x

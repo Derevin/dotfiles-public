@@ -54,6 +54,16 @@ LAB_PROJECT_OVERRIDE="$PROJECT" lab_resolve "$NEW"
 NEW_WORKTREE="$LAB_WORKTREE"
 NEW_CONTAINER="$LAB_CONTAINER"
 
+# Keyed on the id, because the checks below compare whole names and a name
+# carries the slug: a lab claimed for this task before it was retitled derives a
+# different name now and would slip past every one of them. NEW itself is left to
+# those checks — they can tell a collision from a claim that died partway, which
+# this cannot.
+EXISTING=$(lab_task_lab "$BACKEND" "$ID")
+if [ -n "$EXISTING" ] && [ "$EXISTING" != "$NEW" ]; then
+    echo "lab-claim: task $ID already has the $BACKEND lab $EXISTING" >&2; exit 1
+fi
+
 # One lab per (backend, task): a second would need a suffix, and then the id no
 # longer identifies the lab. The new worktree standing where the old one has
 # already gone is the exception — that is a claim that died partway, so pick it

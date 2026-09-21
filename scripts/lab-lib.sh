@@ -290,12 +290,15 @@ lab_backend_fallback() {
 
 # --- existence --------------------------------------------------------------
 
-# lab_container_exists <container> / lab_workspace_exists <workspace>
+# lab_container_exists <container> / lab_workspaces / lab_workspace_exists
 lab_container_exists() { docker container inspect "$1" >/dev/null 2>&1; }
-lab_workspace_exists() {
+# One round trip, cached for the process — the by-task lookup below reads the
+# same list, and a coder call has no timeout to spend twice.
+lab_workspaces() {
   [ -n "${LAB_WORKSPACES+x}" ] || LAB_WORKSPACES=$(coder list --output json 2>/dev/null | jq -r '.[].name' 2>/dev/null)
-  printf '%s\n' "$LAB_WORKSPACES" | grep -qxF "$1"
+  printf '%s\n' "$LAB_WORKSPACES"
 }
+lab_workspace_exists() { lab_workspaces | grep -qxF "$1"; }
 
 # lab_exists <name> — existence is always derived, never stored, so it cannot
 # disagree with reality.
@@ -306,6 +309,60 @@ lab_exists() {
     docker) lab_container_exists "$LAB_CONTAINER" ;;
     *) [ -d "$LAB_WORKTREE" ] ;;
   esac
+}
+
+# lab_task_lab <backend> <id> — the lab that exists for a (backend, task), found
+# by id alone. Needs the project resolved first (LAB_CHECKOUT, LAB_PREFIX).
+#
+# This is the probe that "one lab per (backend, task)" needs. The id identifies
+# a lab and the slug only describes it, so a task retitled between its grooming
+# claim and its implementation claim derives a different name for the same lab —
+# and a caller that asks lab_exists about that derived name is told no, and mints
+# a second lab beside the one holding the work.
+#
+# Prints the name, or nothing. Returns 2 for more than one and names them on
+# stderr: that is the state this exists to prevent, and choosing between them is
+# the guess lab_task_find refuses to make in the other direction. Matched against
+# what lab_claimed_name emits — <head>-<slug>, or the bare head where the cap
+# left no room for a slug.
+lab_task_lab() {
+  local backend head n hits=()
+  backend=$(lab_backend "$1") || return 1
+  head="$(lab_backend_letter "$backend")lab-${2}"
+  # Every caller resolves the project first, and a checkout is the one key a
+  # project cannot leave out — so an empty one is a caller that skipped it, not a
+  # configuration. Said out loud, because the callers read this in an assignment
+  # under set -e, where a bare non-zero return ends them with nothing printed.
+  [ -n "${LAB_CHECKOUT:-}" ] || { echo "lab: lab_task_lab needs the project resolved first" >&2; return 1; }
+
+  # Whichever registry lab_exists would ask for this backend, so the two can
+  # never disagree about what exists.
+  if [ "$backend" = host ]; then
+    local d base="${LAB_CHECKOUT##*/}"
+    for d in "$LAB_CHECKOUT-$head" "$LAB_CHECKOUT-$head"-*; do
+      [ -d "$d" ] || continue
+      n="${d##*/}"
+      hits+=("${n#"$base"-}")
+    done
+  else
+    local names
+    case "$backend" in
+      coder) names=$(lab_workspaces) ;;
+      docker) names=$(docker ps -a --format '{{.Names}}' 2>/dev/null) ;;
+    esac
+    while read -r n; do
+      n=${n#"${LAB_PREFIX:-}"}
+      case "$n" in "$head"|"$head"-*) hits+=("$n") ;; esac
+    done <<< "$names"
+  fi
+
+  [ "${#hits[@]}" -gt 0 ] || return 0
+  if [ "${#hits[@]}" -gt 1 ]; then
+    echo "lab: task $2 has more than one $backend lab:" >&2
+    printf '  %s\n' "${hits[@]}" >&2
+    return 2
+  fi
+  printf '%s' "${hits[0]}"
 }
 
 # --- git --------------------------------------------------------------------

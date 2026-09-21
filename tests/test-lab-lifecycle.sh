@@ -147,6 +147,38 @@ ok "list is derived from the filesystem" "$(lab-list.sh | tr '\n' ' ')" "$NEW $N
 # then the id would no longer identify the lab.
 fails lab-claim.sh "$N2" 238
 fails lab-claim.sh "$NEW" 238
+# Same rule, one rename later. Grooming and implementation are separate claims,
+# and a task groomed into a different title between them derives a different
+# name now — which the whole-name checks above would wave through, leaving two
+# labs for one id and the implementation beside the plan instead of on top of it.
+mv "$TASK" "$TMP/tasks/widget/active/N238-make-the-build-quicker.md"
+TASK="$TMP/tasks/widget/active/N238-make-the-build-quicker.md"
+fails lab-claim.sh "$N2" 238
+ok "the renamed task grew no second lab" "$(lab-list.sh | tr '\n' ' ')" "$NEW $N2 "
+
+# --- putting a renamed task in front of you ----------------------------------
+# What the refusal above is the backstop for: lab-start.sh has to reuse the lab
+# the id already names, under the name it was claimed with. Re-slugging it would
+# destroy and recreate the backend under whatever is attached to it, and the
+# stale slug costs nothing — the id is what identifies a lab.
+#
+# lab-attach.sh is the one step here that needs a tmux server, which this suite
+# deliberately starts none of, so it is stubbed to report the lab it was handed.
+cat > "$TMP/bin/lab-attach.sh" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" > "$TMP_ATTACH_LOG"
+STUB
+chmod +x "$TMP/bin/lab-attach.sh"
+export TMP_ATTACH_LOG="$TMP/attach.log"
+# No server answers on this socket dir, so the caller pane cannot come from
+# JUST_CALLER and the backend cannot come from the pane — both fall back, which
+# is the path a launchpad takes anyway.
+TMUX_PANE=%9 lab-start.sh 238 '/implement-task 238' >/dev/null 2>&1
+ok "start reuses the lab the id names" "$(cat "$TMP/attach.log")" \
+    "--pane %9 $NEW /implement-task 238"
+ok "start minted no second lab" "$(lab-list.sh | tr '\n' ' ')" "$NEW $N2 "
+rm "$TMP/bin/lab-attach.sh"
+
 
 # --- drop guards -------------------------------------------------------------
 fails lab-drop.sh "$NEW"                      # attached task is in active/
