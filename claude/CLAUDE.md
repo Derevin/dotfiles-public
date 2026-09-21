@@ -54,19 +54,17 @@ Prefer built-in tools (Read, Grep, Glob) and CLI tools (jq, sort, cut, tr, uniq,
 
 Just run commands directly — the working directory is already set. No `cd dir && cmd`, no `git -C`, no `git --git-dir`, no path workarounds. Run `pwd` first if unsure. If you genuinely need a different directory, run `cd` as a separate command first.
 
-Never poll for a command you started — run it with `run_in_background`, wait for the exit notification. Hand-rolled wait loops busy-spin (foreground `sleep` is blocked) and never time out.
-
 `pgrep -f` / `pkill -f` match the matcher's own command line — `pgrep -f ctest` in a shell whose argv contains "ctest" never goes false. Match exact name (`-x`), or exclude `$$`.
 
 ## Output handling
 
-Large command output: dump once to `/tmp` (`> /tmp/<name>.out 2>&1`), re-read slices via `Read` offset/limit. Don't rerun command with different ranges.
+Large command output: dump once to a file — `/tmp` unless you have a better place (`> /tmp/<name>.out 2>&1`) — re-read slices via `Read` offset/limit. Don't rerun command with different ranges.
 
 ## API errors
 
 The API is flaky — retry a call that trips an API error, up to 10 attempts, before giving up.
 
-Degrade subagents only — a fork that keeps erroring gets Opus 4.8 (`opus-4-8`), never Sonnet or Fable. The main session doesn't degrade: retry, then stop and report.
+Degrade subagents only — a fork that keeps erroring gets Opus 4.8, never Sonnet or Fable. The main session doesn't degrade: retry, then stop and report.
 
 ## Red-green workflow
 
@@ -74,9 +72,9 @@ When fixing bugs or implementing new features in a project that has tests: write
 
 ## Tasks
 
-Task data lives in `~/repos/tasks/` — personal, not shared with collaborators. Don't reference task IDs or contents in PRs, commits, or any external comms. See its CLAUDE.md for conventions (naming, priorities, format, claiming). Task scripts (`task-list.sh`, etc.) are on PATH — invoke them directly, never with a `~/repos/tasks/` prefix. Use `/plan-task`, `/implement-task`, `/complete-task`, `/list-tasks` commands when working on tasks. Don't auto-complete on PR merge — user's call; leave it in `active/` silently, don't narrate the non-action.
+Task data lives in `~/repos/tasks/` — personal, not shared with collaborators. Don't reference task IDs or contents in PRs, commits, or any external comms. See its CLAUDE.md for conventions (naming, priorities, format, claiming). Task scripts are on PATH — invoke them directly, never with a `~/repos/tasks/` prefix. Use the task slash commands when working on tasks. Don't auto-complete on PR merge — user's call; leave it in `active/` silently, don't narrate the non-action.
 
-**All state changes (claim/complete/cancel/move) go through the task scripts** — `task-claim.sh`, `task-done.sh`, `task-cancel.sh`, etc. Never `git mv` or `mv` files under `~/repos/tasks/{todo,planning,planned,active,done,canceled}/`. The scripts handle the commit message + remote sync atomically; manual moves leave the repo out of sync with origin.
+**All state changes (claim/complete/cancel/move) go through the task scripts, never `git mv` or `mv` by hand.** They handle the commit message + remote sync atomically; manual moves leave the repo out of sync with origin.
 
 Verify pwd before any task script — project (via `find-project.sh`) and worker both derive from it; wrong cwd → wrong project listed or wrong worker stamped.
 
