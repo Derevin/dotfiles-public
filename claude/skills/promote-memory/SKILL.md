@@ -75,7 +75,7 @@ Wait for user confirmation. User can skip items, override target file, change se
 
 ## Apply
 
-1. **CLAUDE.md edits** — write via Edit. Do NOT commit. Leave commit to the user (they handle via `/pushcommit` or manually).
+1. **CLAUDE.md edits** — write via Edit. Do NOT commit. Leave commit to the user.
 2. **Context-store edits (CONTEXT.md / ADR)** — write via Edit/Write. Commit each via `context-commit.sh "<message>"` immediately after the write:
    - term added/updated: `<project>: term — <term>`
    - ADR created: `<project>: adr — <slug>`
