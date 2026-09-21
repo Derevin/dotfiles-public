@@ -185,7 +185,8 @@
   "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
   "autoUpdatesChannel": "latest",
-  "prefersReducedMotion": true,
   "tui": "default",
-  "theme": "light"
+  "prefersReducedMotion": true,
+  "theme": "light",
+  "feedbackDrafts": "off"
 }
