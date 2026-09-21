@@ -188,5 +188,6 @@
   "tui": "default",
   "prefersReducedMotion": true,
   "theme": "light",
-  "feedbackDrafts": "off"
+  "feedbackDrafts": "off",
+  "switchModelsOnFlag": false
 }

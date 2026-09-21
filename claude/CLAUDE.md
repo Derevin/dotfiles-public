@@ -62,6 +62,12 @@ Never poll for a command you started — run it with `run_in_background`, wait f
 
 Large command output: dump once to `/tmp` (`> /tmp/<name>.out 2>&1`), re-read slices via `Read` offset/limit. Don't rerun command with different ranges.
 
+## API errors
+
+The API is flaky — retry a call that trips an API error, up to 10 attempts, before giving up.
+
+Degrade subagents only — a fork that keeps erroring gets Opus 4.8 (`opus-4-8`), never Sonnet or Fable. The main session doesn't degrade: retry, then stop and report.
+
 ## Red-green workflow
 
 When fixing bugs or implementing new features in a project that has tests: write a failing test first, run it and verify it fails, then make the change, then verify the test passes.
