@@ -15,7 +15,7 @@ if [[ $# -lt 1 ]]; then
   echo "usage: task-unclaim.sh <filename>" >&2; exit 1
 fi
 
-filename=$1
+filename=$(task_filename "$1")
 detect_project
 detect_worker
 

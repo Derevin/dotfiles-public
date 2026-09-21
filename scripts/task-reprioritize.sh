@@ -32,7 +32,7 @@ git pull --rebase 2>/dev/null || true
 if [[ "$arg" =~ ^[0-9]{1,3}$ ]]; then
   pattern="[A-Z]$(printf '%03d' "$((10#$arg))")-*.md"
 else
-  pattern=$arg
+  pattern=$(task_filename "$arg")
 fi
 
 matches=()

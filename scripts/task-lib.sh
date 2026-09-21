@@ -62,6 +62,12 @@ detect_worker() {
   fi
 }
 
+# task_filename — the file name, from either form a task is named by: the slash
+# commands say `N042-some-slug` and that argument is often handed straight on.
+task_filename() {
+  echo "${1%.md}.md"
+}
+
 # slug_from_filename — extract slug from task filename (strip letter+digits prefix and .md suffix)
 slug_from_filename() {
   local name=$1

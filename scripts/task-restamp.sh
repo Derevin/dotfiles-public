@@ -23,7 +23,7 @@ if [[ $# -lt 2 ]]; then
   echo "usage: task-restamp.sh <filename> <worker>" >&2; exit 1
 fi
 
-filename=$1
+filename=$(task_filename "$1")
 worker=$2
 detect_project
 
