@@ -1,7 +1,7 @@
 ---
 name: recon
 description: Maps what a proposed change would touch before a plan exists — which files, how that area behaves today, what prior art already covers the shape. Use to seed a planning conversation; it locates work rather than judging it.
-model: opus
+model: claude-opus-4-8
 effort: low
 tools: Bash, Read, Grep, Glob
 ---

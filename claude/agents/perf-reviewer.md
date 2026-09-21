@@ -1,7 +1,7 @@
 ---
 name: perf-reviewer
 description: Reviews a diff for work that scales badly — complexity, repeated work, blocking calls, leaked resources. Use as one perspective in a multi-reviewer branch review.
-model: opus
+model: claude-opus-4-8
 effort: medium
 tools: Read, Grep, Glob, Write
 ---

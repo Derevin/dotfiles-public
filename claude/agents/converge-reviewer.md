@@ -1,7 +1,7 @@
 ---
 name: converge-reviewer
 description: Reads a branch diff in one pass and proposes only substantial, high-confidence fixes, without making them. Use when a review must converge to a fixed point rather than dredge for findings.
-model: opus
+model: claude-opus-4-8
 effort: medium
 tools: Bash, Read, Grep, Glob, Write
 ---
