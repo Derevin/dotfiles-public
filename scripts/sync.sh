@@ -207,7 +207,7 @@ apply_subtrees() {
     # Publishing is deliberate (gated on a leak scan), so report and carry on
     # rather than failing the sync on a perfectly normal steady state.
     if [[ " $flags " == *" push-only "* ]]; then
-      echo "$name/$prefix: unpublished (publish via /pushcommit-subtrees)"
+      echo "$name/$prefix: unpublished (publish via subtrees-push.sh)"
       continue
     fi
 

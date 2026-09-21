@@ -11,8 +11,19 @@
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
-    echo "Push every subtree listed in .subtrees to its mirror."
-    echo "Usage: subtrees-push.sh"
+    cat <<'USAGE'
+Publish every subtree listed in .subtrees to its public mirror.
+Usage: subtrees-push.sh
+
+Run from the superproject root with the work already committed and pushed: the
+split walks HEAD, so nothing uncommitted reaches a mirror. Each prefix is split
+locally, matched to the remote tip by tree, and the new commits cherry-picked on
+top — fast-forward push, remote SHAs preserved. Exits non-zero if a prefix needs
+a manual push.
+
+Publishing is deliberate. Run the leak scan from CLAUDE.md first and confirm it
+comes back empty; nothing here checks it.
+USAGE
     exit 0
 fi
 
