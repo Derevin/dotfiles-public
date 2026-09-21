@@ -88,7 +88,7 @@
       "Bash(fd *--exec*)"
     ]
   },
-  "model": "opus[1m]",
+  "model": "claude-opus-4-8[1m]",
   "skillOverrides": {
     "artifact-capabilities": "off",
     "artifact-design": "off",
@@ -180,6 +180,7 @@
     "rust-analyzer-lsp@claude-plugins-official": true,
     "clangd-lsp@claude-plugins-official": true
   },
+  "feedbackDrafts": "off",
   "spinnerTipsEnabled": false,
   "effortLevel": "xhigh",
   "promptSuggestionEnabled": false,
@@ -188,6 +189,5 @@
   "tui": "default",
   "prefersReducedMotion": true,
   "theme": "light",
-  "feedbackDrafts": "off",
   "switchModelsOnFlag": false
 }
