@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Destroy a lab. The only irreversible act in the lifecycle, so never implicit:
-# /complete-task prints this command rather than running it; only
-# /complete-task-with-drop, asked for by name, runs it.
+# /complete-task prints this command for the user to run by hand.
 #
 # Refuses while the lab still holds work: a dirty worktree, a HEAD no remote ref
 # can reach, or an attached task not groomed, done or canceled. --force
