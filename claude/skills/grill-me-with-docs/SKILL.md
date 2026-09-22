@@ -15,6 +15,14 @@ Format each question like so:
 ➡️ <your recommended answer>
 ```
 
+Close each round with a **quickfire** recap — one line per question in it, enough to answer from without scrolling back to the full question:
+
+```
+Q<n>: <question as a clause> → <recommendation>, <why>
+```
+
+e.g. `Q4: Does the cache own eviction, or the caller? → the cache, callers only read`
+
 Each round's answers reshape the tree — settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a *later* round, not this one.
 
 Finding *facts* is your job, never mine. When a frontier question needs a fact from the environment, dispatch a subagent to find it rather than asking me something you could look up. When you dispatch an exploration, wait until every running subagent has finished before asking the round — a round posted while agents are still landing gets mangled by their output and I have to reask. The *decisions* are mine — put each one to me and wait.
