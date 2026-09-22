@@ -102,8 +102,7 @@ lab_head() {
 }
 
 # lab_is_lab <name> — true for a name this tooling creates, false for a legacy
-# fixture (dwt1, hwt4, cwt2), which can be attached to but never claimed or
-# dropped: it carries no task and is not ours to destroy.
+# fixture (dwt1, hwt4, cwt2), which carries no task and so cannot be claimed.
 lab_is_lab() { [[ "$1" =~ ^[hdc]lab-(tmp[0-9]+|[0-9]{3}-.+)$ ]]; }
 
 # lab_is_anonymous <name> — true for <b>lab-tmp<N>.

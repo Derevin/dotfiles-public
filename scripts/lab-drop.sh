@@ -4,7 +4,7 @@
 # /complete-task-with-drop, asked for by name, runs it.
 #
 # Refuses while the lab still holds work: a dirty worktree, a HEAD no remote ref
-# can reach, or an attached task that is neither groomed nor done. --force
+# can reach, or an attached task not groomed, done or canceled. --force
 # overrides all three.
 #
 # Does NOT delete ~/.claude/projects/<encoded>: that is conversation history,
@@ -27,7 +27,6 @@ FORCE=0
 NAME="${1:-}"
 [ -n "$NAME" ] || { echo "usage: lab-drop.sh [--force] <lab>" >&2; exit 2; }
 
-lab_is_lab "$NAME" || { echo "lab-drop: $NAME is a legacy fixture — not ours to destroy" >&2; exit 1; }
 lab_resolve "$NAME"
 
 refuse() { echo "lab-drop: $NAME $1 — use --force to drop anyway" >&2; exit 1; }
@@ -60,8 +59,8 @@ if [ "$FORCE" -eq 0 ]; then
         [ "$reachable" -eq 1 ] || refuse "has commits no remote ref can reach"
     fi
 
-    # An attached task that is still queued or in flight. Groomed (planned) or
-    # finished (done) is the only state where the lab has nothing left to do.
+    # An attached task still queued or in flight. Groomed (planned), finished
+    # (done) or abandoned (canceled): the states that leave nothing to do.
     id=$(lab_task_id "$NAME") || true
     if [ -n "$id" ]; then
         task_path=$(lab_task_find "$LAB_PROJECT" "$id" todo planning planned active done canceled 2>/dev/null) || rc=$?
@@ -73,7 +72,7 @@ if [ "$FORCE" -eq 0 ]; then
             0)
                 dir=$(basename "$(dirname "$task_path")")
                 case "$dir" in
-                    planned|done) ;;
+                    planned|done|canceled) ;;
                     *) refuse "is attached to a task in $dir/" ;;
                 esac
                 ;;

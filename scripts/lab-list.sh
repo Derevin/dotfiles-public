@@ -4,7 +4,7 @@
 # Derived from the filesystem, docker and coder every time — existence is never
 # stored, so this can never disagree with reality. Includes the legacy numbered
 # fixtures (dwt1, hwt3, cwt2), which can be attached to from a launchpad but
-# never claimed or dropped.
+# never claimed.
 #
 # Usage: lab-list.sh [--long]
 set -euo pipefail

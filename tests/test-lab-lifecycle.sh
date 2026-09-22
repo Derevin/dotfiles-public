@@ -190,17 +190,27 @@ q -C "$TMP/Widget-$N2" config user.name T
 echo more >> "$TMP/Widget-$N2/README.md"
 q -C "$TMP/Widget-$N2" commit -am local
 fails lab-drop.sh "$N2"                       # HEAD no remote ref can reach
-q -C "$TMP/Widget-$N2" reset --hard origin/main
-fails lab-drop.sh dwt1                        # a legacy fixture is not ours to destroy
-
-lab-drop.sh "$N2" >/dev/null
-ok "drop removes the worktree" "$([ -d "$TMP/Widget-$N2" ] && echo y)" ""
+# --force overrides every guard, an unreachable HEAD included.
+lab-drop.sh --force "$N2" >/dev/null
+ok "force drops past the guards" "$([ -d "$TMP/Widget-$N2" ] && echo y)" ""
 
 mv "$TASK" "$TMP/tasks/widget/done/"
 lab-drop.sh "$NEW" >/dev/null
 ok "drop allows a finished task" "$([ -d "$TMP/Widget-$NEW" ] && echo y)" ""
 # Conversation history is small text and is wanted after the lab is gone.
 ok "drop keeps the claude session dir" "$([ -d "$PROJ_NEW" ] && echo y)" y
+
+# A canceled task is finished with, the same as done: the lab has nothing left.
+printf '# Abandoned\nWorker: main\n\nbody\n' > "$TMP/tasks/widget/active/N241-abandoned.md"
+q -C "$TMP/tasks" add -A
+q -C "$TMP/tasks" commit -m add-241
+q -C "$TMP/tasks" push
+NC=$(lab-new.sh host 2>/dev/null)
+NEWC=$(lab-claim.sh "$NC" 241 2>/dev/null)
+mv "$TMP/tasks/widget/active/"?241-*.md "$TMP/tasks/widget/canceled/"
+lab-drop.sh "$NEWC" >/dev/null
+ok "drop allows a canceled task" "$([ -d "$TMP/Widget-$NEWC" ] && echo y)" ""
+
 ok "nothing left to list" "$(lab-list.sh)" ""
 
 # --- claiming from outside the checkout --------------------------------------
