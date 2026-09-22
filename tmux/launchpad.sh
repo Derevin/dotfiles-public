@@ -39,8 +39,8 @@ WINDOW="labs"
 PROJECT=$(cd "$DIR" && find-project.sh) || { echo "launchpad: cannot name the project at $DIR" >&2; exit 1; }
 
 # Own window-name family, allocated deterministically: the placement state keys
-# on the name, and sharing the overview family would let an overview window shift
-# which name a lab window gets.
+# on the name, so a second labs window of the same project gets a distinct name
+# rather than collide in the state file.
 if [[ -n "${TMUX:-}" ]]; then
     while tmux list-windows -F '#{window_name}' | grep -qx "$WINDOW"; do
         NUM="${WINDOW#labs}"

@@ -39,7 +39,6 @@ COMMON = [
     ("tmux/.tmux.conf", ".tmux.conf"),
     ("tmux/.tmux-base.conf", ".tmux-base.conf"),
     ("tmux/.tmux-popup.conf", ".tmux-popup.conf"),
-    ("tmux/overview.sh", ".local/bin/overview.sh"),
     ("tmux/close-window.sh", ".local/bin/close-window.sh"),
     ("tmux/nav.sh", ".local/bin/nav.sh"),
     ("tmux/just.sh", ".local/bin/just.sh"),
@@ -140,6 +139,7 @@ REMOVED = [
     ".local/bin/wt-split.sh",
     ".local/bin/wt-cleanup.sh",
     ".local/bin/lab-split.sh",
+    ".local/bin/overview.sh",
 ]
 
 # Sibling repos under ~/repos are declared in each layer's repos.conf (shared

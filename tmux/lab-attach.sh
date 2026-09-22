@@ -68,8 +68,8 @@ tmux respawn-pane -k -c "$CWD" -t "$PANE" "lab-shell $(lab_sq "$LAB")"
 tmux set-option -pt "$PANE" @lab "$LAB"
 tmux set-option -pt "$PANE" @backend "$LAB_BACKEND"
 
-# Remember where the lab was put, keyed on window name: the overview scripts
-# allocate overview, overview2, … deterministically, so two windows of one
+# Remember where the lab was put, keyed on window name: launchpad
+# allocates labs, labs2, … deterministically, so two windows of one
 # project do not fight. Only quadrants are tracked — a stray split is not a
 # placement anyone wants restored.
 # '|' rather than spaces: a window name may hold one, and default IFS would

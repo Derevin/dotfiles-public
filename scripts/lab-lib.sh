@@ -417,7 +417,7 @@ lab_caller_pane() {
 }
 
 # lab_claude_cmd [--no-auto-memory] <label> [claude-arg...] — the one definition
-# of how Claude is launched. Every overview, workspace and lab script goes
+# of how Claude is launched. Every workspace and lab script goes
 # through it, so "the normal command plus --continue" means something.
 lab_claude_cmd() {
   local prefix="" a out
@@ -439,8 +439,8 @@ lab_claude_cmd() {
 #
 # Rows are (window, quadrant, lab). Existence is never stored — only where a lab
 # was last put — so the file can never disagree with reality about what exists.
-# Keyed on window NAME because the overview scripts allocate overview, overview2,
-# … deterministically, so two windows of one project do not fight.
+# Keyed on window NAME because launchpad allocates labs, labs2, …
+# deterministically, so two windows of one project do not fight.
 
 lab_state_file() { printf '%s/%s.tsv' "$LAB_STATE_DIR" "$1"; }
 
