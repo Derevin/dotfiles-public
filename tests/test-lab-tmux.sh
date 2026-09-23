@@ -100,6 +100,10 @@ untagged() { [ -z "$(pane_opt "$1" @lab)" ]; }
 placed() { cut -f3 "$TMP/state/widget.tsv" 2>/dev/null | grep -qx "$1"; }
 unplaced() { ! placed "$1"; }
 gone() { [ ! -d "$TMP/Widget-$1" ]; }
+# The whole pane, scrollback included: respawn blanks the visible screen on its
+# own, but the dropped lab's frame lingers in history until the revert scrubs it.
+retains() { tmux capture-pane -p -S - -t "$1" 2>/dev/null | grep -q -- "$2"; }
+scrubbed() { ! retains "$1" "$2"; }
 
 # -a: append after the current window rather than claim an index already taken.
 # The name is fixed because the placement row is keyed on it and automatic-rename
@@ -183,10 +187,16 @@ tmux set-option -pt "$P5" @quadrant 5
 E=$(lab-new.sh host 2>/dev/null)
 lab-attach.sh --pane "$P5" "$E" >/dev/null 2>&1
 wait_for claude_ran "$E"
+# Leave a marker in the pane and bury it in scrollback with filler, the way a
+# long Claude session fills history: the revert must scrub it, so the launchpad
+# carries none of the dropped lab.
+tmux send-keys -t "$P5" 'echo SENTINEL_E; for i in $(seq 1 40); do echo f-$i; done' Enter
+wait_for retains "$P5" SENTINEL_E
 lab-drop.sh "$E" >/dev/null 2>&1
 wait_for untagged "$P5"
 ok "drop reverts the pane showing the lab" "$(yn untagged "$P5")" y
 ok "drop drops the placement" "$(yn unplaced "$E")" y
+ok "drop scrubs the reverted pane's scrollback" "$(yn wait_for scrubbed "$P5" SENTINEL_E)" y
 
 # --- drop typed inside the pane showing the lab -------------------------------
 # Releasing that pane respawns it, which kills the process group the drop itself

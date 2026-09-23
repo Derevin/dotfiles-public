@@ -60,7 +60,9 @@ LAUNCHPAD_CMD=$(tmux show-options -gv default-command 2>/dev/null || true)
 if [ -z "$LAUNCHPAD_CMD" ]; then
     LAUNCHPAD_CMD="$(tmux show-options -gv default-shell 2>/dev/null || echo "${SHELL:-/bin/sh}") -l"
 fi
-tmux respawn-pane -k -c "$LAB_CHECKOUT" -t "$PANE" "$LAUNCHPAD_CMD"
+# clear first: respawn blanks the visible screen but leaves the dropped lab's
+# frame in scrollback. exec keeps the launchpad as the pane's own process.
+tmux respawn-pane -k -c "$LAB_CHECKOUT" -t "$PANE" "clear; exec $LAUNCHPAD_CMD"
 tmux set-option -pu -t "$PANE" @lab
 
 # A launchpad names no backend, so the released lab's goes with it. Leaving one
