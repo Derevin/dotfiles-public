@@ -4,7 +4,8 @@
     "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
     "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1",
     "CLAUDE_CODE_ENABLE_TASKS": "0",
-    "CLAUDE_CODE_ENABLE_TELEMETRY": "0"
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
+    "DISABLE_AUTOUPDATER": "1"
   },
   "includeCoAuthoredBy": false,
   "permissions": {
@@ -185,7 +186,6 @@
   "effortLevel": "xhigh",
   "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
-  "autoUpdatesChannel": "latest",
   "tui": "default",
   "prefersReducedMotion": true,
   "theme": "light",

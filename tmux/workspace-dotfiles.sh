@@ -24,6 +24,12 @@ fi
 DIR=~/repos/dotfiles
 EXTRA_REPO="${1:-}"
 
+# Start epoch, captured before sync launches: each host-Claude launch below waits
+# for sync's host Claude update to land (a marker touched no earlier than now)
+# before starting, so the morning Claude is the fresh build. The wait always
+# clears (it times out to a launch), so a stalled update never wedges the pane.
+T0=$(date +%s)
+
 BASE="dotfiles"
 RIGHT_DIR="$DIR"
 if [[ -n "$EXTRA_REPO" ]]; then
@@ -101,9 +107,9 @@ tmux resize-pane -t "$P1" -x $((WCOLS / 2))
 
 if [[ $TAKEOVER -eq 1 ]]; then
     # Script is running in pane 1 — queue cd + claude for after it exits
-    tmux send-keys -t "$P1" "cd $DIR && $(lab_claude_cmd dotfiles)" Enter
+    tmux send-keys -t "$P1" "cd $DIR && claude-update.sh --wait-host $T0 && $(lab_claude_cmd dotfiles)" Enter
 else
-    tmux send-keys -t "$P1" "$(lab_claude_cmd dotfiles)" Enter
+    tmux send-keys -t "$P1" "claude-update.sh --wait-host $T0 && $(lab_claude_cmd dotfiles)" Enter
 fi
 
 # Guarded on the tasks repo: a clone without it keeps a plain shell here.
@@ -114,9 +120,10 @@ if [[ -d ~/repos/tasks ]]; then
     tmux send-keys -t "$P2" "task-watch.sh --with dotfiles" Enter
 fi
 
-# Extra-repo mode: bottom-right pane runs claude in the given repo.
+# Extra-repo mode: bottom-right pane runs claude in the given repo. Also a host
+# session, so it waits on the same host update.
 if [[ -n "$EXTRA_REPO" ]]; then
-    tmux send-keys -t "$P3" "$(lab_claude_cmd "$P3NAME")" Enter
+    tmux send-keys -t "$P3" "claude-update.sh --wait-host $T0 && $(lab_claude_cmd "$P3NAME")" Enter
 fi
 
 tmux select-pane -t "$P1"

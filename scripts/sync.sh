@@ -340,6 +340,12 @@ submit() {
   run_job "$out" "$@" &
 }
 
+# Refresh Claude ahead of the panes (host first, then every running lab). It sits
+# after the re-exec gate, so a dotfiles pull can't double-run it and race the
+# shared docker volume. Its rc folds into SYNC_ISSUES like any other job — a
+# failed update holds the strip — and the lab updates keep the strip open until
+# the fleet is current.
+submit claude-update.sh
 for repo in "${other_repos[@]}"; do
   submit apply_repo_and_subtrees "$repo"
 done
