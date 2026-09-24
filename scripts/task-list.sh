@@ -5,10 +5,10 @@ set -euo pipefail
 if [[ "${1:-}" == "--help" ]]; then
     echo "List tasks for a project (defaults to detected project)."
     echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [PROJECT]"
-    echo "Statuses: todo planning planned active done canceled"
+    echo "Statuses: todo planning planned active stale done canceled"
     echo "--no-header drops the project/worker lines, for callers short on rows."
     echo "--ids prints bare <letter><id>-<slug> lines, for fzf choosers."
-    echo "Shows open statuses only (todo planning planned active); done and"
+    echo "Shows open statuses only (todo planning planned active stale); done and"
     echo "canceled need an explicit --status or --all."
     exit 0
 fi
@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
       shift
       while [[ $# -gt 0 ]]; do
         case $1 in
-          todo|planning|planned|active|done|canceled) status_list+=("$1"); shift ;;
+          todo|planning|planned|active|stale|done|canceled) status_list+=("$1"); shift ;;
           *) break ;;
         esac
       done
@@ -78,7 +78,7 @@ list_dir() {
   echo "${label} (${#files[@]})"
   for f in "${files[@]}"; do
     local suffix=""
-    if [[ "$dir" == "active" || "$dir" == "planning" ]]; then
+    if [[ "$dir" == "active" || "$dir" == "planning" || "$dir" == "stale" ]]; then
       local worker
       worker=$(grep -m1 '^Worker: ' "$TASKS_DIR/$dir/$f" 2>/dev/null | sed 's/^Worker: //') || true
       [[ -n "$worker" ]] && suffix=" [$worker]" || true
@@ -92,12 +92,12 @@ list_dir() {
   done
 }
 
-statuses=(active planned planning todo)
+statuses=(active planned planning stale todo)
 
 if [[ ${#status_list[@]} -gt 0 ]]; then
   statuses=("${status_list[@]}")
 elif $show_all; then
-  statuses=(canceled done active planned planning todo)
+  statuses=(canceled done active planned planning stale todo)
 fi
 
 # The worker is the header's only consumer, so detecting it is header-only work

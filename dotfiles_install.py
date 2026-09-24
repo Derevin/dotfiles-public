@@ -59,6 +59,7 @@ COMMON = [
     ("scripts/task-done.sh", ".local/bin/task-done.sh"),
     ("scripts/task-cancel.sh", ".local/bin/task-cancel.sh"),
     ("scripts/task-unclaim.sh", ".local/bin/task-unclaim.sh"),
+    ("scripts/task-stale.sh", ".local/bin/task-stale.sh"),
     ("scripts/task-restamp.sh", ".local/bin/task-restamp.sh"),
     ("scripts/task-next-id.sh", ".local/bin/task-next-id.sh"),
     ("scripts/task-planned.sh", ".local/bin/task-planned.sh"),

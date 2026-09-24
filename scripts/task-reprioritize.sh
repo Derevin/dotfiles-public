@@ -36,14 +36,14 @@ else
 fi
 
 matches=()
-for dir in todo planning planned active; do
+for dir in todo planning planned active stale; do
   for f in "$TASKS_DIR/$dir"/$pattern; do
     [[ -f "$f" ]] && matches+=("$f")
   done
 done
 
 if [[ ${#matches[@]} -eq 0 ]]; then
-  echo "error: $1 not found in todo/, planning/, planned/, or active/" >&2; exit 1
+  echo "error: $1 not found in todo/, planning/, planned/, active/, or stale/" >&2; exit 1
 elif [[ ${#matches[@]} -gt 1 ]]; then
   echo "error: $1 matches ${#matches[@]} tasks: ${matches[*]##*/}" >&2; exit 1
 fi

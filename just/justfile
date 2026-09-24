@@ -3,10 +3,6 @@
 sync:
     sync.sh
 
-[no-cd]
-task-list:
-    task-list.sh --status todo active
-
 # A chooser for a param the recipe defaults (see `model` below) only opens when
 # the M-j picker's recipe is accepted with ctrl-o. Plain Enter takes its first
 # line, and the picker shows that line in place of the default — so lead with

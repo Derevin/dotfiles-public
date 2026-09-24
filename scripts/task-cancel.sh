@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
-    echo "Cancel a task (move todo/, planning/, planned/, or active/ -> canceled/)."
+    echo "Cancel a task (move todo/, planning/, planned/, active/, or stale/ -> canceled/)."
     echo "Usage: task-cancel.sh <filename>"
     exit 0
 fi
@@ -18,7 +18,7 @@ fi
 filename=$(task_filename "$1")
 detect_project
 
-# Find in todo, planning, planned, or active
+# Find in todo, planning, planned, active, or stale
 if [[ -f "$TASKS_DIR/todo/$filename" ]]; then
   src="$TASKS_DIR/todo/$filename"
 elif [[ -f "$TASKS_DIR/planning/$filename" ]]; then
@@ -27,8 +27,10 @@ elif [[ -f "$TASKS_DIR/planned/$filename" ]]; then
   src="$TASKS_DIR/planned/$filename"
 elif [[ -f "$TASKS_DIR/active/$filename" ]]; then
   src="$TASKS_DIR/active/$filename"
+elif [[ -f "$TASKS_DIR/stale/$filename" ]]; then
+  src="$TASKS_DIR/stale/$filename"
 else
-  echo "error: $filename not found in todo/, planning/, planned/, or active/" >&2; exit 1
+  echo "error: $filename not found in todo/, planning/, planned/, active/, or stale/" >&2; exit 1
 fi
 
 dst="$TASKS_DIR/canceled/$filename"

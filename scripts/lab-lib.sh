@@ -506,7 +506,7 @@ LAB_TASKS_ROOT="${LAB_TASKS_ROOT:-${TASKS_ROOT:-$HOME/repos/tasks}}"
 lab_task_find() {
   local project=$1 id=$2 dir f hits=()
   shift 2
-  [ $# -gt 0 ] || set -- todo planning planned active
+  [ $# -gt 0 ] || set -- todo planning planned active stale
   for dir in "$@"; do
     for f in "$LAB_TASKS_ROOT/$project/$dir/"?"$id"-*.md; do
       [ -e "$f" ] && hits+=("$f")

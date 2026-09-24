@@ -30,7 +30,7 @@ git clone -q "$TMP/tasks-origin.git" "$TMP/tasks" 2>/dev/null
 q -C "$TMP/tasks" config user.email t@t
 q -C "$TMP/tasks" config user.name T
 TASKS="$TMP/tasks/widget"
-mkdir -p "$TASKS"/{todo,planning,planned,active,done,canceled}
+mkdir -p "$TASKS"/{todo,planning,planned,active,stale,done,canceled}
 echo tasks > "$TMP/tasks/README.md"
 q -C "$TMP/tasks" add -A
 q -C "$TMP/tasks" commit -m init
@@ -91,6 +91,27 @@ for suffix in "" ".md"; do
     next todo
     run task-cancel.sh "$T$suffix"
     ok "cancel takes $what" "$(at canceled "$T")" y
+
+    # stale round-trip: active -> stale keeps the worker (the lab lives on next
+    # to it); stale -> active resumes without doubling the Worker: line.
+    next planned
+    run task-claim.sh "$T$suffix"
+    run task-stale.sh "$T$suffix"
+    ok "stale takes $what" "$(at stale "$T")" y
+    ok "stale keeps worker ($what)" "$(worker stale "$T")" main
+    run task-claim.sh "$T$suffix"
+    ok "claim resumes from stale/ ($what)" "$(at active "$T")" y
+    ok "resume leaves one Worker line ($what)" \
+        "$(grep -c '^Worker: ' "$TASKS/active/$T.md" 2>/dev/null)" 1
+
+    # a lab renamed while its task sits stale carries the Worker: with it
+    run task-stale.sh "$T$suffix"
+    run task-restamp.sh "$T$suffix" hlab-7
+    ok "restamp reaches stale/ ($what)" "$(worker stale "$T")" hlab-7
+
+    # cancel reaches a stale task directly, no resume first
+    run task-cancel.sh "$T$suffix"
+    ok "cancel reaches stale/ ($what)" "$(at canceled "$T")" y
 done
 
 fails task-claim.sh N099-no-such-task

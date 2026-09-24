@@ -62,7 +62,7 @@ if [ "$FORCE" -eq 0 ]; then
     # (done) or abandoned (canceled): the states that leave nothing to do.
     id=$(lab_task_id "$NAME") || true
     if [ -n "$id" ]; then
-        task_path=$(lab_task_find "$LAB_PROJECT" "$id" todo planning planned active done canceled 2>/dev/null) || rc=$?
+        task_path=$(lab_task_find "$LAB_PROJECT" "$id" todo planning planned active stale done canceled 2>/dev/null) || rc=$?
         # A task that cannot be found is a lab whose task was deleted — nothing
         # left to hold it. A task id that resolves to two files is the opposite:
         # one of them may well be in flight, and refusing to guess is the whole

@@ -28,7 +28,7 @@ worker=$2
 detect_project
 
 path=""
-for dir in planning active planned todo; do
+for dir in planning active stale planned todo; do
   if [[ -f "$TASKS_DIR/$dir/$filename" ]]; then path="$TASKS_DIR/$dir/$filename"; break; fi
 done
 [[ -n "$path" ]] || { echo "error: $filename not found in $TASKS_DIR" >&2; exit 1; }
