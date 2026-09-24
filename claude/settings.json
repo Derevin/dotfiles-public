@@ -192,9 +192,9 @@
   "effortLevel": "xhigh",
   "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
+  "autoUpdatesChannel": "latest",
   "tui": "default",
   "prefersReducedMotion": true,
   "theme": "light",
-  "switchModelsOnFlag": false,
-  "autoUpdatesChannel": "latest"
+  "switchModelsOnFlag": false
 }
