@@ -35,8 +35,12 @@ printf 'no\thas uncommitted changes\n'          > "$S/v/dlab-239-thing"
 printf 'no\tis attached to a task in active/\n' > "$S/v/hlab-tmp1"
 # clab-240-x left unresolved.
 
-ok "render droppable shows only passing labs" \
-    "$("$PICK" render "$S" | cut -f1 | tr '\n' ' ')" "hlab-238-fix "
+# Droppable hides only a confirmed refusal; a pending lab stays visible (a fresh
+# list must never be empty, or the first Enter lands on nothing).
+ok "render droppable hides only confirmed refusals" \
+    "$("$PICK" render "$S" | cut -f1 | tr '\n' ' ')" "hlab-238-fix clab-240-x "
+ok "render droppable marks a pending lab" \
+    "$("$PICK" render "$S" | awk -F'\t' '$1=="clab-240-x"{print $2}')" "(resolving...)"
 ok "header counts held and unresolved" \
     "$("$PICK" header "$S")" "ctrl-a: show all   |   2 hidden, 1 unresolved"
 

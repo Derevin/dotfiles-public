@@ -43,8 +43,11 @@ render)
                 *)       note="($(cut -f2- "$vf"))" ;;
             esac
             printf '%s\t%s\n' "$name" "$note"
-        elif [ "$verdict" = ok ]; then
-            printf '%s\t\n' "$name"
+        elif [ "$verdict" != no ]; then
+            # Pending stays visible so a fresh list is never empty and a lone lab
+            # is selectable at once; only a confirmed refusal drops from view.
+            if [ "$verdict" = ok ]; then note=""; else note="(resolving...)"; fi
+            printf '%s\t%s\n' "$name" "$note"
         fi
     done < "$STATE/labs"
     ;;
