@@ -123,6 +123,7 @@ LINUX_ONLY = [
     ("scripts/lab-new.sh", ".local/bin/lab-new.sh"),
     ("scripts/lab-claim.sh", ".local/bin/lab-claim.sh"),
     ("scripts/lab-drop.sh", ".local/bin/lab-drop.sh"),
+    ("scripts/lab-drop-pick.sh", ".local/bin/lab-drop-pick.sh"),
     ("scripts/lab-list.sh", ".local/bin/lab-list.sh"),
     ("scripts/lab-backends.sh", ".local/bin/lab-backends.sh"),
     ("scripts/lab-current.sh", ".local/bin/lab-current.sh"),

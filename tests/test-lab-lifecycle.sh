@@ -181,20 +181,33 @@ rm "$TMP/bin/lab-attach.sh"
 
 
 # --- drop guards -------------------------------------------------------------
+# --check is the dry run the picker resolves each lab through: the same verdict a
+# real drop would reach, its reason on stdout, but destroying nothing.
 fails lab-drop.sh "$NEW"                      # attached task is in active/
+fails lab-drop.sh --check "$NEW"
+ok "check reports the active task" "$(lab-drop.sh --check "$NEW" 2>/dev/null)" \
+    "is attached to a task in active/"
 echo dirt > "$TMP/Widget-$N2/dirt"
 fails lab-drop.sh "$N2"                       # dirty worktree
+ok "check reports a dirty worktree" "$(lab-drop.sh --check "$N2" 2>/dev/null)" \
+    "has uncommitted changes"
 rm "$TMP/Widget-$N2/dirt"
 q -C "$TMP/Widget-$N2" config user.email t@t
 q -C "$TMP/Widget-$N2" config user.name T
 echo more >> "$TMP/Widget-$N2/README.md"
 q -C "$TMP/Widget-$N2" commit -am local
 fails lab-drop.sh "$N2"                       # HEAD no remote ref can reach
+ok "check reports an unreachable HEAD" "$(lab-drop.sh --check "$N2" 2>/dev/null)" \
+    "has commits no remote ref can reach"
 # --force overrides every guard, an unreachable HEAD included.
 lab-drop.sh --force "$N2" >/dev/null
 ok "force drops past the guards" "$([ -d "$TMP/Widget-$N2" ] && echo y)" ""
 
 mv "$TASK" "$TMP/tasks/widget/done/"
+# The picker only ever offers a lab whose check has passed, and the check leaves
+# it standing for the real drop that follows.
+ok "check passes a droppable lab" "$(lab-drop.sh --check "$NEW" >/dev/null 2>&1 && echo ok)" ok
+ok "check drops nothing" "$([ -d "$TMP/Widget-$NEW" ] && echo y)" y
 lab-drop.sh "$NEW" >/dev/null
 ok "drop allows a finished task" "$([ -d "$TMP/Widget-$NEW" ] && echo y)" ""
 # Conversation history is small text and is wanted after the lab is gone.

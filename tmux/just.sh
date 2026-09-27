@@ -176,7 +176,7 @@ pane_busy() {
 # make the listing visibly slow. Without jq, fall back to per-recipe shows.
 HAVE_JQ=0
 command -v jq >/dev/null 2>&1 && HAVE_JQ=1
-declare -A p_req p_body p_par g_req g_body g_par
+declare -A p_req p_body p_par p_pick g_req g_body g_par g_pick
 
 drop_missing_repos() {
     local scope="$1" listing="$2" line name show repo kept=""
@@ -268,12 +268,13 @@ if [ "$HAVE_JQ" -eq 1 ]; then
         ([.value.body[][]? | strings
           | capture("^\\s*@?#\\s*requires-repo\\s+(?<r>\\S+)").r] | first // "-"),
         (.value | tojson),
-        ([.value.parameters[]? | select(.default != null) | .name] | join(","))] | @tsv'
+        ([.value.parameters[]? | select(.default != null) | .name] | join(",")),
+        ([.value.body[][]? | strings | test("^\\s*@?#\\s*picker\\b")] | any)] | @tsv'
     pdump=$(just --dump --dump-format json 2>/dev/null)
     gdump=$(just -g --dump --dump-format json 2>/dev/null)
-    while IFS=$'\t' read -r n r b pars; do p_req[$n]=$r; p_body[$n]=$b; p_par[$n]=$pars; done \
+    while IFS=$'\t' read -r n r b pars pk; do p_req[$n]=$r; p_body[$n]=$b; p_par[$n]=$pars; p_pick[$n]=$pk; done \
         < <(jq -r "$dump_meta" <<<"$pdump" 2>/dev/null)
-    while IFS=$'\t' read -r n r b pars; do g_req[$n]=$r; g_body[$n]=$b; g_par[$n]=$pars; done \
+    while IFS=$'\t' read -r n r b pars pk; do g_req[$n]=$r; g_body[$n]=$b; g_par[$n]=$pars; g_pick[$n]=$pk; done \
         < <(jq -r "$dump_meta" <<<"$gdump" 2>/dev/null)
 
     # A dir without its own justfile resolves the project scope to ~/.justfile
@@ -410,6 +411,24 @@ if [ -n "$params" ]; then
         # typed prompt: --exit-0 auto-closes the empty fzf, and the tee'd file
         # distinguishes "chooser produced nothing" from "user cancelled".
         chooser="_${recipe}-${name}"
+
+        # A chooser marked `@# picker` owns its own interactive UI and prints the
+        # chosen value; run it attached to the popup and take its stdout. Piping
+        # it into fzf like a value list would make the user pick twice.
+        if [ "$HAVE_JQ" -eq 1 ]; then
+            if [ "$source" = "global" ]; then is_pick=${g_pick[$chooser]:-}; else is_pick=${p_pick[$chooser]:-}; fi
+        elif [ "$source" = "global" ]; then
+            just -g --show "$chooser" 2>/dev/null | grep -qE '^\s*@?#\s*picker\b' && is_pick=true || is_pick=false
+        else
+            just --show "$chooser" 2>/dev/null | grep -qE '^\s*@?#\s*picker\b' && is_pick=true || is_pick=false
+        fi
+        if [ "$is_pick" = true ]; then
+            if [ "$source" = "global" ]; then val=$(just -g "$chooser" 2>/dev/null); else val=$(just "$chooser" 2>/dev/null); fi
+            [ -z "$val" ] && echo "aborted" && exit 0
+            args+=("$val")
+            continue
+        fi
+
         if [ "$HAVE_JQ" -eq 1 ]; then
             if [ "$source" = "global" ]; then chooser_def=${g_body[$chooser]:-}; else chooser_def=${p_body[$chooser]:-}; fi
             if [ -n "$chooser_def" ]; then

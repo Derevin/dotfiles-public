@@ -6,15 +6,18 @@
 # can reach, or an attached task not groomed, done or canceled. --force
 # overrides all three.
 #
+# --check runs the guards and stops without destroying anything: exit 0 droppable,
+# exit 1 not, the reason on stdout. The picker resolves every lab through it.
+#
 # Does NOT delete ~/.claude/projects/<encoded>: that is conversation history,
 # it is small text, and it is wanted after the lab is gone.
 #
-# Usage: lab-drop.sh [--force] <lab>
+# Usage: lab-drop.sh [--force] [--check] <lab>
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     echo "Destroy a lab: its worktree and its container or workspace."
-    echo "Usage: lab-drop.sh [--force] <lab>"
+    echo "Usage: lab-drop.sh [--force] [--check] <lab>"
     exit 0
 fi
 
@@ -22,13 +25,26 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/lab-lib.sh"
 
 FORCE=0
-[ "${1:-}" = "--force" ] && { FORCE=1; shift; }
+CHECK=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --force) FORCE=1; shift ;;
+        --check) CHECK=1; shift ;;
+        *) break ;;
+    esac
+done
 NAME="${1:-}"
-[ -n "$NAME" ] || { echo "usage: lab-drop.sh [--force] <lab>" >&2; exit 2; }
+[ -n "$NAME" ] || { echo "usage: lab-drop.sh [--force] [--check] <lab>" >&2; exit 2; }
 
 lab_resolve "$NAME"
 
-refuse() { echo "lab-drop: $NAME $1 — use --force to drop anyway" >&2; exit 1; }
+# In check mode the reason is data the picker captures, so it goes to stdout bare;
+# a real drop addresses the user, naming the lab and the escape hatch.
+refuse() {
+    [ "$CHECK" -eq 1 ] && { printf '%s\n' "$1"; exit 1; }
+    echo "lab-drop: $NAME $1 — use --force to drop anyway" >&2
+    exit 1
+}
 
 # Uncommitted or unpushed work. The common case is a detached HEAD with no
 # branch and no upstream, so the guard is on HEAD itself: reachable from some
@@ -79,6 +95,9 @@ if [ "$FORCE" -eq 0 ]; then
         esac
     fi
 fi
+
+# The guards are the whole answer a check needs, and it must never touch a backend.
+[ "$CHECK" -eq 1 ] && exit 0
 
 # Any pane still showing the lab, while it still exists: left alone it would hold
 # a Claude inside a deleted worktree and go on claiming a lab nothing resolves.
