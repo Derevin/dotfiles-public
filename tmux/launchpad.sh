@@ -60,29 +60,30 @@ W=$(tmux display-message -p '#{session_name}' 2>/dev/null || echo "$WINDOW")
 W="${W}:${WINDOW}"
 tmux setw -t "$W" automatic-rename off
 # Row-based 2x2 so the horizontal mid-line is shared and up/down resize moves
-# both columns together. Spatial: 1 TL, 2 BL, 3 TR, 4 BR. Pane ids, not indices
-# — tmux renumbers indices by position as panes are added.
-P1=$(tmux display-message -t "$W.1" -p '#{pane_id}')
-P2=$(tmux split-window -v -c "$DIR" -t "$P1" -P -F '#{pane_id}')
-P3=$(tmux split-window -h -c "$DIR" -t "$P1" -P -F '#{pane_id}')
-P4=$(tmux split-window -h -c "$DIR" -t "$P2" -P -F '#{pane_id}')
+# both columns together. Spatial: 1 TL, 2 TR, 3 BL, 4 BR (row-first). Pane ids,
+# not indices — tmux renumbers indices by position as panes are added.
+TL=$(tmux display-message -t "$W.1" -p '#{pane_id}')
+BL=$(tmux split-window -v -c "$DIR" -t "$TL" -P -F '#{pane_id}')
+TR=$(tmux split-window -h -c "$DIR" -t "$TL" -P -F '#{pane_id}')
+BR=$(tmux split-window -h -c "$DIR" -t "$BL" -P -F '#{pane_id}')
 
 q=1
-for ID in "$P1" "$P2" "$P3" "$P4"; do
+for ID in "$TL" "$TR" "$BL" "$BR"; do
     tmux set-option -pt "$ID" @unclosable 1
     tmux set-option -pt "$ID" @quadrant "$q"
-    # Tops are the odd quadrants (1 TL, 3 TR).
-    if (( q % 2 == 1 )); then
-        tmux set-option -pt "$ID" @split-dir up
-    else
-        tmux set-option -pt "$ID" @split-dir down
-    fi
     q=$((q + 1))
 done
 
+# @split-dir per row: top quadrants split upward, bottom downward — each away
+# from the shared mid-line.
+tmux set-option -pt "$TL" @split-dir up
+tmux set-option -pt "$TR" @split-dir up
+tmux set-option -pt "$BL" @split-dir down
+tmux set-option -pt "$BR" @split-dir down
+
 lab-restore.sh "$PROJECT" "$WINDOW"
 
-tmux select-pane -t "$P1"
+tmux select-pane -t "$TL"
 
 if [[ -z "${TMUX:-}" ]]; then
     exec tmux attach-session -t "$WINDOW"

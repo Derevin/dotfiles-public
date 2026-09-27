@@ -308,4 +308,20 @@ ok "a dispatch pane's lab-shell does not degrade" "$(yn wait_for dead "$DA")" y
 ok "the held dispatch pane keeps the lab error" "$(yn wait_for pane_shows "$DA" 'no worktree at')" y
 tmux kill-pane -t "$DA" 2>/dev/null
 
+# --- launchpad numbers the quadrants row-first --------------------------------
+# 1 TL, 2 TR, 3 BL, 4 BR — the pane M-N selects. Column-first would seat 2 at
+# bottom-left and 3 at top-right, so those two are what tell the schemes apart.
+# run-shell is synchronous and sets $TMUX, so launchpad builds the window in this
+# session and all four panes are present the moment it returns.
+LAUNCH=$(new_pane)
+tmux run-shell -t "$LAUNCH" "launchpad.sh $TMP/Widget --window labtest"
+qpos() {
+    tmux list-panes -t t:labtest -F '#{@quadrant} #{pane_top} #{pane_left}' 2>/dev/null \
+        | awk -v q="$1" '$1 == q { print ($2 == 0 ? "top" : "bottom"), ($3 == 0 ? "left" : "right"); exit }'
+}
+ok "quadrant 1 is top-left"     "$(qpos 1)" "top left"
+ok "quadrant 2 is top-right"    "$(qpos 2)" "top right"
+ok "quadrant 3 is bottom-left"  "$(qpos 3)" "bottom left"
+ok "quadrant 4 is bottom-right" "$(qpos 4)" "bottom right"
+
 report
