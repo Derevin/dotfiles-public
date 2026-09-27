@@ -268,13 +268,16 @@ if [ "$HAVE_JQ" -eq 1 ]; then
         ([.value.body[][]? | strings
           | capture("^\\s*@?#\\s*requires-repo\\s+(?<r>\\S+)").r] | first // "-"),
         (.value | tojson),
-        ([.value.parameters[]? | select(.default != null) | .name] | join(",")),
-        ([.value.body[][]? | strings | test("^\\s*@?#\\s*picker\\b")] | any)] | @tsv'
+        ([.value.body[][]? | strings | test("^\\s*@?#\\s*picker\\b")] | any),
+        ([.value.parameters[]? | select(.default != null) | .name] | join(","))] | @tsv'
     pdump=$(just --dump --dump-format json 2>/dev/null)
     gdump=$(just -g --dump --dump-format json 2>/dev/null)
-    while IFS=$'\t' read -r n r b pars pk; do p_req[$n]=$r; p_body[$n]=$b; p_par[$n]=$pars; p_pick[$n]=$pk; done \
+    # params is read last because it is the one field that can be empty, and IFS=tab
+    # is whitespace: read collapses adjacent tabs, so an empty field mid-row would
+    # swallow the one after it. Keep the empty-able field trailing.
+    while IFS=$'\t' read -r n r b pk pars; do p_req[$n]=$r; p_body[$n]=$b; p_par[$n]=$pars; p_pick[$n]=$pk; done \
         < <(jq -r "$dump_meta" <<<"$pdump" 2>/dev/null)
-    while IFS=$'\t' read -r n r b pars pk; do g_req[$n]=$r; g_body[$n]=$b; g_par[$n]=$pars; g_pick[$n]=$pk; done \
+    while IFS=$'\t' read -r n r b pk pars; do g_req[$n]=$r; g_body[$n]=$b; g_par[$n]=$pars; g_pick[$n]=$pk; done \
         < <(jq -r "$dump_meta" <<<"$gdump" 2>/dev/null)
 
     # A dir without its own justfile resolves the project scope to ~/.justfile

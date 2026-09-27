@@ -49,7 +49,9 @@ case "$*" in
             echo '{"source":"g","recipes":{
                 "lab":{"body":[],"parameters":[{"name":"id","default":null},{"name":"backend","default":""}]},
                 "_lab-backend":{"body":[]},
-                "solo":{"body":[],"parameters":[{"name":"model","default":"haiku"}]}}}' ||
+                "solo":{"body":[],"parameters":[{"name":"model","default":"haiku"}]},
+                "drop":{"body":[],"parameters":[{"name":"thing","default":null}]},
+                "_drop-thing":{"body":[["@# picker"]]}}}' ||
             echo '{"source":"p","recipes":{}}'
         exit 0 ;;
     *--list*)
@@ -57,16 +59,20 @@ case "$*" in
         # descriptions.
         [ "$GLOBAL" = 1 ] && printf '%s\n' \
             "lab id backend=''  # A lab recipe" \
-            "solo model='haiku' # A solo recipe"
+            "solo model='haiku' # A solo recipe" \
+            "drop thing         # A drop recipe"
         exit 0 ;;
     *--show*)
         case "${*: -1}" in
             lab) printf "lab id backend='':\n    @# host_only\n" ;;
             solo) printf "solo model='haiku':\n    @# host_only\n" ;;
+            drop) printf "drop thing:\n" ;;
         esac
         exit 0 ;;
 esac
 [ "${*: -1}" = _lab-backend ] && { printf '%s\n' host docker coder; exit 0; }
+# The picker chooser: prints the chosen value the way lab-drop-pick.sh does.
+[ "${*: -1}" = _drop-thing ] && { printf 'chosen-lab\n'; exit 0; }
 # Any other private recipe is absent, and absent is what just says loudly.
 case "${*: -1}" in _*) echo "error: unknown recipe" >&2; exit 1 ;; esac
 # The run. Each argument bracketed: an empty one has to be visible.
@@ -74,6 +80,7 @@ printf 'RUN'; printf ' [%s]' "$@"; printf '\n'
 STUB
 cat > "$TMP/bin/fzf" <<'STUB'
 #!/usr/bin/env bash
+printf '%s\n' "$*" >> "${FZF_LOG:-/dev/null}"
 # The recipe picker is the call carrying --expect, where fzf prints the
 # accepting key on a line of its own before the selection. Anything else is a
 # chooser, which takes the top entry.
@@ -120,5 +127,15 @@ out=$(PATH="$TMP/bin:$PATH" bash "$SCRIPT_DIR/../tmux/just.sh" --preview global 
 ok "the preview names what enter passes" "$(grep -o 'enter passes:.*' <<< "$out")" \
     "enter passes: backend=host   (ctrl-o to choose)"
 ok "the preview still shows the recipe" "$(grep -c "^lab id backend=''" <<< "$out")" 1
+
+# A chooser marked `@# picker` runs its own UI; just.sh takes its stdout whole and
+# never pipes it into fzf, which would make the user pick twice. Regression: a
+# picker chooser with no params must still be recognised — its dump row sits right
+# beside an empty params field, and a whitespace-IFS read once swallowed it.
+: > "$TMP/fzflog"
+out=$(PATH="$TMP/bin:$PATH" FZF_KEY="" FZF_PICK="drop" FZF_LIST="$TMP/listing" FZF_LOG="$TMP/fzflog" \
+    bash "$SCRIPT_DIR/../tmux/just.sh" <<< "")
+ok "a picker chooser passes its own output" "$(grep -o 'RUN.*' <<< "$out")" "RUN [-g] [drop] [chosen-lab]"
+ok "a picker chooser is not piped into a second fzf" "$(awk 'END{print NR}' "$TMP/fzflog")" 1
 
 report
