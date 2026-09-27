@@ -128,6 +128,8 @@ LINUX_ONLY = [
     ("scripts/lab-current.sh", ".local/bin/lab-current.sh"),
     ("tmux/park-host-worktrees.sh", ".local/bin/park-host-worktrees.sh"),
     ("scripts/apply-gnome-keybindings.sh", ".local/bin/apply-gnome-keybindings.sh"),
+    # cargo wrapper: heavy builds run in a low-priority systemd scope.
+    ("scripts/cargo", ".local/bin/cargo"),
 ]
 
 # Symlinks a previous version of this installer created, under names nothing

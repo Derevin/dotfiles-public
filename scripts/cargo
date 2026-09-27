@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# cargo wrapper: symlinked into ~/.local/bin (ahead of the real cargo on PATH) so
+# every bare `cargo` — mine or an agent's — routes heavy compile commands through
+# a low-priority, memory-bounded systemd scope, keeping the shell and tmux
+# responsive during builds. Light commands (metadata, --version, ...) and any
+# host without a live systemd user manager fall straight through to real cargo.
+#
+# --help is forwarded to real cargo, not intercepted: this is a transparent proxy.
+#
+# Tuning is env-only, so nothing here is host-specific:
+#   CARGO_SCOPE_CPU_WEIGHT   systemd CPUWeight, default 20 (of 100; lower = nicer)
+#   CARGO_SCOPE_MEMORY_HIGH  systemd MemoryHigh, default 75% (of RAM; empty = none)
+set -u
+
+# Real cargo: the next `cargo` on PATH that isn't this wrapper, then rustup's
+# default. A hardcoded ~/.cargo/bin path would miss distro / brew / CARGO_HOME
+# installs and, when it guessed wrong, silently fail to run cargo at all.
+real=
+while IFS= read -r cand; do
+    [[ -n $cand && ! $cand -ef $0 ]] || continue
+    real=$cand
+    break
+done < <(type -aP cargo 2>/dev/null)
+[[ -n $real ]] || real="${CARGO_HOME:-$HOME/.cargo}/bin/cargo"
+[[ -x $real && ! $real -ef $0 ]] || {
+    echo "cargo: no real cargo on PATH or at ${CARGO_HOME:-$HOME/.cargo}/bin" >&2
+    exit 127
+}
+
+# Subcommand, skipping a leading +toolchain override.
+sub=${1-}
+[[ $sub == +* ]] && sub=${2-}
+
+case $sub in
+    build|b|test|t|check|c|clippy|run|r|bench|doc|d|rustc|rustdoc|install|nextest) heavy=1 ;;
+    *) heavy= ;;
+esac
+
+runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+if [[ -n $heavy && -z ${CARGO_SCOPED-} && -z ${IN_CONTAINER-} ]] \
+    && command -v systemd-run >/dev/null 2>&1 \
+    && [[ -S $runtime/systemd/private ]]; then
+    export CARGO_SCOPED=1  # break recursion if a build shells out to cargo
+    scope=(--user --scope -q -p CPUWeight="${CARGO_SCOPE_CPU_WEIGHT:-20}")
+    mem=${CARGO_SCOPE_MEMORY_HIGH-75%}  # unset → 75%; empty → no bound
+    [[ -n $mem ]] && scope+=(-p MemoryHigh="$mem")
+    exec systemd-run "${scope[@]}" -- "$real" "$@"
+fi
+
+exec "$real" "$@"
