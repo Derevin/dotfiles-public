@@ -1,0 +1,22 @@
+# Compressed-RAM swap for WSL2: the VHDX disk swap is slow to fault back, so zram
+# holds evicted pages compressed in RAM at higher priority; disk swap overflows.
+# Size (6G) is the uncompressed ceiling; actual RAM used is the compressed size.
+#
+# Install (root):
+#   sudo cp zram-swap.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now zram-swap.service
+[Unit]
+Description=zram compressed-RAM swap
+DefaultDependencies=no
+Before=swap.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/sbin/modprobe zram
+ExecStart=/bin/sh -c 'dev=$(zramctl --find --algorithm lzo-rle --size 6G) && echo "$dev" > /run/zram-swap.dev && mkswap "$dev" && swapon --priority 100 "$dev"'
+ExecStop=/bin/sh -c 'dev=$(cat /run/zram-swap.dev) && swapoff "$dev" && zramctl --reset "$dev"'
+
+[Install]
+WantedBy=multi-user.target
