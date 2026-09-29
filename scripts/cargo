@@ -9,7 +9,7 @@
 #
 # Tuning is env-only, so nothing here is host-specific:
 #   CARGO_SCOPE_CPU_WEIGHT   systemd CPUWeight, default 20 (of 100; lower = nicer)
-#   CARGO_SCOPE_MEMORY_HIGH  systemd MemoryHigh, default 75% (of RAM; empty = none)
+#   CARGO_SCOPE_MEMORY_HIGH  systemd MemoryHigh, default 60% (of RAM; empty = none)
 set -u
 
 # Real cargo: the next `cargo` on PATH that isn't this wrapper, then rustup's
@@ -42,7 +42,11 @@ if [[ -n $heavy && -z ${CARGO_SCOPED-} && -z ${IN_CONTAINER-} ]] \
     && [[ -S $runtime/systemd/private ]]; then
     export CARGO_SCOPED=1  # break recursion if a build shells out to cargo
     scope=(--user --scope -q -p CPUWeight="${CARGO_SCOPE_CPU_WEIGHT:-20}")
-    mem=${CARGO_SCOPE_MEMORY_HIGH-75%}  # unset → 75%; empty → no bound
+    # MemoryHigh throttles the build's own cgroup past the cap, so a heavy
+    # compile reclaims against itself instead of evicting the editor and shells
+    # into swap — the real lever here (spare cores mean CPU rarely contends).
+    # 60% leaves headroom for rust-analyzer and the interactive session.
+    mem=${CARGO_SCOPE_MEMORY_HIGH-60%}  # unset → 60%; empty → no bound
     [[ -n $mem ]] && scope+=(-p MemoryHigh="$mem")
     exec systemd-run "${scope[@]}" -- "$real" "$@"
 fi
