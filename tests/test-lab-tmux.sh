@@ -2,7 +2,9 @@
 # Pane-level test of attach and release — the two scripts that take over the pane
 # they are invoked from. They are the only ones that respawn the caller's own
 # pane, which is the thing that needs a real server to show, so they get a suite
-# of their own; the other two suites never start one.
+# of their own; the other two suites never start one. The dotfiles workspace
+# launch rides along: it too needs a live server, and run-shell stands in for the
+# attach it would otherwise exec into a terminal.
 #
 # Safety: TMUX_TMPDIR points at a socket dir inside the temp dir and TMUX is
 # unset, so every bare `tmux` — here and inside the scripts under test, which
@@ -323,5 +325,31 @@ ok "quadrant 1 is top-left"     "$(qpos 1)" "top left"
 ok "quadrant 2 is top-right"    "$(qpos 2)" "top right"
 ok "quadrant 3 is bottom-left"  "$(qpos 3)" "bottom left"
 ok "quadrant 4 is bottom-right" "$(qpos 4)" "bottom right"
+
+# --- the dotfiles workspace resumes each pane by default ----------------------
+# workspace-dotfiles.sh appends --continue unless --fresh is passed; in extra-repo
+# mode both the dotfiles pane and the extra repo's pane get it. run-shell sets
+# $TMUX, so the script builds its window in this session instead of exec-attaching
+# to a terminal it hasn't got. claude-update/sync are stubbed to return at once —
+# the launch is under test, not the morning wait.
+mkdir -p "$HOME/repos/dotfiles"
+for s in claude-update.sh sync.sh; do
+    printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/bin/$s"
+done
+chmod +x "$TMP/bin/claude-update.sh" "$TMP/bin/sync.sh"
+cont() { grep -q "^$1|--effort max --continue$" "$CLAUDE_STUB_LOG" 2>/dev/null; }
+fresh() { grep -q "^$1|--effort max$" "$CLAUDE_STUB_LOG" 2>/dev/null; }
+
+WSA=$(new_pane)
+tmux run-shell -t "$WSA" "workspace-dotfiles.sh $TMP/Widget dota widgeta"
+wait_for cont dotfiles
+wait_for cont widgeta
+ok "workspace resumes the dotfiles pane"   "$(yn cont dotfiles)" y
+ok "workspace resumes the extra-repo pane" "$(yn cont widgeta)" y
+
+WSB=$(new_pane)
+tmux run-shell -t "$WSB" "workspace-dotfiles.sh --fresh $TMP/Widget dotb widgetb"
+wait_for fresh widgetb
+ok "--fresh starts the extra-repo pane clean" "$(yn fresh widgetb)" y
 
 report

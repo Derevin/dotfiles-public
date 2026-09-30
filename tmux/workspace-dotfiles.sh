@@ -12,13 +12,24 @@
 # (default "dotx"), and that claude's display name is <claude-name> (default:
 # repo basename). A private recipe supplies these.
 #
+# Leading --fresh starts Claude clean; without it each pane resumes its repo's
+# last conversation (--continue).
+#
 # Pane references are by pane_id (the stable %N) rather than index, because
 # tmux re-numbers pane indices by spatial position when panes are added or
 # removed — adding the sync strip above pane 1 reshuffles everything otherwise.
 if [[ "${1:-}" == "--help" ]]; then
     echo "Dotfiles workspace: claude left, live task list over a terminal right."
-    echo "Usage: workspace-dotfiles.sh [extra-repo-path] [window-name] [claude-name]"
+    echo "Usage: workspace-dotfiles.sh [--fresh] [extra-repo-path] [window-name] [claude-name]"
     exit 0
+fi
+
+# Each Claude resumes its repo's last conversation unless --fresh is passed. No
+# recipe passes it: the morning workspaces always resume, opting out is by hand.
+CONT=--continue
+if [[ "${1:-}" == "--fresh" ]]; then
+    CONT=
+    shift
 fi
 
 DIR=~/repos/dotfiles
@@ -107,9 +118,9 @@ tmux resize-pane -t "$P1" -x $((WCOLS / 2))
 
 if [[ $TAKEOVER -eq 1 ]]; then
     # Script is running in pane 1 — queue cd + claude for after it exits
-    tmux send-keys -t "$P1" "cd $DIR && claude-update.sh --wait-host $T0 && $(lab_claude_cmd dotfiles)" Enter
+    tmux send-keys -t "$P1" "cd $DIR && claude-update.sh --wait-host $T0 && $(lab_claude_cmd dotfiles "$CONT")" Enter
 else
-    tmux send-keys -t "$P1" "claude-update.sh --wait-host $T0 && $(lab_claude_cmd dotfiles)" Enter
+    tmux send-keys -t "$P1" "claude-update.sh --wait-host $T0 && $(lab_claude_cmd dotfiles "$CONT")" Enter
 fi
 
 # Guarded on the tasks repo: a clone without it keeps a plain shell here.
@@ -123,7 +134,7 @@ fi
 # Extra-repo mode: bottom-right pane runs claude in the given repo. Also a host
 # session, so it waits on the same host update.
 if [[ -n "$EXTRA_REPO" ]]; then
-    tmux send-keys -t "$P3" "claude-update.sh --wait-host $T0 && $(lab_claude_cmd "$P3NAME")" Enter
+    tmux send-keys -t "$P3" "claude-update.sh --wait-host $T0 && $(lab_claude_cmd "$P3NAME" "$CONT")" Enter
 fi
 
 tmux select-pane -t "$P1"
