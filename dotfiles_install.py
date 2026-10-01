@@ -225,11 +225,12 @@ def verify_dotfiles_location(install_root):
 
 
 def load_repos(layers):
-    """Parse every layer's repos.conf into (core, extra) dicts mapping
-    name -> remote. core repos are always cloned; extra repos are opt-in via
-    --extra. sync.sh reads the same files. Later layers override earlier ones on
-    a name collision."""
-    core, extra = {}, {}
+    """Parse every layer's repos.conf into (core, extra, links). core and extra
+    map name -> remote (core always cloned, extra opt-in via --extra); links maps
+    name -> a link table relative to the repo root, from an optional `links=<path>`
+    flag (see repo_link_layers). sync.sh reads the same files. Later layers override
+    earlier ones on a name collision."""
+    core, extra, links = {}, {}, {}
     for layer in layers:
         manifest = layer.repos_conf
         if not manifest.exists():
@@ -238,14 +239,20 @@ def load_repos(layers):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            name, tier, remote = line.split()
+            name, tier, remote, *flags = line.split()
             if tier == "core":
                 core[name] = remote
             elif tier == "extra":
                 extra[name] = remote
             else:
                 sys.exit(f"repos.conf: bad tier {tier!r} for {name!r} (want core|extra)")
-    return core, extra
+            for flag in flags:
+                key, sep, val = flag.partition("=")
+                if key == "links" and sep and val:
+                    links[name] = val
+                else:
+                    sys.exit(f"repos.conf: bad flag {flag!r} for {name!r} (want links=<path>)")
+    return core, extra, links
 
 
 def clone_repo(name: str, remote: str, dry_run: bool, verbose: bool = False):
@@ -260,6 +267,45 @@ def clone_repo(name: str, remote: str, dry_run: bool, verbose: bool = False):
     if not dry_run:
         dest.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "clone", remote, str(dest)], check=True)
+
+
+def parse_link_table(path: Path):
+    """Parse a repo's link table into (src_rel, dst_rel) pairs — two
+    whitespace-separated columns, '#' comments and blank lines ignored. src is
+    relative to the repo, dst relative to HOME: the same shape a layer's Python
+    mappings carry, contributed as data by a repo the installer can't import."""
+    mappings = []
+    for n, line in enumerate(path.read_text().splitlines(), 1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        if len(parts) != 2:
+            sys.exit(f"{path}:{n}: want 'src dst', got {line!r}")
+        mappings.append((parts[0], parts[1]))
+    return mappings
+
+
+def repo_link_layers(repo_links, verbose=False):
+    """A Layer per cloned repo that declares a `links=` table, so a repo too
+    private or separate to live in this tree still installs its symlinks through
+    the one link pipeline. Presence-gated: a repo not on disk (an --extra never
+    opted into) contributes nothing, so a plain re-run relinks exactly what is
+    present. A declared-but-missing table warns rather than aborts, like the
+    installer's other best-effort steps."""
+    layers = []
+    for name, links_rel in repo_links.items():
+        repo_root = HOME / "repos" / name
+        if not repo_root.exists():
+            if verbose:
+                print(f"  skip (repo {name} not cloned) {repo_root}")
+            continue
+        table = repo_root / links_rel
+        if not table.exists():
+            action(f"  warn: links table not found {table}")
+            continue
+        layers.append(Layer(repo_root, common=parse_link_table(table)))
+    return layers
 
 
 def extract_tarball(tarball: Path, extract_dir: Path, strip: int, dry_run: bool, verbose: bool = False):
@@ -489,7 +535,7 @@ def main(extra_layers=(), install_root=None, provision=None):
     layers = [own_layer(), *extra_layers]
     if install_root is None:
         install_root = DOTFILES
-    core_repos, extra_repos = load_repos(layers)
+    core_repos, extra_repos, repo_links = load_repos(layers)
 
     parser = argparse.ArgumentParser(description="Install dotfiles symlinks")
     parser.add_argument("--dry-run", action="store_true", help="Preview without making changes")
@@ -533,6 +579,11 @@ def main(extra_layers=(), install_root=None, provision=None):
         clone_repo(name, remote, args.dry_run, args.verbose)
     for name in args.extra:
         clone_repo(name, extra_repos[name], args.dry_run, args.verbose)
+
+    # Repos that ship a links= table join as layers, after cloning so a just-cloned
+    # --extra links in the same run. Presence-gated, so a bare re-run relinks only
+    # repos on disk; the existing merge/link/prune pipeline does the rest.
+    layers = layers + repo_link_layers(repo_links, args.verbose)
 
     if not IS_WINDOWS:
         for layer in layers:
