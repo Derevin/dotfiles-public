@@ -14,7 +14,8 @@
 #
 # Ordering still holds: dotfiles applies and re-execs first (so new code wins),
 # then install clones any newly-declared siblings (a fresh clone is already
-# current, so it needs no prefetch), then siblings apply in parallel.
+# current, so it needs no prefetch), then siblings apply in parallel, then a
+# links= repo that moved triggers one more install so its symlinks track the pull.
 set -euo pipefail
 SYNC_ISSUES=0
 
@@ -267,6 +268,27 @@ declared_repos() {
   done
 }
 
+# Sibling repos whose repos.conf line carries a links= table — install creates
+# their symlinks from their own content (dotfiles_install.py's repo_link_layers),
+# so a pull that moves one means install must relink. Deduped across both confs,
+# like declared_repos. Optional conf args override the defaults (for tests).
+link_repos() {
+  local -A seen
+  local conf name _ rest
+  local confs=("$@")
+  [[ ${#confs[@]} -gt 0 ]] || confs=(~/repos/dotfiles/repos.conf ~/repos/dotfiles/public/repos.conf)
+  for conf in "${confs[@]}"; do
+    [[ -f "$conf" ]] || continue
+    while read -r name _ _ rest; do
+      case "$name" in '#'*|'') continue ;; esac
+      case " $rest " in *" links="*) : ;; *) continue ;; esac
+      [[ -n "${seen[$name]:-}" ]] && continue
+      seen[$name]=1
+      printf '%s\n' "$name"
+    done < "$conf"
+  done
+}
+
 # --- 1. Prefetch every existing repo + subtree, in parallel (read-only) -------
 # New siblings (declared by a not-yet-pulled dotfiles change) aren't on disk
 # yet; install clones them after the gate, and a fresh clone needs no sync.
@@ -319,6 +341,15 @@ while read -r rname; do
   [[ -d ~/repos/$rname ]] && other_repos+=(~/repos/$rname)
 done < <(declared_repos)
 
+# Snapshot each links= repo's HEAD before the apply below mutates it. install
+# linked these from their pre-apply content above; one that moves needs relinking
+# once the apply has brought it current — done after the apply, below.
+link_heads_before=()
+while read -r rname; do
+  [[ -d ~/repos/$rname/.git ]] || continue
+  link_heads_before+=("$rname:$(cd ~/repos/$rname && git rev-parse HEAD 2>/dev/null || echo none)")
+done < <(link_repos)
+
 # --- 4. Apply siblings (ff/push + subtrees) and dotfiles' own subtrees in
 #        parallel. Each job buffers output (concurrent writes to one stream
 #        would interleave) and records its exit code; we replay in submission
@@ -358,5 +389,22 @@ for out in "${outs[@]}"; do
   read -r job_rc <"$out.rc" || true
   [[ "$job_rc" == 0 ]] || SYNC_ISSUES=1
 done
+
+# A links= repo that moved was linked from stale content above; relink now that
+# every sibling is current. Conditional + idempotent: ordinary syncs (only
+# tasks/context moving) don't re-run install, and the re-run only does real work
+# where content changed. --no-provision: prereqs were already ensured above.
+relink=0
+if [[ ${#link_heads_before[@]} -gt 0 ]]; then
+  for entry in "${link_heads_before[@]}"; do
+    rname=${entry%%:*}
+    after_head=$(cd ~/repos/$rname && git rev-parse HEAD 2>/dev/null || echo none)
+    [[ "${entry#*:}" != "$after_head" ]] && relink=1
+  done
+fi
+if [[ "$relink" == 1 ]]; then
+  echo "links repo updated — re-running install"
+  ~/repos/dotfiles/dotfiles_install.py --no-provision || SYNC_ISSUES=1
+fi
 
 exit $SYNC_ISSUES
