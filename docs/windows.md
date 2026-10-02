@@ -10,7 +10,10 @@ reach WT: commit and push from WSL, `git pull` in the Windows clone, then restar
 WT — a write over the `/mnt/c` 9P mount may not trip its file watcher.
 
 **WSL `vmIdleTimeout`.** `wsl/.wslconfig` shuts the VM down 5 minutes after the
-last distro exits. Repos live inside WSL (`~/repos/`) for native I/O speed.
+last distro exits. Repos live inside WSL (`~/repos/`) for native I/O speed. The
+installer **copies** `.wslconfig`, not symlinks it — WSL won't read it through a
+reparse point ("untrusted mount point", file silently ignored). So editing it
+needs a re-install to re-copy, then `wsl --shutdown`.
 
 **MSYS2 git + pipe groups.** `{ git ...; git ...; } | pager` corrupts the terminal
 for `less`. Capture into a variable first, then pipe. The same applies to

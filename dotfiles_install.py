@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Dotfiles installer. Creates symlinks from repo files to their home locations."""
+"""Dotfiles installer. Symlinks repo files to their home locations (a few are
+copied instead — see WINDOWS_COPY)."""
 
 import argparse
 import hashlib
@@ -86,6 +87,12 @@ WINDOWS_ONLY = [
     ("alacritty/alacritty.toml", "AppData/Roaming/alacritty/alacritty.toml"),
     ("alacritty/platform-windows.toml", "AppData/Roaming/alacritty/platform.toml"),
     ("windows-terminal/settings.json", "AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"),
+]
+
+# Copied, not symlinked. WSL's config hardening rejects a .wslconfig reached
+# through a reparse point as an untrusted mount point and silently falls back to
+# defaults, so a symlink leaves the file unread. It only honours a real file.
+WINDOWS_COPY = [
     ("wsl/.wslconfig", ".wslconfig"),
 ]
 
@@ -465,6 +472,22 @@ def link(src: Path, dst: Path, dry_run: bool, verbose: bool = False):
             dst.symlink_to(src)
 
 
+def copy_file(src: Path, dst: Path, dry_run: bool, verbose: bool = False):
+    """Materialize a real copy, replacing any symlink a prior install left — for
+    targets a symlink-following reader rejects (see WINDOWS_COPY)."""
+    if dst.is_symlink():
+        if not dry_run:
+            dst.unlink()
+    elif dst.is_file() and dst.read_bytes() == src.read_bytes():
+        if verbose:
+            print(f"  skip (copy up to date) {dst}")
+        return
+    action(f"  copy {dst} <- {src}")
+    if not dry_run:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dst)
+
+
 def prune(root: Path, dst_rels, dry_run: bool, verbose: bool = False):
     """Remove symlinks a previous version of this layer created. Only links that
     still point inside the layer's own root — anything else is the user's file,
@@ -605,6 +628,14 @@ def main(extra_layers=(), install_root=None, provision=None):
             action(f"  warn: source not found {src}")
             continue
         link(src, dst, args.dry_run, args.verbose)
+
+    if IS_WINDOWS:
+        for src_rel, dst_rel in WINDOWS_COPY:
+            src = DOTFILES / src_rel
+            if not src.exists():
+                action(f"  warn: source not found {src}")
+                continue
+            copy_file(src, HOME / dst_rel, args.dry_run, args.verbose)
 
     for layer in layers:
         prune(layer.root, layer.removed, args.dry_run, args.verbose)
