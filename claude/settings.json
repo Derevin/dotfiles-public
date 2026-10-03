@@ -192,6 +192,8 @@
   "spinnerTipsEnabled": false,
   "effortLevel": "xhigh",
   "promptSuggestionEnabled": false,
+  "emojiCompletionEnabled": false,
+  "terminalTitleFromRename": false,
   "awaySummaryEnabled": false,
   "autoUpdatesChannel": "latest",
   "tui": "default",
