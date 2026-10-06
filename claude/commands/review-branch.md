@@ -12,13 +12,14 @@ Review the current branch's diff against its merge base. Works offline — no PR
 
 1a. **Read project domain docs.** Resolve `<project>` via `find-project.sh`. If `~/repos/context/<project>/CONTEXT.md` (or `CONTEXT-MAP.md` + per-context files) exists, read it and note any terms the diff renames, repurposes, or contradicts. If `adr/` exists, skim for decisions the diff might violate. Hold these findings for step 3. Skip silently if the context store doesn't exist.
 
-2. **Dispatch subagent reviewers.** Launch all five in parallel, passing each the full output:
+2. **Dispatch subagent reviewers.** Launch all six in parallel, passing each the full output:
 
    - **code-reviewer** — readability, naming, error handling, dead code, code smells
    - **architecture-reviewer** — where responsibility sits, mixed layers, module coupling, seam contracts
    - **perf-reviewer** — algorithmic complexity, repeated work, blocking calls, resource cleanup
    - **test-reviewer** — untested paths, weak assertions, flaky patterns, missing edge cases
    - **security-reviewer** — injection, secrets, validation at entry, unsafe file and process handling
+   - **comment-reviewer** — added comments and prose: private-ADR references, narration, bloat, history-relative phrasing
 
    Instruct each to only report noteworthy findings. No praise, no minor style nits. Omit feedback on pre-existing code not affected by the branch changes.
 
@@ -37,6 +38,6 @@ Review the current branch's diff against its merge base. Works offline — no PR
    - **Middle Man** — a unit that mostly just delegates onward.
    - **Refused Bequest** — a subclass/implementer ignoring or overriding most of what it inherits.
 
-   Dispatch all five before collecting any, so they run concurrently. Hand each a report path — `reports/<perspective>.md` under your scratchpad — and require its final output be that path alone. A child's return lands in the top-level session, never in a dispatching fork: a returned body is both lost to the fork and dumped into the context it was forked to keep clean. A dispatching fork is not reliably notified when a child finishes and has no `TaskOutput`, so collect with `fork-collect.sh <reports-dir> <agentId>:code.md <agentId>:architecture.md ...`, pairing each id the Agent tool returned with the file you gave that reviewer. It waits for every entry to close, prints each report, and names any reviewer it gave up on or that closed without writing one. Sleeping or polling instead hangs until the user kills you.
+   Dispatch all six before collecting any, so they run concurrently. Hand each a report path — `reports/<perspective>.md` under your scratchpad — and require its final output be that path alone. A child's return lands in the top-level session, never in a dispatching fork: a returned body is both lost to the fork and dumped into the context it was forked to keep clean. A dispatching fork is not reliably notified when a child finishes and has no `TaskOutput`, so collect with `fork-collect.sh <reports-dir> <agentId>:code.md <agentId>:architecture.md ...`, pairing each id the Agent tool returned with the file you gave that reviewer. It waits for every entry to close, prints each report, and names any reviewer it gave up on or that closed without writing one. Sleeping or polling instead hangs until the user kills you.
 
 3. **Synthesize.** Review all subagent feedback. Post only findings you also deem noteworthy. Group by file, quote relevant diff context. Include any domain-term drift or ADR violations from step 1a. End with a short summary and suggested next steps.
