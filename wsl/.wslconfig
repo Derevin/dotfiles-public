@@ -1,6 +1,6 @@
 [wsl2]
 # Shut down VM 5 minutes after last distro exits
 vmIdleTimeout=300000
-# Cap VM RAM at 11 GiB (WSL default ~50% of host = 7.7 GiB, too tight for Bevy
-# builds - they thrash swap). Takes effect on next VM start.
-memory=11GB
+# Cap VM RAM at 24 GiB of the host's 32 (default 50% = 16 is tight for a 12-way
+# Bevy build); leaves ~8 for Windows and the native GPU run. Next VM start.
+memory=24GB
