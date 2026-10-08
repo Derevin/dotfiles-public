@@ -164,6 +164,12 @@ _Failure mode._ Steering by prohibition — telling the agent what _not_ to do �
 
 _Avoid_: ironic rebound, don't-prompting, the pink elephant
 
+### Negative Space
+
+_Failure mode._ Blindness to the steering a skill does by what it leaves _out_. Every decision the skill declines to make is delegated to the agent's priors, never left neutral — an unstated choice is still a choice, made by default. The inverse of **Negation**: negation names the wrong behaviour into the frame, negative space leaves the right one out of it, so the agent fills the gap from pretraining. Cure: read a draft for its silences and settle each omission on purpose — state the target, or make it an explicit **branch** the skill is meant to leave open.
+
+_Avoid_: the void, omission, gap, blind spot
+
 ## Pruning
 
 Keeping a skill lean — each remedy paired with the failure it cures.
@@ -173,6 +179,12 @@ Keeping a skill lean — each remedy paired with the failure it cures.
 The desired state where each meaning lives in exactly one authoritative place, so a change to the skill's behaviour is a change in one place. **Duplication** is its violation.
 
 _Avoid_: home, canonical location
+
+### Cache
+
+A line that restates something the environment already states authoritatively — a `package.json` script, a config value, the directory layout, `--help` output. The skill's **single source of truth** extends into those files, so a restatement is a copy that drifts the moment the source changes, like any cache. It earns its load only when the lookup it saves is expensive. Cache what the agent cannot find by looking — the reason behind a choice, an unwritten convention, a gotcha no config confesses — and leave one-file, one-command lookups to the environment, where they cannot go stale.
+
+_Avoid_: mirror, copy, restatement
 
 ### Duplication
 

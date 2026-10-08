@@ -51,7 +51,7 @@ Where the ladder decides _how far down_ a piece sits, **co-location** decides _w
 
 ## Pruning
 
-Keep each meaning in a **single source of truth**: one authoritative place, so changing the behaviour is a one-place edit.
+Keep each meaning in a **single source of truth**: one authoritative place, so changing the behaviour is a one-place edit. That source reaches past the skill into the environment — config, scripts, `--help`, directory layout are authoritative, so a line restating them is a **cache** that goes stale. Cache only what the agent can't find by looking: the *why*, unwritten conventions, a gotcha no config confesses.
 
 Check every line for **relevance**: does it still bear on what the skill does?
 
@@ -80,3 +80,4 @@ Use these to diagnose issues the user may be having with the skill.
 - **Sprawl** — a skill simply too long, even when every line is live and unique. Hurts readability and maintainability and wastes tokens. The cure is the ladder: disclose **reference** behind pointers, and split by **branch** or sequence so each path carries only what it needs.
 - **No-op** — a line the model already obeys by default, so you pay load to say nothing. The test: does it change behaviour versus the default? A weak leading word (_be thorough_ when the agent is already thorough-ish) is a no-op; the fix is a stronger word (_relentless_), not a different technique.
 - **Negation** — steering by prohibition backfires: _don't think of an elephant_ names the elephant and makes it more available, not less. Prompt the **positive** — state the target behaviour so the banned one is never spoken; keep a prohibition only as a hard guardrail you can't phrase positively, and even then pair it with what to do instead.
+- **Negative space** — steering by omission: every decision the skill declines falls to the agent's priors, not to neutral ground. Where **negation** names the wrong behaviour into the frame, negative space leaves the right one out of it. Read a draft for its silences and settle each: state the target, or make it an explicit **branch** the skill means to leave open.
