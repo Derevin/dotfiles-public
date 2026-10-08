@@ -116,4 +116,20 @@ done
 
 fails task-claim.sh N099-no-such-task
 
+# --force completes a task from any state; the bare form still refuses anything
+# but active/.
+next planned
+fails task-done.sh "$T"
+ok "done without --force refuses non-active" "$(at planned "$T")" y
+run task-done.sh --force "$T"
+ok "done --force completes from planned/" "$(at done "$T")" y
+
+next stale
+run task-done.sh --force "$T"
+ok "done --force completes from stale/" "$(at done "$T")" y
+
+next active
+run task-done.sh --force "$T"
+ok "done --force completes from active/" "$(at done "$T")" y
+
 report
