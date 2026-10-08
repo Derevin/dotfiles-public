@@ -35,6 +35,7 @@ COMMON = [
     ("claude/skills/promote-memory", ".claude/skills/promote-memory"),
     ("claude/skills/grill-me-with-docs", ".claude/skills/grill-me-with-docs"),
     ("claude/skills/write-a-skill", ".claude/skills/write-a-skill"),
+    ("claude/skills/retro", ".claude/skills/retro"),
     ("claude/agents", ".claude/agents"),
     ("claude/commands", ".claude/commands"),
     ("tmux/.tmux.conf", ".tmux.conf"),

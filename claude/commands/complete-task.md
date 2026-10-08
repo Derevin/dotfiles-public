@@ -20,3 +20,5 @@ Complete the current active task. Assumes exactly one active task for this worke
 5. **Cleanup.** Run `task-cleanup-branch.sh` — detaches to `origin/<base>` and deletes the task branch. Refuses if PR isn't merged or if not on a branch.
 
 6. **Offer the drop.** Run `lab-current.sh`. If it prints a name, print `lab-drop.sh <name>` for the user to paste — do NOT run it. Dropping is irreversible and always theirs to trigger.
+
+7. **Offer the retro.** Print `/retro` for the user to run in their main session — it mines this task's session for environment improvements, and wants the full context and a strong model this closing fork lacks. Do NOT run it here.
