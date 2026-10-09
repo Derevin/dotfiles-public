@@ -60,6 +60,8 @@ Just run commands directly — the working directory is already set. No `cd dir 
 
 Large command output: dump once to a file — `/tmp` unless you have a better place (`> /tmp/<name>.out 2>&1`) — re-read slices via `Read` offset/limit. Don't rerun command with different ranges.
 
+A background fork's `<new-diagnostics>` lag the tree it just edited — they index its mid-flight states, so a flood right after a fork lands is usually stale. Verify with one build/test run, not the diagnostics.
+
 ## API errors
 
 The API is flaky — retry a call that trips an API error, up to 10 attempts, before giving up.
