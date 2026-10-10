@@ -20,29 +20,23 @@ Before opening a PR, show the title and body and wait for user's OK. Don't run `
 
 End a proposed PR body with a `----` rule, blank line before it (else the last body line renders as a heading). Commentary goes after the rule, never inside the body. The rule marks where the body ends for review — strip it from what `gh pr create` gets.
 
-PR descriptions: as short as the change allows. Plain text, no headers/checklists/bullets. Why, not what — never restate the diff. No test plans, no "This PR..." preamble, no background already in the linked issue. Every sentence must earn its place; if one is enough, stop there.
+PR descriptions: as short as the change allows, usually one sentence stating the why. Plain text, no headers/checklists/bullets. Why, not what — never restate the diff. No test plans, no "This PR..." preamble, no background already in the linked issue. Drop tail clauses, impact numbers, "so that…" purpose tails, named-pattern references. Every sentence must earn its place; if one is enough, stop there. When user edits a PR body, apply exactly the requested change — never reintroduce previously dropped text.
 
 Don't hard-wrap PR bodies at a column — one paragraph, one line, let it wrap. Newlines only for real paragraph breaks.
 
 No em dashes (—) in PR titles or bodies, even where grammatical — user never writes them, so they read as not-their-voice. Recast with `:`, a comma, a semicolon, a period, or a plain `-`.
 
-To swap two commits in a non-interactive rebase: `GIT_SEQUENCE_EDITOR='sed -i "1{h;d}; 2G"' git rebase -i HEAD~2`
-
 Branch off `origin/main` (or `origin/master`), not local.
 
 Single tag prefix only — `Recovery: X`, not `GUI: Recovery: X`. Tag = one word naming what changed, not which file (`Tasks:`, not `Global CLAUDE:`). Use "Fix" only for genuine bugs; refactors take neutral verbs (Load, Reorder, Move, Use).
-
-Trim PR bodies hard — usually one sentence stating the why. Drop tail clauses, impact numbers, "so that…" purpose tails, named-pattern references. When user edits a PR body, apply exactly the requested change — never reintroduce previously dropped text.
 
 Don't assert scope superlatives ("last/only/first X") in PR or commit bodies without verifying — grep to confirm it holds; if unsure, drop the superlative and state only the local fact.
 
 Amend HEAD for review fixes (`git commit --amend --no-edit`); don't fixup+autosquash when target is HEAD. Don't auto force-push after amend — wait for explicit direction.
 
-After splitting a commit into its own PR, leave HEAD on the split branch and don't restack the parent until the split PR merges. After splitting an orthogonal fix, don't auto-switch back.
+After splitting or extracting work into its own PR, stop: leave HEAD on the split branch, don't restack the parent or branch the remainder until that PR merges. After splitting an orthogonal fix, don't auto-switch back.
 
 Skip the rebuild/test cycle when a rebase resolution is purely mechanical (list ordering, formatting).
-
-When asked to "extract X first" into a separate PR, stop after creating that PR — don't preemptively branch the remainder.
 
 Don't `cd` into other worktrees; use `git show <ref>:<path>` instead.
 
@@ -74,9 +68,9 @@ When fixing bugs or implementing new features in a project that has tests: write
 
 ## Tasks
 
-Task data lives in `~/repos/tasks/` — personal, not shared with collaborators. Don't reference task IDs or contents in PRs, commits, or any external comms. See its CLAUDE.md for conventions (naming, priorities, format, claiming). Task scripts are on PATH — invoke them directly, never with a `~/repos/tasks/` prefix. Use the task slash commands when working on tasks. Don't auto-complete on PR merge — user's call; leave it in `active/` silently, don't narrate the non-action.
+Task data lives in `~/repos/tasks/` — personal, not shared with collaborators. Don't reference task IDs or contents in PRs, commits, or any external comms. See its CLAUDE.md for conventions (naming, priorities, format, claiming). Don't auto-complete on PR merge — user's call.
 
-**All state changes (claim/complete/cancel/move) go through the task scripts, never `git mv` or `mv` by hand.** They handle the commit message + remote sync atomically; manual moves leave the repo out of sync with origin.
+Task scripts are on PATH — invoke them directly, never with a `~/repos/tasks/` prefix. **All state changes (claim/complete/cancel/move) go through the task scripts, never `git mv` or `mv` by hand.** They handle the commit message + remote sync atomically; manual moves leave the repo out of sync with origin.
 
 Verify pwd before any task script — project (via `find-project.sh`) and worker both derive from it; wrong cwd → wrong project listed or wrong worker stamped.
 
