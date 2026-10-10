@@ -22,8 +22,34 @@ SYNC_ISSUES=0
 if [[ "${1:-}" == "--help" ]]; then
     echo "Sync dotfiles, run install, sync remaining repos, ingest subtrees."
     echo "Exits non-zero if anything is dirty, diverged, or fails to sync."
-    echo "Usage: sync.sh"
+    echo "With --wait <epoch>: block until a sync finishes (marker >= epoch), then exit 0."
+    echo "Usage: sync.sh [--wait <epoch>]"
     exit 0
+fi
+
+# Done-marker, touched at the end of every completed run (clean or dirty) and
+# read by --wait. The `go` bootstrap waits on it before opening the launchpad, so
+# the labs land in a fleet whose Claude sync has finished. Path mirrors
+# claude-update.sh's host marker.
+SYNC_DONE_MARKER="${XDG_RUNTIME_DIR:-/tmp}/dotfiles-sync.done"
+
+# --wait <epoch>: block until the done-marker is at least as fresh as <epoch>,
+# then exit 0. A stale, absent, or never-touched marker falls through the timeout
+# and still exits 0 — a stalled sync must never wedge the bootstrap. Mirrors
+# claude-update.sh --wait-host; the timeout is longer because a full sync (docker
+# and coder Claude updates included) runs minutes on a stale day.
+if [[ "${1:-}" == "--wait" ]]; then
+    want="${2:-0}"
+    timeout="${DOTFILES_SYNC_WAIT_TIMEOUT:-600}"
+    deadline=$(( $(date +%s) + timeout ))
+    while :; do
+        if [[ -f "$SYNC_DONE_MARKER" ]]; then
+            mtime=$(stat -c %Y "$SYNC_DONE_MARKER" 2>/dev/null || echo 0)
+            [[ "$mtime" -ge "$want" ]] && exit 0
+        fi
+        [[ "$(date +%s)" -ge "$deadline" ]] && exit 0
+        sleep 1
+    done
 fi
 
 # Route every git network op over one reused SSH connection. ControlMaster=auto
@@ -407,4 +433,8 @@ if [[ "$relink" == 1 ]]; then
   ~/repos/dotfiles/dotfiles_install.py --no-provision || SYNC_ISSUES=1
 fi
 
+# A run reached the end (clean or dirty) — mark it done so a `go` bootstrap
+# waiting on the marker opens the launchpad either way. Runs that abort earlier
+# (no python, re-exec loop) leave it untouched on purpose: the waiter times out.
+touch "$SYNC_DONE_MARKER"
 exit $SYNC_ISSUES

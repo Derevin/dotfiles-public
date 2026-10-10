@@ -81,6 +81,7 @@ COMMON = [
     ("tmux/workspace-dotfiles.sh", ".local/bin/workspace-dotfiles.sh"),
     ("tmux/workspace-solo.sh", ".local/bin/workspace-solo.sh"),
     ("tmux/workspace-dual.sh", ".local/bin/workspace-dual.sh"),
+    ("tmux/morning-wait.sh", ".local/bin/morning-wait.sh"),
 ]
 
 WINDOWS_ONLY = [
