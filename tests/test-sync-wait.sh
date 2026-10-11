@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Tests sync.sh --wait: the gate the `go` bootstrap blocks on before opening the
-# launchpad. It must return at once on a fresh done-marker, and time out to 0 on
-# a stale, absent, or never-touched one — a stalled sync must never wedge.
+# launchpad. It must return at once on a fresh done-marker, carrying the sync's
+# recorded status (0 clean, non-zero had issues), and time out to non-zero on a
+# stale, absent, or never-touched one — a stalled sync must never wedge, and its
+# outcome counts as a failure.
 #
 # --wait short-circuits before any network or install work, so this runs the real
 # sync.sh safely; the non-wait flow is never entered.
@@ -24,21 +26,25 @@ export XDG_RUNTIME_DIR="$TMP/run"
 mkdir -p "$XDG_RUNTIME_DIR"
 MARKER="$XDG_RUNTIME_DIR/dotfiles-sync.done"
 
-# --- fresh marker returns at once --------------------------------------------
+# --- fresh clean marker (status 0) returns 0 at once --------------------------
 t0=$(date +%s)
-touch -d "@$((t0 + 5))" "$MARKER"
-"$SYNC" --wait "$t0"; ok "returns 0 on fresh marker" "$?" 0
+echo 0 > "$MARKER"; touch -d "@$((t0 + 5))" "$MARKER"
+"$SYNC" --wait "$t0"; ok "returns 0 on a fresh clean marker" "$?" 0
 
-# --- stale marker times out to 0 (does not accept an earlier sync) ------------
-touch -d "@$((t0 - 100))" "$MARKER"
+# --- fresh dirty marker carries its non-zero status --------------------------
+echo 1 > "$MARKER"; touch -d "@$((t0 + 5))" "$MARKER"
+"$SYNC" --wait "$t0"; ok "returns the recorded status on a fresh dirty marker" "$?" 1
+
+# --- stale marker times out to non-zero (does not accept an earlier sync) ------
+echo 0 > "$MARKER"; touch -d "@$((t0 - 100))" "$MARKER"
 start=$(date +%s)
 DOTFILES_SYNC_WAIT_TIMEOUT=1 "$SYNC" --wait "$t0"; rc=$?
 end=$(date +%s)
-ok "times out to 0 on stale marker" "$rc" 0
+ok "times out to non-zero on a stale marker" "$rc" 1
 [ "$((end - start))" -le 4 ]; ok "timeout is bounded" "$?" 0
 
-# --- absent marker times out to 0 --------------------------------------------
+# --- absent marker times out to non-zero -------------------------------------
 rm -f "$MARKER"
-DOTFILES_SYNC_WAIT_TIMEOUT=1 "$SYNC" --wait "$(date +%s)"; ok "exits 0 with no marker" "$?" 0
+DOTFILES_SYNC_WAIT_TIMEOUT=1 "$SYNC" --wait "$(date +%s)"; ok "times out to non-zero with no marker" "$?" 1
 
 report
