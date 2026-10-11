@@ -178,6 +178,7 @@
       }
     ]
   },
+  "idleCompaction": false,
   "enableArtifact": false,
   "enableWorkflows": false,
   "statusLine": {
