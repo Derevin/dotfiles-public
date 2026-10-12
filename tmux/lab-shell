@@ -80,7 +80,11 @@ DIRENV_LOAD='eval "$(direnv export bash)"; '
 seeded_interactive_cmd() {
     local seed
     seed='printf '\''%s\n'\'' '"$(lab_sq "$1")"' >> "${HISTFILE:-$HOME/.bash_history}"'
-    printf 'trap : INT; %s%s; %s; exec bash -l' "$DIRENV_LOAD" "$1" "$seed"
+    # Ignore INT and TERM so the pane reaches `exec bash -l` whatever the recipe
+    # does on Ctrl+C. The recipe shares this shell's process group (one bash -lc,
+    # job control off), so a recipe that reaps itself with `kill 0` — mock's
+    # launch.bash does — SIGTERMs this shell too; untrapped, that closes the pane.
+    printf 'trap : INT TERM; %s%s; %s; exec bash -l' "$DIRENV_LOAD" "$1" "$seed"
 }
 
 if [ -n "${TMUX:-}" ] && [ -n "${TMUX_PANE:-}" ]; then

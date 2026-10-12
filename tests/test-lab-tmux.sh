@@ -282,6 +282,36 @@ ok "the held pane keeps the error" "$(yn wait_for pane_shows "$D8" 'instant boom
 ok "the held pane names the exit status" "$(yn wait_for pane_shows "$D8" 'status 3')" y
 tmux kill-pane -t "$D8" 2>/dev/null
 
+# --- interactive-after survives a recipe that kills its own process group -----
+# `just mock` ends in launch.bash, which traps SIGINT and `kill 0`s its group to
+# reap the backend. The --interactive-after wrapper runs the recipe in that same
+# group (one non-interactive `bash -lc`, job control off), so the kill lands on
+# the wrapper too, and a SIGTERM would take it down before `exec bash -l` —
+# closing the dispatch pane out from under the user. The wrapper must ride out
+# both signals. fake-mock stands in for launch.bash; the recipe reaching the
+# history file is proof the wrapper got past it to the interactive shell.
+printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/bin/direnv"
+cat > "$TMP/bin/fake-mock" <<EOF
+#!/usr/bin/env bash
+touch "$TMP/mock-running"
+trap 'kill 0' INT
+sleep 30 & wait
+EOF
+chmod +x "$TMP/bin/direnv" "$TMP/bin/fake-mock"
+
+G=$(lab-new.sh host 2>/dev/null)
+PB=$(new_pane)
+pane_split -v -d --caller "$PB" --lab "$G" --backend host \
+    "$PB" "lab-shell --interactive-after $G fake-mock" >/dev/null
+SB=$(split_of "$PB")
+wait_for test -f "$TMP/mock-running"
+tmux send-keys -t "$SB" C-c
+ok "interactive-after reaches its shell after a recipe's kill 0" \
+    "$(yn wait_for grep -qx fake-mock "$HOME/.bash_history")" y
+ok "interactive-after keeps the dispatch pane alive after a recipe's kill 0" \
+    "$(yn alive "$SB")" y
+tmux kill-pane -t "$SB" 2>/dev/null
+
 # --- a split pane whose lab cannot be entered degrades -----------------------
 # Quadrants are @unclosable, so a dead one cannot be cleared with M-w and the
 # slot is lost until the window is rebuilt. The pane must stay interactive, keep
