@@ -33,14 +33,9 @@ PROMPT="${2:-}"
 BACKEND_ARG="${3:-}"
 [ -n "$ID" ] && [ -n "$PROMPT" ] || { echo "usage: lab-start.sh <task-id> <prompt> [backend]" >&2; exit 2; }
 
-# Accept anything the id can be read out of, so a chooser can show something
-# readable (N238-fix-the-nasty-bug) rather than three bare digits: a filename, a
-# path, or the id alone. The letter prefix is priority, never identity.
-ID="${ID##*/}"
-ID="${ID%.md}"
-ID="${ID#[A-Z]}"
-ID="${ID%%-*}"
-[[ "$ID" =~ ^[0-9]{3}$ ]] || { echo "lab-start: cannot read a three-digit task id out of '${1}'" >&2; exit 2; }
+# A chooser shows a readable N238-slug, not three bare digits; read the id back
+# out of whatever form it arrives in.
+ID=$(lab_read_id "$ID") || { echo "lab-start: cannot read a three-digit task id out of '${1}'" >&2; exit 2; }
 
 export TMUX=
 CALLER=$(tmux show-environment -g JUST_CALLER 2>/dev/null | cut -d= -f2-) || true

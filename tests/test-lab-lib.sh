@@ -198,4 +198,43 @@ ok "current from a host lab subdir" \
     "$(cd "$TMP/one/Proj-hlab-tmp4/modules/gui" && lab_current)" hlab-tmp4
 ok "current outside a lab" "$(cd "$TMP/one" && lab_current; echo)" ""
 
+# --- reading a task id out of anything --------------------------------------
+# A chooser shows a readable N238-slug, not three bare digits, so the id has to
+# be read back out of a filename, a path, a bare id, or an annotated chooser line.
+ok "read id bare" "$(lab_read_id 238)" 238
+ok "read id from id-slug" "$(lab_read_id 238-fix-the-bug)" 238
+ok "read id from a task filename" "$(lab_read_id N238-fix-the-bug.md)" 238
+ok "read id from a path" "$(lab_read_id /a/b/A238-x.md)" 238
+ok "read id from a chooser line" "$(lab_read_id $'238-fix-the-bug\t(2 saved · docker)')" 238
+fails lab_read_id notanid
+fails lab_read_id 23
+
+# --- surviving conversations ------------------------------------------------
+# A drop keeps ~/.claude/projects/<encoded> — the conversation, keyed on the
+# worktree path, which the name and so the id determine. These find what is left
+# to rebuild from. HOME is overridden per call so the real one is never touched.
+H="$TMP/home"
+proj() { printf '%s' "$H/.claude/projects/$(printf '%s' "$1" | sed 's/[^a-zA-Z0-9]/-/g')"; }
+d_missin=$(proj "$TMP/one/Proj-dlab-265-selftest-missin")
+d_constr=$(proj "$TMP/one/Proj-dlab-265-selftest-constr")
+d_other=$(proj "$TMP/one/Proj-dlab-100-unrelated")
+d_host=$(proj "$TMP/one/Proj-hlab-265-host-side")
+mkdir -p "$d_missin" "$d_constr" "$d_other" "$d_host"
+touch -d '2020-01-01' "$d_missin"
+touch -d '2020-01-02' "$d_constr"
+
+# Every slug a retitled task left, newest first — and only this id, this backend.
+ok "finds both slugs of one id, newest first" \
+    "$(HOME=$H lab_history_dirs "$TMP/one/Proj" d 265 | tr '\n' '|')" \
+    "$d_constr|$d_missin|"
+ok "nothing for an id with no conversation" \
+    "$(HOME=$H lab_history_dirs "$TMP/one/Proj" d 999)" ""
+ok "a different id is not matched" \
+    "$(HOME=$H lab_history_dirs "$TMP/one/Proj" d 100 | tr '\n' '|')" "$d_other|"
+
+# The scan the chooser groups: one row per surviving dir, backend letter, id, slug.
+ok "scan reports backend, id and slug for each dir" \
+    "$(HOME=$H lab_history_scan "$TMP/one/Proj" | cut -f2-4 | tr '\t' ' ' | sort | tr '\n' ';')" \
+    "d 100 unrelated;d 265 selftest-constr;d 265 selftest-missin;h 265 host-side;"
+
 report

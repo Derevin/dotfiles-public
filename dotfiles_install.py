@@ -128,6 +128,7 @@ LINUX_ONLY = [
     ("tmux/lab-restore.sh", ".local/bin/lab-restore.sh"),
     ("tmux/lab-inflight.sh", ".local/bin/lab-inflight.sh"),
     ("tmux/lab-start.sh", ".local/bin/lab-start.sh"),
+    ("tmux/lab-reconstruct.sh", ".local/bin/lab-reconstruct.sh"),
     ("tmux/launchpad.sh", ".local/bin/launchpad.sh"),
     ("scripts/lab-new.sh", ".local/bin/lab-new.sh"),
     ("scripts/lab-claim.sh", ".local/bin/lab-claim.sh"),

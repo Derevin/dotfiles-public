@@ -43,44 +43,8 @@ for n in $(seq 1 99); do
 done
 [ -n "$NAME" ] || { echo "lab-new: no free ${LETTER}lab-tmp index" >&2; exit 1; }
 
-WORKTREE="${LAB_CHECKOUT}-${NAME}"
-
 # The name on stdout is this script's whole output — lab-start.sh and the claim
-# read it back. Everything else provisioning says goes to stderr.
-
-# Coder workspaces clone the repo themselves at /workspace, so there is no host
-# worktree to create — the provisioner is the whole job there.
-if [ "$BACKEND" != coder ]; then
-    [ -d "$LAB_CHECKOUT" ] || { echo "lab-new: no checkout at $LAB_CHECKOUT" >&2; exit 1; }
-    BASE=$(lab_base_branch "$LAB_CHECKOUT")
-    # Fetch so the detach lands on a current tip.
-    git -C "$LAB_CHECKOUT" fetch --quiet origin "$BASE" || { echo "lab-new: fetch failed" >&2; exit 1; }
-    # Detached: no script invents a branch name. Branch creation stays with
-    # whoever starts committing.
-    git -C "$LAB_CHECKOUT" worktree add --detach "$WORKTREE" "origin/$BASE" >&2
-fi
-
-if [ -n "$LAB_PROVISIONER" ]; then
-    [ -x "$LAB_PROVISIONER" ] || { echo "lab-new: provisioner not executable: $LAB_PROVISIONER" >&2; exit 1; }
-    if ! "$LAB_PROVISIONER" "$BACKEND" "$NAME" "$WORKTREE" >&2; then
-        # The backend goes back too, not just the worktree: bringing it up is the
-        # provisioner's first step and seeding it the last, so a failure usually
-        # leaves one standing — and a half-provisioned backend holds the name
-        # against every later attempt while being unusable itself. Destroying it
-        # blind rather than after an existence check: lab_workspace_exists caches
-        # the workspace list from the free-index scan, which ran before this one
-        # was created.
-        echo "lab-new: provisioning failed — rolling back $NAME" >&2
-        case "$BACKEND" in
-            docker) docker rm -f "$LAB_PREFIX$NAME" >/dev/null 2>&1 || true ;;
-            coder) coder delete "$LAB_PREFIX$NAME" -y >/dev/null 2>&1 || true ;;
-        esac
-        [ "$BACKEND" != coder ] && git -C "$LAB_CHECKOUT" worktree remove --force "$WORKTREE" >/dev/null 2>&1
-        exit 1
-    fi
-elif [ "$BACKEND" != host ]; then
-    echo "lab-new: no provisioner configured for $PROJECT — $BACKEND needs one (see $LAB_CONF)" >&2
-    exit 1
-fi
+# read it back. Everything provisioning says goes to stderr.
+lab_provision "$BACKEND" "$NAME" || exit 1
 
 echo "$NAME"

@@ -299,4 +299,40 @@ ok "no provisioner leaves only host" \
 # outside a configured project anyway.
 ok "no default, no list" "$(LAB_CONF="$TMP/lab-nodefault.conf" lab-backends.sh)" ""
 
+# --- reconstruct: rebuild a dropped lab around its surviving conversation ------
+# NEW (hlab-238-make-the-build-f) was dropped far above, but a drop keeps its
+# ~/.claude/projects dir. Reconstruct recovers the name from that dir, re-
+# provisions, and resumes — no task needed, so one long gone to done/ is no
+# obstacle. lab-attach.sh is stubbed again, as it was for lab-start above.
+cat > "$TMP/bin/lab-attach.sh" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" > "$TMP_ATTACH_LOG"
+STUB
+chmod +x "$TMP/bin/lab-attach.sh"
+export TMP_ATTACH_LOG="$TMP/attach.log"
+
+ok "the dropped lab left its conversation behind" "$([ -d "$PROJ_NEW" ] && echo y)" y
+ok "and its worktree is gone" "$([ -d "$TMP/Widget-$NEW" ] && echo y)" ""
+
+# A task retitled across claims leaves more than one. Add an older conversation
+# under a different slug: the newest (PROJ_NEW) must name the rebuilt lab, and the
+# older has to fold in beside it rather than be left stranded.
+OLDER="$HOME/.claude/projects/$(enc "$TMP/Widget-hlab-238-earlier-title")"
+CLEAN_PROJ_DIRS+=("$OLDER")
+mkdir -p "$OLDER"; echo older > "$OLDER/old.jsonl"
+touch -d '2020-01-01' "$OLDER"
+touch "$PROJ_NEW"
+
+TMUX_PANE=%9 lab-reconstruct.sh 238 >/dev/null 2>&1
+ok "reconstruct recreates the worktree at the recovered name" "$([ -d "$TMP/Widget-$NEW" ] && echo y)" y
+ok "reconstruct resumes the conversation in it" "$(cat "$TMP/attach.log")" "--pane %9 $NEW --continue"
+ok "reconstruct keeps the newest conversation" "$([ -f "$PROJ_NEW/x.jsonl" ] && echo y)" y
+ok "reconstruct folds an older conversation in beside it" "$([ -f "$PROJ_NEW/old.jsonl" ] && echo y)" y
+# A live lab now holds the task: a second rebuild refuses rather than fork it.
+fails env TMUX_PANE=%9 lab-reconstruct.sh 238
+# No conversation for an id: refuse — plan-task/implement-task make a fresh lab.
+fails env TMUX_PANE=%9 lab-reconstruct.sh 777
+lab-drop.sh --force "$NEW" >/dev/null
+rm "$TMP/bin/lab-attach.sh"
+
 report

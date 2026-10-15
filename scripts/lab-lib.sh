@@ -113,6 +113,21 @@ lab_task_id() {
   [[ "$1" =~ ^[hdc]lab-([0-9]{3})- ]] && printf '%s' "${BASH_REMATCH[1]}"
 }
 
+# lab_read_id <token> — the three-digit task id read out of anything it can be
+# found in: the id alone, an id-slug, a task filename or path (priority letter or
+# not), or a chooser line whose first field is one of those. Empty and non-zero
+# when there is none, so a caller under set -e stops rather than minting a lab for
+# a misread id.
+lab_read_id() {
+  local s=${1%%[[:space:]]*}   # first field — a chooser line annotates past it
+  s=${s##*/}                   # a path → its basename
+  s=${s%.md}                   # a task filename → drop the suffix
+  s=${s#[A-Z]}                 # the priority letter is not identity
+  s=${s%%-*}                   # id-slug → the id
+  [[ "$s" =~ ^[0-9]{3}$ ]] || return 1
+  printf '%s' "$s"
+}
+
 # lab_claimed_name <backend> <id> <slug> <container-prefix> — the claimed name,
 # slug truncated to what LAB_NAME_CAP leaves after the prefix and the id. Cutting
 # mid-word can leave a trailing hyphen, which coder rejects, so strip it.
@@ -382,6 +397,41 @@ lab_base_branch() {
   printf '%s' "$base"
 }
 
+# lab_provision <backend> <name> — bring a lab's backing store up under an exact
+# name: a detached worktree off the base branch (host and docker), then the
+# project's provisioner (docker and coder, and host when one is configured).
+# Rolls both back on a provisioner failure, so a half-built lab never holds the
+# name against every retry while being unusable itself. Needs the project resolved
+# first (LAB_CHECKOUT, LAB_PREFIX, LAB_PROVISIONER); the worktree is
+# ${LAB_CHECKOUT}-<name>. Shared by lab-new (anonymous) and lab-reconstruct (a
+# recovered name), so the one definition decides what provisioning means.
+lab_provision() {
+  local backend=$1 name=$2 worktree="${LAB_CHECKOUT}-$2" base
+  if [ "$backend" != coder ]; then
+    [ -d "$LAB_CHECKOUT" ] || { echo "lab: no checkout at $LAB_CHECKOUT" >&2; return 1; }
+    base=$(lab_base_branch "$LAB_CHECKOUT") || return 1
+    git -C "$LAB_CHECKOUT" fetch --quiet origin "$base" || { echo "lab: fetch failed" >&2; return 1; }
+    # Detached: no script invents a branch name. Branch creation stays with
+    # whoever starts committing.
+    git -C "$LAB_CHECKOUT" worktree add --detach "$worktree" "origin/$base" >&2
+  fi
+  if [ -n "$LAB_PROVISIONER" ]; then
+    [ -x "$LAB_PROVISIONER" ] || { echo "lab: provisioner not executable: $LAB_PROVISIONER" >&2; return 1; }
+    if ! "$LAB_PROVISIONER" "$backend" "$name" "$worktree" >&2; then
+      echo "lab: provisioning failed — rolling back $name" >&2
+      case "$backend" in
+        docker) docker rm -f "$LAB_PREFIX$name" >/dev/null 2>&1 || true ;;
+        coder)  coder delete "$LAB_PREFIX$name" -y >/dev/null 2>&1 || true ;;
+      esac
+      [ "$backend" != coder ] && git -C "$LAB_CHECKOUT" worktree remove --force "$worktree" >/dev/null 2>&1
+      return 1
+    fi
+  elif [ "$backend" != host ]; then
+    echo "lab: no provisioner configured — $backend needs one (see $LAB_CONF)" >&2
+    return 1
+  fi
+}
+
 # --- claude -----------------------------------------------------------------
 
 # lab_claude_project_dir <path> — where Claude keeps the session state for a cwd.
@@ -389,6 +439,40 @@ lab_base_branch() {
 # directory along with the worktree.
 lab_claude_project_dir() {
   printf '%s/.claude/projects/%s' "$HOME" "$(printf '%s' "$1" | sed 's/[^a-zA-Z0-9]/-/g')"
+}
+
+# lab_history_dirs <checkout> <letter> <id> — the ~/.claude/projects dirs a
+# (checkout, backend, task) has left behind, dropped labs included: a drop keeps
+# the conversation, keyed on the worktree path, which the name and so the id
+# determine. A task retitled across claims leaves one dir per slug. Newest first,
+# nothing when none — what lab-reconstruct rebuilds from.
+lab_history_dirs() {
+  local checkout=$1 letter=$2 id=$3 prefix d hits=()
+  prefix=$(lab_claude_project_dir "${checkout}-${letter}lab-${id}")
+  for d in "$prefix" "$prefix"-*; do
+    [ -d "$d" ] && hits+=("$d")
+  done
+  [ "${#hits[@]}" -gt 0 ] || return 0
+  ls -1dt "${hits[@]}"
+}
+
+# lab_history_scan <checkout> — one row per surviving conversation dir of a
+# project, as <mtime>\t<letter>\t<id>\t<slug>. The chooser groups these by
+# (letter, id) to offer only the tasks a rebuild can recover. Slug characters pass
+# through the path encoding unchanged, so the row carries them back verbatim.
+lab_history_scan() {
+  local checkout=$1 base encck d bn rest mt
+  base="$HOME/.claude/projects"
+  [ -d "$base" ] || return 0
+  encck=$(lab_claude_project_dir "$checkout"); encck=${encck##*/}
+  for d in "$base/${encck}-"?lab-*; do
+    [ -d "$d" ] || continue
+    bn=${d##*/}
+    rest=${bn#"${encck}-"}
+    [[ "$rest" =~ ^([hdc])lab-([0-9]{3})(-(.*))?$ ]] || continue
+    mt=$(stat -c %Y "$d" 2>/dev/null || echo 0)
+    printf '%s\t%s\t%s\t%s\n' "$mt" "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[4]}"
+  done
 }
 
 # lab_caller_pane <self-socket> — which pane a script that takes over a pane
