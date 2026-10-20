@@ -23,7 +23,7 @@ Run the deep review in isolation. You start cold, which is what makes this a bac
    - **Drop** if any holds: no defect, no documented rule, and no in-repo precedent — taste with nothing behind it; it targets pre-existing code the diff merely touched rather than introduced; or it adds an abstraction, parameter, or hook with no second call site in the diff.
    - **Ask** only what you are **blocked** on: you cannot settle it from the diff, the task file, the context store, or the repo's own conventions, *and* getting it wrong is expensive to undo. Name what the user knows that you don't — if you can't name it, you aren't blocked, so decide.
 
-   The in-repo precedent test carries the most weight — "the codebase already does this" is what separates consistency from novelty. Check it, don't assume it.
+   The in-repo precedent test carries the most weight — "the codebase already does this" is what separates consistency from novelty. Check it, don't assume it. Precedent legitimizes a style choice, not a documented-rule violation: a rule the repo already breaks elsewhere is not precedent that shields the same break in the diff — Apply still wins.
 
 4. **Apply that bucket.** Edit directly, in place. Don't commit — leave the changes in the working tree for the user to inspect.
 

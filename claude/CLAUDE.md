@@ -78,6 +78,8 @@ Verify pwd before any task script — project (via `find-project.sh`) and worker
 
 Per-project domain knowledge — a glossary (`CONTEXT.md`) and decision records (`adr/`) — lives in `~/repos/context/<project>/`, external to the code repo (keeps it out of possibly-public repos). Read before planning non-trivial work; `context-sync.sh` first to avoid stale reads. Resolve `<project>` with `find-project.sh` — not always the dir basename.
 
+Don't cite a specific ADR or CONTEXT.md entry (by number or title) in a code comment — those records live in an external store the code reader can't open, so the pointer dangles. State the fact the record holds; drop the citation.
+
 ## .claude directory
 
 When deleting inside `.claude/`, target the specific file — never `rm -rf .claude/`.
