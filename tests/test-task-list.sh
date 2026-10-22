@@ -24,6 +24,14 @@ printf '# Api\n' > "$TMP/proj/planned/N007-refactor-api.md"
 printf '# Being\n\nWorker: hlab-9\n' > "$TMP/proj/active/H001-being-done.md"
 printf '# Paused\n\nWorker: hlab-5\n' > "$TMP/proj/stale/H002-paused.md"
 
+mkdir -p "$TMP/proj"/{done,canceled}
+printf '# Shipped\n' > "$TMP/proj/done/N020-recent-done.md"
+touch -d '2 days ago' "$TMP/proj/done/N020-recent-done.md"
+printf '# Shipped long ago\n' > "$TMP/proj/done/N021-old-done.md"
+touch -d '30 days ago' "$TMP/proj/done/N021-old-done.md"
+printf '# Dropped\n' > "$TMP/proj/canceled/N022-recent-cancel.md"
+touch -d '1 day ago' "$TMP/proj/canceled/N022-recent-cancel.md"
+
 export TASKS_ROOT="$TMP"
 list() { "$SCRIPT_DIR/../scripts/task-list.sh" "$@" proj; }
 
@@ -48,5 +56,25 @@ ok "default view puts stale above todo, worker kept" \
 ok "--status stale is accepted, shows the worker" \
     "$(list --status stale --no-header)" \
     "$(printf 'STALE (1)\n  H002-paused.md [hlab-5]')"
+
+# --recent appends done then canceled below the open queue, each windowed to the
+# last N days by file mtime and shown only when its window holds something.
+recent=$(list --no-header --recent 7)
+ok "--recent shows done inside the window" "$(grep -c 'N020-recent-done' <<<"$recent")" 1
+ok "--recent hides done outside the window" "$(grep -c 'N021-old-done' <<<"$recent")" 0
+ok "--recent counts only the windowed files" "$(grep -c '^DONE (1)$' <<<"$recent")" 1
+ok "--recent shows canceled inside the window" "$(grep -c 'N022-recent-cancel' <<<"$recent")" 1
+ok "--recent appends DONE then CANCELED below the open queue" \
+    "$(grep -oE '^[A-Z]+' <<<"$recent" | paste -sd' ')" \
+    "ACTIVE PLANNED STALE TODO DONE CANCELED"
+
+ok "a wider window reaches older done" \
+    "$(list --no-header --recent 100 | grep -c 'N021-old-done')" 1
+
+# A category empty within the window prints no header.
+mkdir -p "$TMP/fresh"/{todo,done,canceled}
+printf '# New\n' > "$TMP/fresh/todo/N001-new.md"
+ok "--recent omits an empty done/canceled" \
+    "$("$SCRIPT_DIR/../scripts/task-list.sh" --no-header --recent 7 fresh | grep -cE '^(DONE|CANCELED)')" 0
 
 report

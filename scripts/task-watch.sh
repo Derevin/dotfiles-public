@@ -17,6 +17,8 @@ if [[ "${1:-}" == "--help" ]]; then
     echo "Live task list: rerun task-list.sh when the project's tasks dir changes."
     echo "Usage: task-watch.sh [--project NAME] [--with NAME] [--poll SECS] [--settle SECS] [--once] [-- task-list.sh args...]"
     echo "--with draws a second project's list right-aligned beside the first."
+    echo "Below the open queue it appends done then canceled from the last 7 days,"
+    echo "each shown only when non-empty."
     echo "--once prints one frame and exits, leaving the screen alone."
     echo "Keys: q quits, any other key redraws. Resizing the pane redraws too."
     exit 0
@@ -94,7 +96,7 @@ term_size() {
 }
 
 list_for() {
-    task-list.sh --no-header "${LIST_ARGS[@]}" "$1" 2>&1
+    task-list.sh --no-header --recent 7 "${LIST_ARGS[@]}" "$1" 2>&1
 }
 
 # A list cut down to one column of the pane: every line clipped to the width,

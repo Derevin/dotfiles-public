@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# List tasks for a project. Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [PROJECT]
+# List tasks for a project. Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [--recent DAYS] [PROJECT]
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "List tasks for a project (defaults to detected project)."
-    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [PROJECT]"
+    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [--recent DAYS] [PROJECT]"
     echo "Statuses: todo planning planned active stale done canceled"
     echo "--no-header drops the project/worker lines, for callers short on rows."
     echo "--ids prints bare <letter><id>-<slug> lines, for fzf choosers."
     echo "Shows open statuses only (todo planning planned active stale); done and"
     echo "canceled need an explicit --status or --all."
+    echo "--recent DAYS appends done then canceled from the last DAYS days (each if any)."
     exit 0
 fi
 
@@ -21,6 +22,7 @@ show_all=false
 verbose=false
 no_header=false
 ids_only=false
+recent_days=""
 explicit_project=""
 
 while [[ $# -gt 0 ]]; do
@@ -38,6 +40,11 @@ while [[ $# -gt 0 ]]; do
     --verbose) verbose=true; shift ;;
     --no-header) no_header=true; shift ;;
     --ids) ids_only=true; shift ;;
+    --recent)
+      shift
+      recent_days=${1:-}
+      [[ $recent_days =~ ^[0-9]+$ ]] || { echo "error: --recent needs a whole-number day count" >&2; exit 1; }
+      shift ;;
     *) explicit_project=$1; shift ;;
   esac
 done
@@ -52,14 +59,18 @@ else
   detect_project
 fi
 
+# max_age (days, optional) windows the listing to files touched that recently —
+# used to cap the accumulating done/canceled dirs to their recent tail.
 list_dir() {
-  local dir=$1 label=$2
+  local dir=$1 label=$2 max_age=${3:-}
   local files=()
+  local find_args=("$TASKS_DIR/$dir" -maxdepth 1 -name '*.md')
+  [[ -n "$max_age" ]] && find_args+=(-mtime "-$max_age")
 
   if [[ -d "$TASKS_DIR/$dir" ]]; then
     while IFS= read -r -d '' f; do
       files+=("$(basename "$f")")
-    done < <(find "$TASKS_DIR/$dir" -maxdepth 1 -name '*.md' -print0 2>/dev/null | sort -z)
+    done < <(find "${find_args[@]}" -print0 2>/dev/null | sort -z)
   fi
 
   # Omit empty categories entirely; a global "(none)" covers the all-empty case.
@@ -113,6 +124,18 @@ for s in "${statuses[@]}"; do
   label=$(echo "$s" | tr '[:lower:]' '[:upper:]')
   list_dir "$s" "$label"
 done
+
+# Recent terminal states below the open queue: done then canceled, windowed and
+# each shown only when non-empty. Skipped for --ids, and for a status already
+# listed above (so --all stays one unwindowed section, not two).
+if [[ -n "$recent_days" ]] && ! $ids_only; then
+  for s in done canceled; do
+    printf '%s\n' "${statuses[@]}" | grep -qx "$s" && continue
+    label=$(echo "$s" | tr '[:lower:]' '[:upper:]')
+    list_dir "$s" "$label" "$recent_days"
+  done
+fi
+
 if [[ $total_shown -eq 0 ]] && ! $ids_only; then
   echo "(none)"
 fi

@@ -78,4 +78,15 @@ ok "--with naming the primary renders one column" \
 fails "$SCRIPT_DIR/../scripts/task-watch.sh" --project proj --with nope
 fails "$SCRIPT_DIR/../scripts/task-watch.sh" --project proj --with
 
+# task-watch.sh asks task-list.sh for done + canceled from the last 7 days, so a
+# recently finished task surfaces in the frame and a long-finished one does not.
+mkdir -p "$TMP/proj/done"
+printf '# Shipped\n' > "$TMP/proj/done/N050-shipped.md"
+touch -d '2 days ago' "$TMP/proj/done/N050-shipped.md"
+printf '# Ancient\n' > "$TMP/proj/done/N051-ancient.md"
+touch -d '40 days ago' "$TMP/proj/done/N051-ancient.md"
+frame=$(watch --project proj)
+ok "the frame shows a recently done task" "$(grep -c 'N050-shipped' <<<"$frame")" 1
+ok "the frame hides a long-done task" "$(grep -c 'N051-ancient' <<<"$frame")" 0
+
 report
