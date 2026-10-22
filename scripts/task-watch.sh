@@ -15,12 +15,13 @@ set -uo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "Live task list: rerun task-list.sh when the project's tasks dir changes."
-    echo "Usage: task-watch.sh [--project NAME] [--with NAME] [--poll SECS] [--settle SECS] [--once] [-- task-list.sh args...]"
+    echo "Usage: task-watch.sh [--project NAME] [--with NAME] [--recent DAYS] [--poll SECS] [--settle SECS] [--once] [-- task-list.sh args...]"
     echo "--with draws a second project's list right-aligned beside the first."
-    echo "Below the open queue it appends done then canceled from the last 7 days,"
-    echo "each shown only when non-empty."
+    echo "Below the open queue it appends done then canceled since a marker DAYS back"
+    echo "(--recent, default 7), each shown only when non-empty."
     echo "--once prints one frame and exits, leaving the screen alone."
-    echo "Keys: q quits, any other key redraws. Resizing the pane redraws too."
+    echo "Keys: left/right move the done-since marker (widen/narrow the window),"
+    echo "q quits, any other key redraws. Resizing the pane redraws too."
     exit 0
 fi
 
@@ -34,6 +35,8 @@ WITH_PROJECT=""
 ONCE=false
 LIST_ARGS=()
 GUTTER=2
+# Days back the done/canceled tail reaches; left/right move this marker live.
+RECENT=7
 
 # Called as need_value "$@" so a flag missing its value errors out instead of
 # leaving a failed `shift 2` to spin the parse loop forever.
@@ -48,6 +51,7 @@ while [[ $# -gt 0 ]]; do
         --once) ONCE=true; shift ;;
         --poll) need_value "$@"; POLL=$2; shift 2 ;;
         --settle) need_value "$@"; SETTLE=$2; shift 2 ;;
+        --recent) need_value "$@"; RECENT=$2; shift 2 ;;
         --) shift; LIST_ARGS=("$@"); break ;;
         *) echo "error: unexpected argument: $1" >&2; exit 1 ;;
     esac
@@ -55,6 +59,9 @@ done
 
 if ! [[ $POLL =~ ^[0-9]+$ && $SETTLE =~ ^[0-9]+$ ]]; then
     echo "error: --poll and --settle take whole seconds" >&2; exit 1
+fi
+if ! [[ $RECENT =~ ^[0-9]+$ ]]; then
+    echo "error: --recent takes a whole-number day count" >&2; exit 1
 fi
 
 if [[ -n "$PROJECT" ]]; then
@@ -96,7 +103,25 @@ term_size() {
 }
 
 list_for() {
-    task-list.sh --no-header --recent 7 "${LIST_ARGS[@]}" "$1" 2>&1
+    task-list.sh --no-header --recent "$RECENT" "${LIST_ARGS[@]}" "$1" 2>&1
+}
+
+# The window's near edge as a two-letter weekday and MM-DD — the "done since"
+# marker. LC_TIME=C pins the weekday to three ASCII letters so slicing to two is
+# locale-proof; a date without GNU -d falls back to the plain day count.
+since_marker() {
+    local s
+    s=$(LC_TIME=C date -d "$RECENT days ago" '+%a %m-%d' 2>/dev/null) \
+        && printf '%s%s' "${s:0:2}" "${s:3}" || printf '%dd' "$RECENT"
+}
+
+# Left widens the window (marker moves back in time), right narrows it, never
+# below a single day.
+step_recent() {
+    case $1 in
+        left) RECENT=$((RECENT + 1)) ;;
+        right) ((RECENT > 1)) && RECENT=$((RECENT - 1)) ;;
+    esac
 }
 
 # A list cut down to one column of the pane: every line clipped to the width,
@@ -160,7 +185,8 @@ render() {
     else
         fit_column "$cols" "$avail" "$FIRST"
     fi
-    stat=$(printf '%s, updated %s (q quits)' "$PROJECT" "$(date +%H:%M:%S)")
+    stat=$(printf '%s, done since %s, updated %s (<> q)' \
+        "$PROJECT" "$(since_marker)" "$(date +%H:%M:%S)")
     # Right-aligning the second project's name is what labels its column: the
     # status row is the only one that can name it without costing the lists one.
     if [[ -n "$WITH_PROJECT" ]] && ((${#stat} + ${#WITH_PROJECT} < cols)); then
@@ -194,7 +220,18 @@ while :; do
     # short enough that a change nothing signalled can't sit stale for long.
     if [[ -t 0 ]]; then
         if read -rsn1 -t "$POLL" key; then
-            [[ $key == q ]] && finish
+            case $key in
+                q) finish ;;
+                $'\e')
+                    # Arrows arrive as ESC [ C/D (or ESC O C/D in application
+                    # mode); read the tail without hanging on a lone Escape.
+                    read -rsn2 -t 0.1 rest || rest=""
+                    case $rest in
+                        '[C'|'OC') step_recent right ;;
+                        '[D'|'OD') step_recent left ;;
+                    esac
+                    ;;
+            esac
             render
             continue
         fi

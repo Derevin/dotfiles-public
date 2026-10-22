@@ -129,11 +129,21 @@ done
 # each shown only when non-empty. Skipped for --ids, and for a status already
 # listed above (so --all stays one unwindowed section, not two).
 if [[ -n "$recent_days" ]] && ! $ids_only; then
+  recent=()
   for s in done canceled; do
     printf '%s\n' "${statuses[@]}" | grep -qx "$s" && continue
-    label=$(echo "$s" | tr '[:lower:]' '[:upper:]')
-    list_dir "$s" "$label" "$recent_days"
+    [[ -n "$(find "$TASKS_DIR/$s" -maxdepth 1 -name '*.md' -mtime "-$recent_days" -print -quit 2>/dev/null)" ]] \
+      && recent+=("$s")
   done
+  # One blank line sets the recent tail off from the open queue, printed only when
+  # the tail has something to follow it.
+  if [[ ${#recent[@]} -gt 0 ]]; then
+    echo ""
+    for s in "${recent[@]}"; do
+      label=$(echo "$s" | tr '[:lower:]' '[:upper:]')
+      list_dir "$s" "$label" "$recent_days"
+    done
+  fi
 fi
 
 if [[ $total_shown -eq 0 ]] && ! $ids_only; then

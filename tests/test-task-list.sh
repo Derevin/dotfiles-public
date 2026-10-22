@@ -67,6 +67,8 @@ ok "--recent shows canceled inside the window" "$(grep -c 'N022-recent-cancel' <
 ok "--recent appends DONE then CANCELED below the open queue" \
     "$(grep -oE '^[A-Z]+' <<<"$recent" | paste -sd' ')" \
     "ACTIVE PLANNED STALE TODO DONE CANCELED"
+ok "--recent sets the recent tail off with one blank line" \
+    "$(awk '/^DONE /{print (prev=="") ? 1 : 0} {prev=$0}' <<<"$recent")" 1
 
 ok "a wider window reaches older done" \
     "$(list --no-header --recent 100 | grep -c 'N021-old-done')" 1
