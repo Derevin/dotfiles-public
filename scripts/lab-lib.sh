@@ -430,6 +430,20 @@ lab_provision() {
     echo "lab: no provisioner configured — $backend needs one (see $LAB_CONF)" >&2
     return 1
   fi
+  # Wire the project's git hooks so commits get checked. Worktrees share the
+  # common hooks dir and pre-commit bakes the installing env's interpreter into
+  # the hook, so install from the main checkout — its .venv outlives the labs
+  # (a lab's is dropped with it). Self-gating and best-effort: only when a
+  # pre-commit config and a runner (prek or pre-commit) are reachable through uv.
+  # Never fails lab creation.
+  if [ "$backend" = host ] && [ -f "$LAB_CHECKOUT/.pre-commit-config.yaml" ] && command -v uv >/dev/null 2>&1; then
+    for runner in prek pre-commit; do
+      if ( cd "$LAB_CHECKOUT" && uv run "$runner" install ) >/dev/null 2>&1; then
+        echo "lab: wired $runner git hooks (shared across worktrees)" >&2
+        break
+      fi
+    done
+  fi
 }
 
 # --- claude -----------------------------------------------------------------
