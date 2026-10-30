@@ -51,7 +51,9 @@ case "$*" in
                 "_lab-backend":{"body":[]},
                 "solo":{"body":[],"parameters":[{"name":"model","default":"haiku"}]},
                 "drop":{"body":[],"parameters":[{"name":"thing","default":null}]},
-                "_drop-thing":{"body":[["@# picker"]]}}}' ||
+                "_drop-thing":{"body":[["@# picker"]]},
+                "imp":{"body":[],"parameters":[{"name":"id","default":null}]},
+                "_imp-id":{"body":[]}}}' ||
             echo '{"source":"p","recipes":{}}'
         exit 0 ;;
     *--list*)
@@ -60,19 +62,24 @@ case "$*" in
         [ "$GLOBAL" = 1 ] && printf '%s\n' \
             "lab id backend=''  # A lab recipe" \
             "solo model='haiku' # A solo recipe" \
-            "drop thing         # A drop recipe"
+            "drop thing         # A drop recipe" \
+            "imp id             # An implement recipe"
         exit 0 ;;
     *--show*)
         case "${*: -1}" in
             lab) printf "lab id backend='':\n    @# host_only\n" ;;
             solo) printf "solo model='haiku':\n    @# host_only\n" ;;
             drop) printf "drop thing:\n" ;;
+            imp) printf "imp id:\n" ;;
         esac
         exit 0 ;;
 esac
 [ "${*: -1}" = _lab-backend ] && { printf '%s\n' host docker coder; exit 0; }
 # The picker chooser: prints the chosen value the way lab-drop-pick.sh does.
 [ "${*: -1}" = _drop-thing ] && { printf 'chosen-lab\n'; exit 0; }
+# An eligible-list chooser that happens to be empty (e.g. nothing in the status
+# it filters on) — present, but prints nothing.
+[ "${*: -1}" = _imp-id ] && exit 0
 # Any other private recipe is absent, and absent is what just says loudly.
 case "${*: -1}" in _*) echo "error: unknown recipe" >&2; exit 1 ;; esac
 # The run. Each argument bracketed: an empty one has to be visible.
@@ -137,5 +144,11 @@ out=$(PATH="$TMP/bin:$PATH" FZF_KEY="" FZF_PICK="drop" FZF_LIST="$TMP/listing" F
     bash "$SCRIPT_DIR/../tmux/just.sh" <<< "")
 ok "a picker chooser passes its own output" "$(grep -o 'RUN.*' <<< "$out")" "RUN [-g] [drop] [chosen-lab]"
 ok "a picker chooser is not piped into a second fzf" "$(awk 'END{print NR}' "$TMP/fzflog")" 1
+
+# A chooser that exists but comes back empty means nothing is eligible — say so
+# and stop, rather than dropping to a raw typed prompt that reads as a bug.
+out=$(run '' imp)
+ok "an empty chooser is announced" "$(grep -c 'nothing to pick' <<< "$out")" 1
+ok "an empty chooser does not run the recipe" "$(grep -c 'RUN \[-g\] \[imp\]' <<< "$out")" 0
 
 report

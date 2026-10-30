@@ -414,6 +414,7 @@ if [ -n "$params" ]; then
         # typed prompt: --exit-0 auto-closes the empty fzf, and the tee'd file
         # distinguishes "chooser produced nothing" from "user cancelled".
         chooser="_${recipe}-${name}"
+        chooser_empty=0
 
         # A chooser marked `@# picker` owns its own interactive UI and prints the
         # chosen value; run it attached to the popup and take its stdout. Piping
@@ -448,6 +449,7 @@ if [ -n "$params" ]; then
                     continue
                 fi
                 rm -f "$ctmp"
+                chooser_empty=1
             fi
         else
             if [ "$source" = "global" ]; then
@@ -461,6 +463,22 @@ if [ -n "$params" ]; then
                 args+=("$val")
                 continue
             fi
+            # Tell a present-but-empty chooser apart from no chooser at all:
+            # only the former means "nothing eligible", the latter is free text.
+            if [ "$source" = "global" ]; then
+                just -g --show "$chooser" >/dev/null 2>&1 && chooser_empty=1
+            else
+                just --show "$chooser" >/dev/null 2>&1 && chooser_empty=1
+            fi
+        fi
+
+        # A chooser lists what is eligible; empty means nothing is. Say so and
+        # stop rather than dropping to the typed prompt below, which with no
+        # candidate to offer just reads as the picker having broken.
+        if [ "$chooser_empty" -eq 1 ]; then
+            echo "$recipe: nothing to pick for '$name' — the list is empty"
+            read -n1 -s -r
+            exit 0
         fi
 
         # Prompt for value
