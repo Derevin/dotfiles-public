@@ -67,6 +67,7 @@ COMMON = [
     ("scripts/task-planned.sh", ".local/bin/task-planned.sh"),
     ("scripts/task-reprioritize.sh", ".local/bin/task-reprioritize.sh"),
     ("scripts/task-commit.sh", ".local/bin/task-commit.sh"),
+    ("scripts/task-create.sh", ".local/bin/task-create.sh"),
     ("scripts/context-commit.sh", ".local/bin/context-commit.sh"),
     ("scripts/context-sync.sh", ".local/bin/context-sync.sh"),
     ("scripts/task-cleanup-branch.sh", ".local/bin/task-cleanup-branch.sh"),

@@ -9,7 +9,7 @@
 # workspace and travels with it.
 #
 # Requires an existing task and never moves queue state: creation and placement
-# stay with /create-task and the task scripts.
+# stay with the task scripts.
 #
 # Usage: lab-claim.sh <lab> <task-id>
 set -euo pipefail
