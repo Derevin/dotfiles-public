@@ -38,11 +38,15 @@ fi
 cd "$TASKS_ROOT"
 git pull --rebase 2>/dev/null || true
 
-# Move and stamp worker. Strip any existing Worker: first — a resumed stale task
-# carries one, and a bare insert would leave two.
+# Move, then stamp the worker: drop any existing Worker: line (a resumed stale
+# task carries one) and insert ours after the title. awk, not `sed 1a`, so an
+# empty reminder task — no line 1 to append after — is still stamped.
 mv "$src" "$dst" || { echo "error: mv failed (race condition?)" >&2; exit 1; }
-sed -i '/^Worker: /d' "$dst"
-sed -i "1a\\Worker: $WORKER" "$dst"
+awk -v w="Worker: $WORKER" '
+  /^Worker: / { next }
+  { print; if (!stamped) { print w; stamped = 1 } }
+  END { if (!stamped) print w }
+' "$dst" > "$dst.tmp" && mv "$dst.tmp" "$dst"
 
 # Commit + push
 slug=$(slug_from_filename "$filename")
