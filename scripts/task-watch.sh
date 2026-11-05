@@ -199,8 +199,8 @@ render() {
     else
         fit_column "$cols" "$avail" "$FIRST"
     fi
-    stat=$(printf '%s, done since %s, updated %s (<> d l s q)' \
-        "$PROJECT" "$(since_marker)" "$(date +%H:%M:%S)")
+    stat=$(printf '%s, done between %s and %s, updated %s (<> d l s q)' \
+        "$PROJECT" "$(date +%d-%m)" "$(since_marker)" "$(date +%H:%M:%S)")
     # Right-aligning the second project's name is what labels its column: the
     # status row is the only one that can name it without costing the lists one.
     if [[ -n "$WITH_PROJECT" ]] && ((${#stat} + ${#WITH_PROJECT} <= cols)); then
