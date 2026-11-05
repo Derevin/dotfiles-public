@@ -66,6 +66,12 @@ ok "--dates adds a day-month date behind the worker" \
     "$(list --status active --dates --no-header)" \
     "$(printf 'ACTIVE (1)\n  H001 being-done [hlab-9] (%s)' "$(date -r "$TMP/proj/active/H001-being-done.md" '+%d-%m')")"
 
+# --no-workers drops the [worker] tag. task-list still shows it by default, so the
+# task commands can keep filtering active rows by worker; the watch opts out.
+ok "--no-workers drops the worker tag" \
+    "$(list --status active --no-workers --no-header)" \
+    "$(printf 'ACTIVE (1)\n  H001 being-done')"
+
 # --recent appends done then canceled below the open queue, each windowed to the
 # last N days by file mtime and shown only when its window holds something.
 recent=$(list --no-header --recent 7)

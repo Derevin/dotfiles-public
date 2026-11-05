@@ -28,7 +28,7 @@ export TASKS_ROOT="$TMP"
 # installed one.
 export PATH="$SCRIPT_DIR/../scripts:$PATH"
 
-COLS=60
+COLS=72
 watch() { LINES=24 COLUMNS=$COLS "$SCRIPT_DIR/../scripts/task-watch.sh" --once "$@" </dev/null; }
 
 # The footer marker, computed the same way the script does: a two-letter weekday
@@ -114,5 +114,15 @@ ok "--recent widens the window, revealing it" \
 dated=$(watch --project proj --dates)
 ok "--dates tags a row with a day-month date" \
     "$(grep -cE 'H003 fix-sensor-bug \([0-9]{2}-[0-9]{2}\)' <<<"$dated")" 1
+
+# The [lab] tag is off by default (work happens in labs, so it rarely varies);
+# --labs, toggled live by L, brings it back.
+mkdir -p "$TMP/proj/active"
+printf '# Busy\n\nWorker: hlab-7\n' > "$TMP/proj/active/H010-busy.md"
+nolabs=$(watch --project proj)
+ok "the lab tag is off by default" "$(grep -c '\[hlab-7\]' <<<"$nolabs")" 0
+ok "the row shows without its lab tag" "$(grep -c 'H010 busy' <<<"$nolabs")" 1
+withlabs=$(watch --project proj --labs)
+ok "--labs restores the lab tag" "$(grep -c 'H010 busy \[hlab-7\]' <<<"$withlabs")" 1
 
 report

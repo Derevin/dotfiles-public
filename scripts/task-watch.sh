@@ -20,10 +20,11 @@ if [[ "${1:-}" == "--help" ]]; then
     echo "Below the open queue it appends done then canceled since a marker DAYS back"
     echo "(--recent, default 7), each shown only when non-empty."
     echo "--dates tags each row with its day-month date (toggled live by d)."
+    echo "--labs shows the [lab] tag, off by default (toggled live by l)."
     echo "--once prints one frame and exits, leaving the screen alone."
     echo "Keys: left/right move the done-since marker (widen/narrow the window),"
-    echo "d toggles the per-row dates, q quits, any other key redraws. Resizing"
-    echo "the pane redraws too."
+    echo "d toggles the per-row dates, l the [lab] tag, q quits, any other key"
+    echo "redraws. Resizing the pane redraws too."
     exit 0
 fi
 
@@ -36,6 +37,7 @@ PROJECT=""
 WITH_PROJECT=""
 ONCE=false
 SHOW_DATES=false
+SHOW_LABS=false
 LIST_ARGS=()
 GUTTER=2
 # Days back the done/canceled tail reaches; left/right move this marker live.
@@ -52,6 +54,7 @@ while [[ $# -gt 0 ]]; do
         --project) need_value "$@"; PROJECT=$2; shift 2 ;;
         --with) need_value "$@"; WITH_PROJECT=$2; shift 2 ;;
         --dates) SHOW_DATES=true; shift ;;
+        --labs) SHOW_LABS=true; shift ;;
         --once) ONCE=true; shift ;;
         --poll) need_value "$@"; POLL=$2; shift 2 ;;
         --settle) need_value "$@"; SETTLE=$2; shift 2 ;;
@@ -107,9 +110,10 @@ term_size() {
 }
 
 list_for() {
-    local dates=()
-    $SHOW_DATES && dates=(--dates)
-    task-list.sh --no-header --recent "$RECENT" "${dates[@]}" "${LIST_ARGS[@]}" "$1" 2>&1
+    local opts=()
+    $SHOW_DATES && opts+=(--dates)
+    $SHOW_LABS || opts+=(--no-workers)
+    task-list.sh --no-header --recent "$RECENT" "${opts[@]}" "${LIST_ARGS[@]}" "$1" 2>&1
 }
 
 # The window's near edge as a two-letter weekday and DD-MM — the "done since"
@@ -191,7 +195,7 @@ render() {
     else
         fit_column "$cols" "$avail" "$FIRST"
     fi
-    stat=$(printf '%s, done since %s, updated %s (<> d q)' \
+    stat=$(printf '%s, done since %s, updated %s (<> d l q)' \
         "$PROJECT" "$(since_marker)" "$(date +%H:%M:%S)")
     # Right-aligning the second project's name is what labels its column: the
     # status row is the only one that can name it without costing the lists one.
@@ -229,6 +233,7 @@ while :; do
             case $key in
                 q) finish ;;
                 d) $SHOW_DATES && SHOW_DATES=false || SHOW_DATES=true ;;
+                l|L) $SHOW_LABS && SHOW_LABS=false || SHOW_LABS=true ;;
                 $'\e')
                     # Arrows arrive as ESC [ C/D (or ESC O C/D in application
                     # mode); read the tail without hanging on a lone Escape.

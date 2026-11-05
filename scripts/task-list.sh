@@ -8,6 +8,7 @@ if [[ "${1:-}" == "--help" ]]; then
     echo "Statuses: todo planning planned active stale done canceled"
     echo "--no-header drops the project/worker lines, for callers short on rows."
     echo "--ids prints bare <letter><id>-<slug> lines, for fzf choosers."
+    echo "--no-workers drops the [worker] tag from active/planning/stale rows."
     echo "--dates tags each row with its file's day-month mtime, after any [worker]."
     echo "Shows open statuses only (todo planning planned active stale); done and"
     echo "canceled need an explicit --status or --all."
@@ -24,6 +25,7 @@ verbose=false
 no_header=false
 ids_only=false
 show_dates=false
+show_workers=true
 recent_days=""
 explicit_project=""
 
@@ -42,6 +44,7 @@ while [[ $# -gt 0 ]]; do
     --verbose) verbose=true; shift ;;
     --no-header) no_header=true; shift ;;
     --ids) ids_only=true; shift ;;
+    --no-workers) show_workers=false; shift ;;
     --dates) show_dates=true; shift ;;
     --recent)
       shift
@@ -101,7 +104,7 @@ list_dir() {
   echo "${label} (${#files[@]})"
   for f in "${files[@]}"; do
     local suffix=""
-    if [[ "$dir" == "active" || "$dir" == "planning" || "$dir" == "stale" ]]; then
+    if $show_workers && [[ "$dir" == "active" || "$dir" == "planning" || "$dir" == "stale" ]]; then
       local worker
       worker=$(grep -m1 '^Worker: ' "$TASKS_DIR/$dir/$f" 2>/dev/null | sed 's/^Worker: //') || true
       [[ -n "$worker" ]] && suffix=" [$worker]" || true
