@@ -125,4 +125,12 @@ ok "the row shows without its lab tag" "$(grep -c 'H010 busy' <<<"$nolabs")" 1
 withlabs=$(watch --project proj --labs)
 ok "--labs restores the lab tag" "$(grep -c 'H010 busy \[hlab-7\]' <<<"$withlabs")" 1
 
+# The stale section is off by default; --stale, toggled live by s, brings it back.
+mkdir -p "$TMP/proj/stale"
+printf '# Parked\n\nWorker: hlab-3\n' > "$TMP/proj/stale/H011-parked.md"
+nostale=$(watch --project proj)
+ok "the stale section is off by default" "$(grep -c 'H011 parked' <<<"$nostale")" 0
+withstale=$(watch --project proj --stale)
+ok "--stale restores the stale section" "$(grep -c 'H011 parked' <<<"$withstale")" 1
+
 report

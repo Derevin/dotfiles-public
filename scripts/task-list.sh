@@ -4,11 +4,12 @@ set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "List tasks for a project (defaults to detected project)."
-    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [--dates] [--recent DAYS] [PROJECT]"
+    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [--no-workers] [--no-stale] [--dates] [--recent DAYS] [PROJECT]"
     echo "Statuses: todo planning planned active stale done canceled"
     echo "--no-header drops the project/worker lines, for callers short on rows."
     echo "--ids prints bare <letter><id>-<slug> lines, for fzf choosers."
     echo "--no-workers drops the [worker] tag from active/planning/stale rows."
+    echo "--no-stale omits the stale section."
     echo "--dates tags each row with its file's day-month mtime, after any [worker]."
     echo "Shows open statuses only (todo planning planned active stale); done and"
     echo "canceled need an explicit --status or --all."
@@ -26,6 +27,7 @@ no_header=false
 ids_only=false
 show_dates=false
 show_workers=true
+show_stale=true
 recent_days=""
 explicit_project=""
 
@@ -45,6 +47,7 @@ while [[ $# -gt 0 ]]; do
     --no-header) no_header=true; shift ;;
     --ids) ids_only=true; shift ;;
     --no-workers) show_workers=false; shift ;;
+    --no-stale) show_stale=false; shift ;;
     --dates) show_dates=true; shift ;;
     --recent)
       shift
@@ -131,6 +134,12 @@ if [[ ${#status_list[@]} -gt 0 ]]; then
   statuses=("${status_list[@]}")
 elif $show_all; then
   statuses=(canceled done active planned planning stale todo)
+fi
+
+if ! $show_stale; then
+  kept=()
+  for s in "${statuses[@]}"; do [[ $s == stale ]] || kept+=("$s"); done
+  statuses=("${kept[@]}")
 fi
 
 # The worker is the header's only consumer, so detecting it is header-only work

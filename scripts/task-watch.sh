@@ -15,16 +15,17 @@ set -uo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "Live task list: rerun task-list.sh when the project's tasks dir changes."
-    echo "Usage: task-watch.sh [--project NAME] [--with NAME] [--recent DAYS] [--dates] [--poll SECS] [--settle SECS] [--once] [-- task-list.sh args...]"
+    echo "Usage: task-watch.sh [--project NAME] [--with NAME] [--recent DAYS] [--dates] [--labs] [--stale] [--poll SECS] [--settle SECS] [--once] [-- task-list.sh args...]"
     echo "--with draws a second project's list right-aligned beside the first."
     echo "Below the open queue it appends done then canceled since a marker DAYS back"
     echo "(--recent, default 7), each shown only when non-empty."
     echo "--dates tags each row with its day-month date (toggled live by d)."
     echo "--labs shows the [lab] tag, off by default (toggled live by l)."
+    echo "--stale shows the stale section, off by default (toggled live by s)."
     echo "--once prints one frame and exits, leaving the screen alone."
     echo "Keys: left/right move the done-since marker (widen/narrow the window),"
-    echo "d toggles the per-row dates, l the [lab] tag, q quits, any other key"
-    echo "redraws. Resizing the pane redraws too."
+    echo "d toggles the per-row dates, l the [lab] tag, s the stale section, q"
+    echo "quits, any other key redraws. Resizing the pane redraws too."
     exit 0
 fi
 
@@ -38,6 +39,7 @@ WITH_PROJECT=""
 ONCE=false
 SHOW_DATES=false
 SHOW_LABS=false
+SHOW_STALE=false
 LIST_ARGS=()
 GUTTER=2
 # Days back the done/canceled tail reaches; left/right move this marker live.
@@ -55,6 +57,7 @@ while [[ $# -gt 0 ]]; do
         --with) need_value "$@"; WITH_PROJECT=$2; shift 2 ;;
         --dates) SHOW_DATES=true; shift ;;
         --labs) SHOW_LABS=true; shift ;;
+        --stale) SHOW_STALE=true; shift ;;
         --once) ONCE=true; shift ;;
         --poll) need_value "$@"; POLL=$2; shift 2 ;;
         --settle) need_value "$@"; SETTLE=$2; shift 2 ;;
@@ -113,6 +116,7 @@ list_for() {
     local opts=()
     $SHOW_DATES && opts+=(--dates)
     $SHOW_LABS || opts+=(--no-workers)
+    $SHOW_STALE || opts+=(--no-stale)
     task-list.sh --no-header --recent "$RECENT" "${opts[@]}" "${LIST_ARGS[@]}" "$1" 2>&1
 }
 
@@ -195,7 +199,7 @@ render() {
     else
         fit_column "$cols" "$avail" "$FIRST"
     fi
-    stat=$(printf '%s, done since %s, updated %s (<> d l q)' \
+    stat=$(printf '%s, done since %s, updated %s (<> d l s q)' \
         "$PROJECT" "$(since_marker)" "$(date +%H:%M:%S)")
     # Right-aligning the second project's name is what labels its column: the
     # status row is the only one that can name it without costing the lists one.
@@ -234,6 +238,7 @@ while :; do
                 q) finish ;;
                 d) $SHOW_DATES && SHOW_DATES=false || SHOW_DATES=true ;;
                 l|L) $SHOW_LABS && SHOW_LABS=false || SHOW_LABS=true ;;
+                s) $SHOW_STALE && SHOW_STALE=false || SHOW_STALE=true ;;
                 $'\e')
                     # Arrows arrive as ESC [ C/D (or ESC O C/D in application
                     # mode); read the tail without hanging on a lone Escape.
