@@ -43,7 +43,7 @@ both=$(watch --project proj --with dotfiles)
 ok "--with keeps the primary list" "$(grep -c 'H003' <<<"$both")" 1
 ok "--with adds the second project" "$(grep -c 'N001' <<<"$both")" 1
 ok "both lists share a row" \
-    "$(grep -c 'H003-fix-sensor-bug .* N001-tweak-conf' <<<"$both")" 1
+    "$(grep -c 'H003 fix-sensor-bug .* N001 tweak-conf' <<<"$both")" 1
 
 # The second column is flush with the right edge: its widest line, the task
 # name, ends in the pane's last cell.
@@ -90,8 +90,8 @@ touch -d '2 days ago' "$TMP/proj/done/N050-shipped.md"
 printf '# Ancient\n' > "$TMP/proj/done/N051-ancient.md"
 touch -d '40 days ago' "$TMP/proj/done/N051-ancient.md"
 frame=$(watch --project proj)
-ok "the frame shows a recently done task" "$(grep -c 'N050-shipped' <<<"$frame")" 1
-ok "the frame hides a long-done task" "$(grep -c 'N051-ancient' <<<"$frame")" 0
+ok "the frame shows a recently done task" "$(grep -c 'N050 shipped' <<<"$frame")" 1
+ok "the frame hides a long-done task" "$(grep -c 'N051 ancient' <<<"$frame")" 0
 
 # The footer carries a "done since" marker: the day the window reaches back to.
 ok "the footer shows the done-since marker at the default window" \
@@ -104,15 +104,15 @@ ok "--recent moves the marker" \
     "$(tail -1 <<<"$narrow" | grep -oE 'done since [A-Za-z]{2} [0-9]{2}-[0-9]{2}')" \
     "done since $(sincefmt 3)"
 ok "--recent narrows the window, hiding the 40-day-old done" \
-    "$(grep -c 'N051-ancient' <<<"$narrow")" 0
+    "$(grep -c 'N051 ancient' <<<"$narrow")" 0
 widewin=$(watch --project proj --recent 50)
 ok "--recent widens the window, revealing it" \
-    "$(grep -c 'N051-ancient' <<<"$widewin")" 1
+    "$(grep -c 'N051 ancient' <<<"$widewin")" 1
 
 # Date mode (--dates, toggled live by d) tags each row with its file's day-month
 # date. H003 has no [lab], so the date trails the bare name.
 dated=$(watch --project proj --dates)
 ok "--dates tags a row with a day-month date" \
-    "$(grep -cE 'H003-fix-sensor-bug \([0-9]{2}-[0-9]{2}\)' <<<"$dated")" 1
+    "$(grep -cE 'H003 fix-sensor-bug \([0-9]{2}-[0-9]{2}\)' <<<"$dated")" 1
 
 report

@@ -110,7 +110,10 @@ list_dir() {
       local d
       d=$(date -r "$TASKS_DIR/$dir/$f" '+%d-%m' 2>/dev/null) && suffix+=" ($d)"
     fi
-    echo "  ${f%.md}$suffix"
+    # A space after the id sets it off from the slug; the slug's own hyphens and
+    # the suffix (lab id, date) keep theirs.
+    local name=${f%.md}
+    echo "  ${name/-/ }$suffix"
     if $verbose; then
       echo ""
       sed 's/^/    /' "$TASKS_DIR/$dir/$f"

@@ -46,7 +46,7 @@ ok "--ids sorts by priority" \
 ok "--ids drops the header" "$(list --status planned --ids)" N007-refactor-api
 
 ok "listing names files" "$(list --status planned --no-header)" \
-    "$(printf 'PLANNED (1)\n  N007-refactor-api')"
+    "$(printf 'PLANNED (1)\n  N007 refactor-api')"
 
 # The .md carries no information a reader needs; rows drop it.
 ok "rows drop the .md extension" \
@@ -56,23 +56,23 @@ ok "rows drop the .md extension" \
 # the lab holding the partial work stays named.
 ok "default view puts stale above todo, worker kept" \
     "$(list --no-header)" \
-    "$(printf 'ACTIVE (1)\n  H001-being-done [hlab-9]\nPLANNED (1)\n  N007-refactor-api\nSTALE (1)\n  H002-paused [hlab-5]\nTODO (2)\n  H003-fix-sensor-bug\n  U012-update-readme')"
+    "$(printf 'ACTIVE (1)\n  H001 being-done [hlab-9]\nPLANNED (1)\n  N007 refactor-api\nSTALE (1)\n  H002 paused [hlab-5]\nTODO (2)\n  H003 fix-sensor-bug\n  U012 update-readme')"
 ok "--status stale is accepted, shows the worker" \
     "$(list --status stale --no-header)" \
-    "$(printf 'STALE (1)\n  H002-paused [hlab-5]')"
+    "$(printf 'STALE (1)\n  H002 paused [hlab-5]')"
 
 # --dates tags each row with its file's day-month mtime, after any [worker].
 ok "--dates adds a day-month date behind the worker" \
     "$(list --status active --dates --no-header)" \
-    "$(printf 'ACTIVE (1)\n  H001-being-done [hlab-9] (%s)' "$(date -r "$TMP/proj/active/H001-being-done.md" '+%d-%m')")"
+    "$(printf 'ACTIVE (1)\n  H001 being-done [hlab-9] (%s)' "$(date -r "$TMP/proj/active/H001-being-done.md" '+%d-%m')")"
 
 # --recent appends done then canceled below the open queue, each windowed to the
 # last N days by file mtime and shown only when its window holds something.
 recent=$(list --no-header --recent 7)
-ok "--recent shows done inside the window" "$(grep -c 'N020-recent-done' <<<"$recent")" 1
-ok "--recent hides done outside the window" "$(grep -c 'N021-old-done' <<<"$recent")" 0
+ok "--recent shows done inside the window" "$(grep -c 'N020 recent-done' <<<"$recent")" 1
+ok "--recent hides done outside the window" "$(grep -c 'N021 old-done' <<<"$recent")" 0
 ok "--recent counts only the windowed files" "$(grep -c '^DONE (1)$' <<<"$recent")" 1
-ok "--recent shows canceled inside the window" "$(grep -c 'N022-recent-cancel' <<<"$recent")" 1
+ok "--recent shows canceled inside the window" "$(grep -c 'N022 recent-cancel' <<<"$recent")" 1
 ok "--recent appends DONE then CANCELED below the open queue" \
     "$(grep -oE '^[A-Z]+' <<<"$recent" | paste -sd' ')" \
     "ACTIVE PLANNED STALE TODO DONE CANCELED"
@@ -80,7 +80,7 @@ ok "--recent sets the recent tail off with one blank line" \
     "$(awk '/^DONE /{print (prev=="") ? 1 : 0} {prev=$0}' <<<"$recent")" 1
 
 ok "a wider window reaches older done" \
-    "$(list --no-header --recent 100 | grep -c 'N021-old-done')" 1
+    "$(list --no-header --recent 100 | grep -c 'N021 old-done')" 1
 
 # A category empty within the window prints no header.
 mkdir -p "$TMP/fresh"/{todo,done,canceled}
@@ -95,7 +95,7 @@ printf '# A\n'       > "$TMP/sorted/done/A010-alpha.md"; touch -d '10 days ago' 
 printf '# H newer\n' > "$TMP/sorted/done/H061-newer.md"; touch -d '1 day ago'   "$TMP/sorted/done/H061-newer.md"
 printf '# H older\n' > "$TMP/sorted/done/H060-older.md"; touch -d '5 days ago'   "$TMP/sorted/done/H060-older.md"
 ok "done sorts by letter then date, not id" \
-    "$("$SCRIPT_DIR/../scripts/task-list.sh" --no-header --status done sorted | grep -oE '[A-Z][0-9]{3}-[a-z-]+' | paste -sd' ')" \
-    "A010-alpha H061-newer H060-older"
+    "$("$SCRIPT_DIR/../scripts/task-list.sh" --no-header --status done sorted | grep -oE '[A-Z][0-9]{3}' | paste -sd' ')" \
+    "A010 H061 H060"
 
 report
