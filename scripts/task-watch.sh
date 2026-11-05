@@ -15,13 +15,15 @@ set -uo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "Live task list: rerun task-list.sh when the project's tasks dir changes."
-    echo "Usage: task-watch.sh [--project NAME] [--with NAME] [--recent DAYS] [--poll SECS] [--settle SECS] [--once] [-- task-list.sh args...]"
+    echo "Usage: task-watch.sh [--project NAME] [--with NAME] [--recent DAYS] [--dates] [--poll SECS] [--settle SECS] [--once] [-- task-list.sh args...]"
     echo "--with draws a second project's list right-aligned beside the first."
     echo "Below the open queue it appends done then canceled since a marker DAYS back"
     echo "(--recent, default 7), each shown only when non-empty."
+    echo "--dates tags each row with its day-month date (toggled live by d)."
     echo "--once prints one frame and exits, leaving the screen alone."
     echo "Keys: left/right move the done-since marker (widen/narrow the window),"
-    echo "q quits, any other key redraws. Resizing the pane redraws too."
+    echo "d toggles the per-row dates, q quits, any other key redraws. Resizing"
+    echo "the pane redraws too."
     exit 0
 fi
 
@@ -33,6 +35,7 @@ SETTLE=6
 PROJECT=""
 WITH_PROJECT=""
 ONCE=false
+SHOW_DATES=false
 LIST_ARGS=()
 GUTTER=2
 # Days back the done/canceled tail reaches; left/right move this marker live.
@@ -48,6 +51,7 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --project) need_value "$@"; PROJECT=$2; shift 2 ;;
         --with) need_value "$@"; WITH_PROJECT=$2; shift 2 ;;
+        --dates) SHOW_DATES=true; shift ;;
         --once) ONCE=true; shift ;;
         --poll) need_value "$@"; POLL=$2; shift 2 ;;
         --settle) need_value "$@"; SETTLE=$2; shift 2 ;;
@@ -103,15 +107,17 @@ term_size() {
 }
 
 list_for() {
-    task-list.sh --no-header --recent "$RECENT" "${LIST_ARGS[@]}" "$1" 2>&1
+    local dates=()
+    $SHOW_DATES && dates=(--dates)
+    task-list.sh --no-header --recent "$RECENT" "${dates[@]}" "${LIST_ARGS[@]}" "$1" 2>&1
 }
 
-# The window's near edge as a two-letter weekday and MM-DD — the "done since"
+# The window's near edge as a two-letter weekday and DD-MM — the "done since"
 # marker. LC_TIME=C pins the weekday to three ASCII letters so slicing to two is
 # locale-proof; a date without GNU -d falls back to the plain day count.
 since_marker() {
     local s
-    s=$(LC_TIME=C date -d "$RECENT days ago" '+%a %m-%d' 2>/dev/null) \
+    s=$(LC_TIME=C date -d "$RECENT days ago" '+%a %d-%m' 2>/dev/null) \
         && printf '%s%s' "${s:0:2}" "${s:3}" || printf '%dd' "$RECENT"
 }
 
@@ -185,11 +191,11 @@ render() {
     else
         fit_column "$cols" "$avail" "$FIRST"
     fi
-    stat=$(printf '%s, done since %s, updated %s (<> q)' \
+    stat=$(printf '%s, done since %s, updated %s (<> d q)' \
         "$PROJECT" "$(since_marker)" "$(date +%H:%M:%S)")
     # Right-aligning the second project's name is what labels its column: the
     # status row is the only one that can name it without costing the lists one.
-    if [[ -n "$WITH_PROJECT" ]] && ((${#stat} + ${#WITH_PROJECT} < cols)); then
+    if [[ -n "$WITH_PROJECT" ]] && ((${#stat} + ${#WITH_PROJECT} <= cols)); then
         printf '%-*s%s' "$((cols - ${#WITH_PROJECT}))" "$stat" "$WITH_PROJECT"
     else
         printf '%s' "$stat"
@@ -222,6 +228,7 @@ while :; do
         if read -rsn1 -t "$POLL" key; then
             case $key in
                 q) finish ;;
+                d) $SHOW_DATES && SHOW_DATES=false || SHOW_DATES=true ;;
                 $'\e')
                     # Arrows arrive as ESC [ C/D (or ESC O C/D in application
                     # mode); read the tail without hanging on a lone Escape.

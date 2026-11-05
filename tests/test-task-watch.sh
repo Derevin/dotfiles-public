@@ -32,8 +32,8 @@ COLS=60
 watch() { LINES=24 COLUMNS=$COLS "$SCRIPT_DIR/../scripts/task-watch.sh" --once "$@" </dev/null; }
 
 # The footer marker, computed the same way the script does: a two-letter weekday
-# and MM-DD for the day the window reaches back to.
-sincefmt() { local s; s=$(LC_TIME=C date -d "$1 days ago" '+%a %m-%d'); printf '%s%s' "${s:0:2}" "${s:3}"; }
+# and DD-MM for the day the window reaches back to.
+sincefmt() { local s; s=$(LC_TIME=C date -d "$1 days ago" '+%a %d-%m'); printf '%s%s' "${s:0:2}" "${s:3}"; }
 
 solo=$(watch --project proj)
 ok "one project lists only its own tasks" \
@@ -43,7 +43,7 @@ both=$(watch --project proj --with dotfiles)
 ok "--with keeps the primary list" "$(grep -c 'H003' <<<"$both")" 1
 ok "--with adds the second project" "$(grep -c 'N001' <<<"$both")" 1
 ok "both lists share a row" \
-    "$(grep -c 'H003-fix-sensor-bug.md .* N001-tweak-conf.md' <<<"$both")" 1
+    "$(grep -c 'H003-fix-sensor-bug .* N001-tweak-conf' <<<"$both")" 1
 
 # The second column is flush with the right edge: its widest line, the task
 # name, ends in the pane's last cell.
@@ -108,5 +108,11 @@ ok "--recent narrows the window, hiding the 40-day-old done" \
 widewin=$(watch --project proj --recent 50)
 ok "--recent widens the window, revealing it" \
     "$(grep -c 'N051-ancient' <<<"$widewin")" 1
+
+# Date mode (--dates, toggled live by d) tags each row with its file's day-month
+# date. H003 has no [lab], so the date trails the bare name.
+dated=$(watch --project proj --dates)
+ok "--dates tags a row with a day-month date" \
+    "$(grep -cE 'H003-fix-sensor-bug \([0-9]{2}-[0-9]{2}\)' <<<"$dated")" 1
 
 report

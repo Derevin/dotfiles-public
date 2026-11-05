@@ -4,10 +4,11 @@ set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "List tasks for a project (defaults to detected project)."
-    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [--recent DAYS] [PROJECT]"
+    echo "Usage: task-list.sh [--status STATUS...] [--all] [--verbose] [--no-header] [--ids] [--dates] [--recent DAYS] [PROJECT]"
     echo "Statuses: todo planning planned active stale done canceled"
     echo "--no-header drops the project/worker lines, for callers short on rows."
     echo "--ids prints bare <letter><id>-<slug> lines, for fzf choosers."
+    echo "--dates tags each row with its file's day-month mtime, after any [worker]."
     echo "Shows open statuses only (todo planning planned active stale); done and"
     echo "canceled need an explicit --status or --all."
     echo "--recent DAYS appends done then canceled from the last DAYS days (each if any)."
@@ -22,6 +23,7 @@ show_all=false
 verbose=false
 no_header=false
 ids_only=false
+show_dates=false
 recent_days=""
 explicit_project=""
 
@@ -40,6 +42,7 @@ while [[ $# -gt 0 ]]; do
     --verbose) verbose=true; shift ;;
     --no-header) no_header=true; shift ;;
     --ids) ids_only=true; shift ;;
+    --dates) show_dates=true; shift ;;
     --recent)
       shift
       recent_days=${1:-}
@@ -68,9 +71,18 @@ list_dir() {
   [[ -n "$max_age" ]] && find_args+=(-mtime "-$max_age")
 
   if [[ -d "$TASKS_DIR/$dir" ]]; then
-    while IFS= read -r -d '' f; do
-      files+=("$(basename "$f")")
-    done < <(find "${find_args[@]}" -print0 2>/dev/null | sort -z)
+    if [[ "$dir" == "done" || "$dir" == "canceled" ]]; then
+      # Terminal states sort by priority letter, then most-recent first: a
+      # finished task's id says nothing about when it finished.
+      while IFS= read -r f; do
+        files+=("$f")
+      done < <(find "${find_args[@]}" -printf '%f\t%T@\n' 2>/dev/null \
+                 | sort -t$'\t' -k1.1,1.1 -k2,2nr | cut -f1)
+    else
+      while IFS= read -r -d '' f; do
+        files+=("$(basename "$f")")
+      done < <(find "${find_args[@]}" -print0 2>/dev/null | sort -z)
+    fi
   fi
 
   # Omit empty categories entirely; a global "(none)" covers the all-empty case.
@@ -94,7 +106,11 @@ list_dir() {
       worker=$(grep -m1 '^Worker: ' "$TASKS_DIR/$dir/$f" 2>/dev/null | sed 's/^Worker: //') || true
       [[ -n "$worker" ]] && suffix=" [$worker]" || true
     fi
-    echo "  $f$suffix"
+    if $show_dates; then
+      local d
+      d=$(date -r "$TASKS_DIR/$dir/$f" '+%d-%m' 2>/dev/null) && suffix+=" ($d)"
+    fi
+    echo "  ${f%.md}$suffix"
     if $verbose; then
       echo ""
       sed 's/^/    /' "$TASKS_DIR/$dir/$f"

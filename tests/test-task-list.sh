@@ -46,16 +46,25 @@ ok "--ids sorts by priority" \
 ok "--ids drops the header" "$(list --status planned --ids)" N007-refactor-api
 
 ok "listing names files" "$(list --status planned --no-header)" \
-    "$(printf 'PLANNED (1)\n  N007-refactor-api.md')"
+    "$(printf 'PLANNED (1)\n  N007-refactor-api')"
+
+# The .md carries no information a reader needs; rows drop it.
+ok "rows drop the .md extension" \
+    "$(list --status planned --no-header | grep -c '\.md')" 0
 
 # A set-aside task lives in stale/, listed above todo, and keeps its Worker: so
 # the lab holding the partial work stays named.
 ok "default view puts stale above todo, worker kept" \
     "$(list --no-header)" \
-    "$(printf 'ACTIVE (1)\n  H001-being-done.md [hlab-9]\nPLANNED (1)\n  N007-refactor-api.md\nSTALE (1)\n  H002-paused.md [hlab-5]\nTODO (2)\n  H003-fix-sensor-bug.md\n  U012-update-readme.md')"
+    "$(printf 'ACTIVE (1)\n  H001-being-done [hlab-9]\nPLANNED (1)\n  N007-refactor-api\nSTALE (1)\n  H002-paused [hlab-5]\nTODO (2)\n  H003-fix-sensor-bug\n  U012-update-readme')"
 ok "--status stale is accepted, shows the worker" \
     "$(list --status stale --no-header)" \
-    "$(printf 'STALE (1)\n  H002-paused.md [hlab-5]')"
+    "$(printf 'STALE (1)\n  H002-paused [hlab-5]')"
+
+# --dates tags each row with its file's day-month mtime, after any [worker].
+ok "--dates adds a day-month date behind the worker" \
+    "$(list --status active --dates --no-header)" \
+    "$(printf 'ACTIVE (1)\n  H001-being-done [hlab-9] (%s)' "$(date -r "$TMP/proj/active/H001-being-done.md" '+%d-%m')")"
 
 # --recent appends done then canceled below the open queue, each windowed to the
 # last N days by file mtime and shown only when its window holds something.
@@ -78,5 +87,15 @@ mkdir -p "$TMP/fresh"/{todo,done,canceled}
 printf '# New\n' > "$TMP/fresh/todo/N001-new.md"
 ok "--recent omits an empty done/canceled" \
     "$("$SCRIPT_DIR/../scripts/task-list.sh" --no-header --recent 7 fresh | grep -cE '^(DONE|CANCELED)')" 0
+
+# Done and canceled sort by priority letter, then most-recent first. Ids here run
+# counter to dates (H061 is newer than H060) so the order proves date beats id.
+mkdir -p "$TMP/sorted/done"
+printf '# A\n'       > "$TMP/sorted/done/A010-alpha.md"; touch -d '10 days ago' "$TMP/sorted/done/A010-alpha.md"
+printf '# H newer\n' > "$TMP/sorted/done/H061-newer.md"; touch -d '1 day ago'   "$TMP/sorted/done/H061-newer.md"
+printf '# H older\n' > "$TMP/sorted/done/H060-older.md"; touch -d '5 days ago'   "$TMP/sorted/done/H060-older.md"
+ok "done sorts by letter then date, not id" \
+    "$("$SCRIPT_DIR/../scripts/task-list.sh" --no-header --status done sorted | grep -oE '[A-Z][0-9]{3}-[a-z-]+' | paste -sd' ')" \
+    "A010-alpha H061-newer H060-older"
 
 report
