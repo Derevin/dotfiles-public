@@ -92,6 +92,7 @@
     {
         "defaults":
         {
+            "bellStyle": "none",
             "builtinGlyphs": true,
             "colorScheme": "Solarized Light High Contrast",
             "cursorShape": "bar",
@@ -167,5 +168,6 @@
         }
     ],
     "tabWidthMode": "compact",
-    "themes": []
+    "themes": [],
+    "warning.largePaste": false
 }
