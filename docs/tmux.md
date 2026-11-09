@@ -34,3 +34,15 @@ leaks.
 
 **Removing a binding.** Just delete the line. Don't add an explicit `unbind -n`; a
 stale binding until the next server restart is fine.
+
+**Control bytes escape in format output.** `display-message -p` renders a
+non-printable byte in the result as a literal octal escape (`0x1f` → the four
+chars `\037`). So packing several fields into one format with a control-char
+delimiter and splitting on it fails. Use a printable delimiter token
+(`A<SEP>B<SEP>C`), or read option values raw with `show -gv` instead.
+
+**#() jobs.** `#(cmd)` in a status format runs `cmd` via `/bin/sh` and re-runs it
+each `status-interval`, caching output; nested `#{...}` args expand first (so
+`#(foo #{client_width})` passes the width), `~` expands, and jobs are keyed by the
+expanded command string (pass `#{session_name}` to separate per session). First
+paint shows stale/empty output until the job returns.
