@@ -18,6 +18,7 @@ SETTLE=0.2
 
 WIDTH_BEFORE=$(tmux display-message -p '#{pane_width}')
 tmux resize-pane -Z
+"$(dirname "$0")/zoom-dir.sh"   # refresh the status-bar zoom arrow before any early exit below
 # '|' rather than spaces: @backend and @lab are both empty off a lab, and default
 # IFS collapses the gap and shifts every field after it.
 IFS='|' read -r TTY CMD COLS ROWS BACKEND LAB <<<"$(tmux display-message -p '#{pane_tty}|#{pane_current_command}|#{pane_width}|#{pane_height}|#{@backend}|#{@lab}')"

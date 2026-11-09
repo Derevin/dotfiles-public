@@ -35,3 +35,6 @@ case "$n" in
     tmux select-pane -Z -t "${p:-$n}" 2>/dev/null || true
     ;;
 esac
+
+# The focused pane moved; refresh the status-bar zoom arrow for its new place.
+"$(dirname "$0")/zoom-dir.sh"
