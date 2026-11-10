@@ -94,7 +94,6 @@
     ]
   },
   "model": "opus[1m]",
-  "fallbackModel": ["claude-opus-4-8"],
   "disableClaudeAiConnectors": true,
   "skillOverrides": {
     "artifact-capabilities": "off",

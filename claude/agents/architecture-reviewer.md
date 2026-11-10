@@ -1,7 +1,7 @@
 ---
 name: architecture-reviewer
 description: Reviews a diff for where responsibility sits — misplaced logic, mixed layers, seams crossed. Use as one perspective in a multi-reviewer branch review.
-model: claude-opus-4-8
+model: opus
 effort: medium
 tools: Read, Grep, Glob, Write
 ---

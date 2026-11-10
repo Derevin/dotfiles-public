@@ -1,7 +1,7 @@
 ---
 name: security-reviewer
 description: Reviews a diff for exploitable weakness — untrusted input, injection, secrets, unsafe file and process handling. Use as one perspective in a multi-reviewer branch review.
-model: claude-opus-4-8
+model: claude-opus-4-8  # newer Opus cyber-flags this prompt and falls back to 4.8 anyway
 effort: medium
 tools: Read, Grep, Glob, Write
 ---

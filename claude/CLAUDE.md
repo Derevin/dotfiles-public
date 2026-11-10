@@ -60,8 +60,6 @@ A background fork's `<new-diagnostics>` lag the tree it just edited — they ind
 
 The API is flaky — retry a call that trips an API error, up to 10 attempts, before giving up.
 
-Settings own model fallback (`fallbackModel` → Opus 4.8, `switchModelsOnFlag` on): overload, unavailable, and safety-flag switches fall back automatically for one turn, main and subagents alike. Don't hand-swap models. For errors the fallback misses (rate-limit, auth), retry then stop and report.
-
 ## Red-green workflow
 
 When fixing bugs or implementing new features in a project that has tests: write a failing test first, run it and verify it fails, then make the change, then verify the test passes.
