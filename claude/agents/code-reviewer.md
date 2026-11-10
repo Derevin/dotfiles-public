@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Reviews a diff for readability and maintainability — naming, responsibility, error handling, dead code. Use as one perspective in a multi-reviewer branch review.
-model: claude-opus-4-8
+model: opus
 effort: medium
 tools: Read, Grep, Glob, Write
 ---

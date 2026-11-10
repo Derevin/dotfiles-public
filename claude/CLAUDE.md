@@ -60,7 +60,7 @@ A background fork's `<new-diagnostics>` lag the tree it just edited — they ind
 
 The API is flaky — retry a call that trips an API error, up to 10 attempts, before giving up.
 
-Degrade subagents only — a fork that keeps erroring gets Opus 4.8, never Sonnet or Fable. The main session doesn't degrade: retry, then stop and report.
+Settings own model fallback (`fallbackModel` → Opus 4.8, `switchModelsOnFlag` on): overload, unavailable, and safety-flag switches fall back automatically for one turn, main and subagents alike. Don't hand-swap models. For errors the fallback misses (rate-limit, auth), retry then stop and report.
 
 ## Red-green workflow
 

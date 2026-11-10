@@ -93,7 +93,8 @@
       "Bash(fd *--exec*)"
     ]
   },
-  "model": "claude-opus-4-8[1m]",
+  "model": "opus[1m]",
+  "fallbackModel": ["claude-opus-4-8"],
   "disableClaudeAiConnectors": true,
   "skillOverrides": {
     "artifact-capabilities": "off",
@@ -201,5 +202,5 @@
   "prefersReducedMotion": true,
   "theme": "light-ansi",
   "idleCompaction": false,
-  "switchModelsOnFlag": false
+  "switchModelsOnFlag": true
 }
