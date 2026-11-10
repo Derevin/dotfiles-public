@@ -24,7 +24,7 @@ Fast-path a bugfix: a compressed `/plan-task` front-end (frame, recon, one endor
 
 7. **Park and claim in.** Run `task-planned.sh <filename>` (`planning/` → `planned/`, a file move only — nothing written into the file), then `task-claim.sh <filename>` (`planned/` → `active/`, stamps you as worker). The two land as commits `Plan` then `Claim` a second apart — the lifecycle, not a bug. The plan stays in this conversation throughout.
 
-8. **Implement.** Invoke `/forkwc-implement`: the fork inherits this conversation, so it holds the plan without any file snapshot. It implements, proves the tests red-green, and returns the decisions the diff can't show. If it returns a question, the plan had a gap: take it to the user, then dispatch again.
+8. **Implement.** Invoke `/forkwc-implement`. The fork it dispatches takes the plan from this conversation, no file snapshot needed. It implements, proves the tests red-green, and returns the decisions the diff can't show. If it returns a question, the plan had a gap: take it to the user, then dispatch again.
 
 9. **Deep review.** As a backstop, invoke `/fork-review` — the full multi-perspective fan-out, run cold in its own fork with the Apply/Drop/Ask gate applied inside it. Hand it nothing; reviewing the diff on its own terms is what makes it an independent check.
 

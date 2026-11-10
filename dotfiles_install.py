@@ -80,6 +80,7 @@ COMMON = [
     ("scripts/fork-registry.sh", ".local/bin/fork-registry.sh"),
     ("scripts/fork-recover.sh", ".local/bin/fork-recover.sh"),
     ("scripts/fork-collect.sh", ".local/bin/fork-collect.sh"),
+    ("scripts/session-tokens.sh", ".local/bin/session-tokens.sh"),
     ("scripts/install_fetcher.sh", ".local/bin/install_fetcher.sh"),
     ("tmux/workspace-dotfiles.sh", ".local/bin/workspace-dotfiles.sh"),
     ("tmux/workspace-solo.sh", ".local/bin/workspace-solo.sh"),
