@@ -436,7 +436,7 @@ lab_provision() {
   # (a lab's is dropped with it). Self-gating and best-effort: only when a
   # pre-commit config and a runner (prek or pre-commit) are reachable through uv.
   # Never fails lab creation.
-  if [ "$backend" = host ] && [ -f "$LAB_CHECKOUT/.pre-commit-config.yaml" ] && command -v uv >/dev/null 2>&1; then
+  if [ "$backend" != coder ] && [ -f "$LAB_CHECKOUT/.pre-commit-config.yaml" ] && command -v uv >/dev/null 2>&1; then
     for runner in prek pre-commit; do
       if ( cd "$LAB_CHECKOUT" && uv run "$runner" install ) >/dev/null 2>&1; then
         echo "lab: wired $runner git hooks (shared across worktrees)" >&2
