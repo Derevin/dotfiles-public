@@ -3,6 +3,7 @@ description: Deep-review the branch in a fork — the diff and the reviewer repo
 context: fork
 background: false
 agent: general-purpose
+effort: medium
 ---
 
 Run the deep review in isolation. You start cold, which is what makes this a backstop rather than a second lap: the task file, the context store, and the diff are on disk, and nothing else should sway you. The diff you fetch, the reports you collect, and the fixes you apply all die with this fork. Only what you return survives.
