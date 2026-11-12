@@ -28,7 +28,7 @@ export TASKS_ROOT="$TMP"
 # installed one.
 export PATH="$SCRIPT_DIR/../scripts:$PATH"
 
-COLS=72
+COLS=80
 watch() { LINES=24 COLUMNS=$COLS "$SCRIPT_DIR/../scripts/task-watch.sh" --once "$@" </dev/null; }
 
 # The footer marker, computed the same way the script does: a two-letter weekday
@@ -93,16 +93,18 @@ frame=$(watch --project proj)
 ok "the frame shows a recently done task" "$(grep -c 'N050 shipped' <<<"$frame")" 1
 ok "the frame hides a long-done task" "$(grep -c 'N051 ancient' <<<"$frame")" 0
 
-# The footer carries a "done since" marker: the day the window reaches back to.
-ok "the footer shows the done-since marker at the default window" \
-    "$(tail -1 <<<"$frame" | grep -oE 'done since [A-Za-z]{2} [0-9]{2}-[0-9]{2}')" \
-    "done since $(sincefmt 7)"
+# The footer spans the done window oldest first: from the "done since" marker,
+# the day the window reaches back to, to today.
+span() { grep -oE 'done between [A-Za-z]{2} [0-9]{2}-[0-9]{2} and [0-9]{2}-[0-9]{2}'; }
+ok "the footer spans the window from the marker to today" \
+    "$(tail -1 <<<"$frame" | span)" \
+    "done between $(sincefmt 7) and $(date +%d-%m)"
 
 # --recent sets where the window starts: it moves the marker and the cutoff.
 narrow=$(watch --project proj --recent 3)
 ok "--recent moves the marker" \
-    "$(tail -1 <<<"$narrow" | grep -oE 'done since [A-Za-z]{2} [0-9]{2}-[0-9]{2}')" \
-    "done since $(sincefmt 3)"
+    "$(tail -1 <<<"$narrow" | span)" \
+    "done between $(sincefmt 3) and $(date +%d-%m)"
 ok "--recent narrows the window, hiding the 40-day-old done" \
     "$(grep -c 'N051 ancient' <<<"$narrow")" 0
 widewin=$(watch --project proj --recent 50)
