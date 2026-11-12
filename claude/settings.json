@@ -93,6 +93,12 @@
       "Bash(fd *--exec*)"
     ]
   },
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Force-With-Lease Push: `git push --force-with-lease` in any form (`=<ref>[:<expect>]`, `--force-if-includes`) to a non-default branch of the session's repo, from it or any of its worktrees (e.g. a PR branch after amend or rebase), is routine iteration, not Git Destructive: the user need not have said force or named the branch. The target is the refspec's destination; a push with no refspec targets the current branch's upstream, presumed a feature branch unless the transcript shows otherwise. The lease refuses the push if the remote branch moved since the last fetch; commits on the branch from earlier sessions are presumed the user's own. This clears only the force; content rules still judge what is pushed. Not covered: plain `--force`/`-f`/`+<refspec>`, `--all`/`--mirror`, the default branch, shared or release branches (e.g. `main`, `master`, `develop`, `release/*`), deploy- or publication-named branches (e.g. `production`, `gh-pages`), remote branch or tag deletion, and a branch the transcript shows belongs to another person."
+    ]
+  },
   "model": "opus[1m]",
   "disableClaudeAiConnectors": true,
   "skillOverrides": {
