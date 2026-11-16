@@ -3,6 +3,7 @@ description: Cold-read the claimed task file in a fork — dispatch a context-fr
 context: fork
 background: false
 agent: general-purpose
+model: opus  # /implement-task's model: the read stands in for the implementer
 ---
 
 Test whether the task brief stands alone. You start cold: you did not inherit the conversation that produced this task, and that is the point — whatever you can't answer from the file and the context store is a gap the implementer will hit too. The reader's report and your triage die with this fork; only the gap list survives.

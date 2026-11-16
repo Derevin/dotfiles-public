@@ -177,6 +177,9 @@ TMUX_PANE=%9 lab-start.sh 238 '/implement-task 238' >/dev/null 2>&1
 ok "start reuses the lab the id names" "$(cat "$TMP/attach.log")" \
     "--pane %9 $NEW /implement-task 238"
 ok "start minted no second lab" "$(lab-list.sh | tr '\n' ' ')" "$NEW $N2 "
+TMUX_PANE=%9 lab-start.sh 238 '/plan-task 238' '' --model fable >/dev/null 2>&1
+ok "start hands claude args to the attach, ahead of the prompt" "$(cat "$TMP/attach.log")" \
+    "--pane %9 $NEW --model fable /plan-task 238"
 rm "$TMP/bin/lab-attach.sh"
 
 

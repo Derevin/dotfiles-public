@@ -8,13 +8,15 @@
 # launchpad stands for no backend — so it comes from the argument, else the
 # caller pane's lab, else the project's declared default.
 #
-# Usage: lab-start.sh <task-id> <prompt> [backend]
-#   backend  omit to take the caller pane's lab, else the project's default.
+# Usage: lab-start.sh <task-id> <prompt> [backend [claude-arg...]]
+#   backend     omit or leave empty to take the caller pane's lab, else the
+#               project's default.
+#   claude-arg  passed to Claude ahead of the prompt (e.g. --model fable).
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     echo "Find or create a task's lab and take over the caller's quadrant with a prompt."
-    echo "Usage: lab-start.sh <task-id> <prompt> [backend]"
+    echo "Usage: lab-start.sh <task-id> <prompt> [backend [claude-arg...]]"
     exit 0
 fi
 
@@ -31,7 +33,7 @@ source "$LIB_DIR/lab-lib.sh"
 ID="${1:-}"
 PROMPT="${2:-}"
 BACKEND_ARG="${3:-}"
-[ -n "$ID" ] && [ -n "$PROMPT" ] || { echo "usage: lab-start.sh <task-id> <prompt> [backend]" >&2; exit 2; }
+[ -n "$ID" ] && [ -n "$PROMPT" ] || { echo "usage: lab-start.sh <task-id> <prompt> [backend [claude-arg...]]" >&2; exit 2; }
 
 # A chooser shows a readable N238-slug, not three bare digits; read the id back
 # out of whatever form it arrives in.
@@ -72,4 +74,4 @@ if [ -z "$NAME" ]; then
     NAME=$(LAB_PROJECT_OVERRIDE="$PROJECT" lab-claim.sh "$NEW" "$ID")
 fi
 
-exec lab-attach.sh --pane "$CALLER" "$NAME" "$PROMPT"
+exec lab-attach.sh --pane "$CALLER" "$NAME" "${@:4}" "$PROMPT"
