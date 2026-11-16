@@ -76,12 +76,12 @@ ok "strip prefix" "$(lab_strip_prefix two-clab-001-x)" clab-001-x
 ok "strip prefix leaves unknown" "$(lab_strip_prefix zz-clab-001-x)" zz-clab-001-x
 
 # --- claude -----------------------------------------------------------------
-ok "claude cmd" "$(lab_claude_cmd dlab-238)" "CLAUDE_LABEL=dlab-238 claude --effort max"
+ok "claude cmd" "$(lab_claude_cmd dlab-238)" "CLAUDE_LABEL=dlab-238 claude --effort xhigh"
 ok "claude cmd no auto memory" "$(lab_claude_cmd --no-auto-memory dwt1 --continue)" \
-    "CLAUDE_LABEL=dwt1 CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 claude --effort max --continue"
+    "CLAUDE_LABEL=dwt1 CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 claude --effort xhigh --continue"
 ok "claude cmd quotes what needs it" "$(lab_claude_cmd x '/plan-task 039')" \
-    "CLAUDE_LABEL=x claude --effort max '/plan-task 039'"
-ok "claude cmd skips empty args" "$(lab_claude_cmd x '')" "CLAUDE_LABEL=x claude --effort max"
+    "CLAUDE_LABEL=x claude --effort xhigh '/plan-task 039'"
+ok "claude cmd skips empty args" "$(lab_claude_cmd x '')" "CLAUDE_LABEL=x claude --effort xhigh"
 ok "claude cmd takes the caller's effort" "$(lab_claude_cmd x --model fable --effort medium)" \
     "CLAUDE_LABEL=x claude --model fable --effort medium"
 

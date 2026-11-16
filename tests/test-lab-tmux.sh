@@ -367,8 +367,8 @@ for s in claude-update.sh sync.sh; do
     printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/bin/$s"
 done
 chmod +x "$TMP/bin/claude-update.sh" "$TMP/bin/sync.sh"
-cont() { grep -q "^$1|--effort max --continue$" "$CLAUDE_STUB_LOG" 2>/dev/null; }
-fresh() { grep -q "^$1|--effort max$" "$CLAUDE_STUB_LOG" 2>/dev/null; }
+cont() { grep -q "^$1|--effort xhigh --continue$" "$CLAUDE_STUB_LOG" 2>/dev/null; }
+fresh() { grep -q "^$1|--effort xhigh$" "$CLAUDE_STUB_LOG" 2>/dev/null; }
 
 WSA=$(new_pane)
 tmux run-shell -t "$WSA" "workspace-dotfiles.sh $TMP/Widget dota widgeta"

@@ -548,9 +548,9 @@ lab_caller_pane() {
 # lab_claude_cmd [--no-auto-memory] <label> [claude-arg...] — the one definition
 # of how Claude is launched. Every workspace and lab script goes
 # through it, so "the normal command plus --continue" means something.
-# Effort is max unless a claude-arg sets it.
+# Effort is xhigh unless a claude-arg sets it.
 lab_claude_cmd() {
-  local prefix="" effort=" --effort max" args="" label a
+  local prefix="" effort=" --effort xhigh" args="" label a
   while [ $# -gt 0 ]; do
     case "$1" in
       --no-auto-memory) prefix="CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 "; shift ;;
