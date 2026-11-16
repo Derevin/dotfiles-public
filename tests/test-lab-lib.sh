@@ -82,6 +82,8 @@ ok "claude cmd no auto memory" "$(lab_claude_cmd --no-auto-memory dwt1 --continu
 ok "claude cmd quotes what needs it" "$(lab_claude_cmd x '/plan-task 039')" \
     "CLAUDE_LABEL=x claude --effort max '/plan-task 039'"
 ok "claude cmd skips empty args" "$(lab_claude_cmd x '')" "CLAUDE_LABEL=x claude --effort max"
+ok "claude cmd takes the caller's effort" "$(lab_claude_cmd x --model fable --effort medium)" \
+    "CLAUDE_LABEL=x claude --model fable --effort medium"
 
 # Claude keys session state on this path, which is why the claim rename carries
 # it. Only separators a checkout path actually contains are pinned here; how
