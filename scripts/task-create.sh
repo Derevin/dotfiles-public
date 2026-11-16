@@ -39,8 +39,13 @@ if [[ -z "$slug" ]]; then
   echo "error: title has no alphanumeric characters to slug" >&2; exit 1
 fi
 
-PROJECT=$(find-project.sh) || exit 1
+PROJECT=$(project_name) || exit 1
 TASKS_DIR="$TASKS_ROOT/$PROJECT"
+# An override is typed by hand, unlike find-project.sh's answer: a typo must not
+# start a new project.
+if [[ -n "${TASK_PROJECT:-}" && ! -d "$TASKS_DIR" ]]; then
+  echo "error: tasks dir not found: $TASKS_DIR" >&2; exit 1
+fi
 mkdir -p "$TASKS_DIR"/{todo,planning,planned,active,stale,done,canceled}
 
 id=$(task-next-id.sh "$PROJECT")

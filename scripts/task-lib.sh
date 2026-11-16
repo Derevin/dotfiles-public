@@ -3,9 +3,19 @@
 
 TASKS_ROOT="${TASKS_ROOT:-$HOME/repos/tasks}"
 
+# project_name — the project to act on: TASK_PROJECT when set and non-empty, for a
+# caller acting on a project whose checkout it is not in; else the cwd's project.
+project_name() {
+  if [[ -n "${TASK_PROJECT:-}" ]]; then
+    printf '%s\n' "$TASK_PROJECT"
+  else
+    find-project.sh
+  fi
+}
+
 # detect_project — sets PROJECT and TASKS_DIR
 detect_project() {
-  PROJECT=$(find-project.sh) || exit 1
+  PROJECT=$(project_name) || exit 1
   TASKS_DIR="$TASKS_ROOT/$PROJECT"
 
   if [[ ! -d "$TASKS_DIR" ]]; then

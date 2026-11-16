@@ -12,7 +12,10 @@ if [[ $# -lt 1 ]]; then
   echo "usage: task-commit.sh <message>" >&2; exit 1
 fi
 
-cd ~/repos/tasks
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$SCRIPT_DIR/task-lib.sh"
+
+cd "$TASKS_ROOT"
 git pull --rebase 2>/dev/null || true
 git add -A
 git commit -m "$1"
