@@ -106,7 +106,7 @@ prefetch_repo() {
 
 # Fetch each subtree's remote tip into a private ref (refs/sync/<prefix>) so the
 # apply pass can compare trees without a fetch. Best-effort: on failure the ref
-# is simply absent and apply falls back to `git subtree pull`, which fetches. A
+# is simply absent and apply fetches it itself. A
 # dedicated ref (not FETCH_HEAD) makes this safe to run concurrently with the
 # repo's own prefetch in the same working copy.
 prefetch_subtrees() {
@@ -208,16 +208,14 @@ apply_subtrees() {
     return 1
   fi
 
-  local prefix remote branch flags ref tip_tree before after
+  local prefix remote branch flags ref tip_tree
   while read -r prefix remote branch flags; do
     case "$prefix" in '#'*|'') continue ;; esac
     ref="refs/sync/${prefix//\//-}"
 
     # Compare the local prefix tree against the remote tip's tree. Prefer the
-    # prefetched ref; if it is absent (prefetch raced or failed), fetch it now —
-    # we must have a reliable tree to compare, because `git subtree pull
-    # --squash` keys off a stored split SHA that goes stale on every push and
-    # will spuriously create an empty merge unless gated on a real tree change.
+    # prefetched ref; if it is absent (prefetch raced or failed), fetch it now:
+    # the merge below takes the tip from this ref, so it must be current.
     if ! tip_tree=$(git rev-parse --verify --quiet "$ref^{tree}"); then
       if git fetch --quiet "$remote" "+$branch:$ref" 2>/dev/null; then
         tip_tree=$(git rev-parse "$ref^{tree}")
@@ -236,7 +234,7 @@ apply_subtrees() {
     # A push-only prefix is a mirror we publish to and never author in, so a
     # tree difference means local is ahead, not that there is something to
     # ingest. Pulling is impossible there anyway: `public` was never `git
-    # subtree add`ed, so `subtree pull --squash` aborts with "was never added".
+    # subtree add`ed, so a squash merge aborts with "was never added".
     # Publishing is deliberate (gated on a leak scan), so report and carry on
     # rather than failing the sync on a perfectly normal steady state.
     if [[ " $flags " == *" push-only "* ]]; then
@@ -244,20 +242,76 @@ apply_subtrees() {
       continue
     fi
 
-    before=$(git rev-parse HEAD)
-    if git subtree pull --prefix="$prefix" "$remote" "$branch" --squash --quiet; then
-      after=$(git rev-parse HEAD)
-      if [[ "$before" != "$after" ]]; then
-        echo "$name/$prefix: ingested"
-      else
-        echo "$name/$prefix: ✓"
-      fi
-    else
-      echo "$name/$prefix: failed"
-      rc=1
-    fi
+    case "$(subtree_ingest "$prefix" "$ref")" in
+      unpublished) echo "$name/$prefix: unpublished (publish via subtrees-push.sh)" ;;
+      ingested) echo "$name/$prefix: ingested" ;;
+      conflict)
+        echo "$name/$prefix: conflicts with local changes; merge by hand: git subtree merge --prefix=$prefix --squash $ref"
+        rc=1
+        ;;
+      *) echo "$name/$prefix: failed"; rc=1 ;;
+    esac
   done < "$subtrees_file"
   return $rc
+}
+
+# subtree_ingest <prefix> <ref> — merge the mirror tip at <ref> into <prefix>.
+# A publish copies local commits into the mirror, so a tip whose tree the prefix
+# has had before holds nothing new. Anything else merges against the newest
+# mirror commit local history already holds. git subtree merges against its own
+# marker instead, and only a pull moves that, never a publish; when it lags, a
+# join records the newer base first. Prints unpublished, ingested, conflict or
+# failed; a conflicted merge is aborted, so nothing is left half merged.
+subtree_ingest() {
+  local prefix=$1 ref=$2 known base base_tree sub c held squash msg join
+  known=$(mktemp)
+  # Every tree the prefix has had in local history, and each mirror state a
+  # squash brought in.
+  {
+    git rev-list HEAD | sed "s|\$|:$prefix|" | git cat-file --batch-check='%(objectname)'
+    git log --format=%T --grep="^git-subtree-dir: $prefix/*\$" HEAD
+  } | grep -v ' missing$' | sort -u >"$known"
+  if grep -qxF "$(git rev-parse "$ref^{tree}")" "$known"; then
+    rm -f "$known"
+    echo unpublished
+    return 0
+  fi
+  base=$(git log --topo-order --format='%H %T' "$ref" |
+    awk 'NR == FNR { k[$1]; next } $2 in k { print $1; exit }' "$known" -)
+  rm -f "$known"
+
+  # The mirror commit git subtree's newest marker names, read the way it reads it.
+  sub=
+  for c in $(git log --format=%H --grep="^git-subtree-dir: $prefix/*\$" HEAD); do
+    sub=$(git log -1 --format=%B "$c" | sed -n 's/^git-subtree-split: //p')
+    [[ -n "$sub" ]] && break
+  done
+
+  if [[ -n "$base" && "$base" != "$sub" ]]; then
+    base_tree=$(git rev-parse "$base^{tree}")
+    squash=$(printf "Squashed '%s/' content from commit %s\n\ngit-subtree-dir: %s\ngit-subtree-split: %s\n" \
+      "$prefix" "$(git rev-parse --short "$base")" "$prefix" "$base" | git commit-tree "$base_tree") || return 1
+    # Name the last local commit holding that tree as its mainline, so a later
+    # split builds on the mirror's commit and a publish never replays it.
+    held=$(git rev-list --topo-order HEAD | awk -v p="$prefix" '{ print $1 ":" p, $1 }' |
+      git cat-file --batch-check='%(objectname) %(rest)' | awk -v t="$base_tree" '$1 == t { print $2; exit }')
+    msg="${prefix^}: Join mirror at $(git rev-parse --short "$base")"
+    [[ -n "$held" ]] && msg+=$'\n\n'"git-subtree-dir: $prefix"$'\n'"git-subtree-mainline: $held"$'\n'"git-subtree-split: $base"
+    join=$(printf '%s\n' "$msg" | git commit-tree "HEAD^{tree}" -p HEAD -p "$squash") || return 1
+    git merge --ff-only --quiet "$join" || return 1
+  fi
+
+  if git subtree merge --prefix="$prefix" --squash -m "${prefix^}: Merge remote changes" "$ref" >/dev/null 2>&1; then
+    echo ingested
+    return 0
+  fi
+  if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+    git merge --abort >/dev/null 2>&1
+    echo conflict
+  else
+    echo failed
+  fi
+  return 1
 }
 
 # Record a repo's prefetch result so apply can tell "fetched, up to date" from

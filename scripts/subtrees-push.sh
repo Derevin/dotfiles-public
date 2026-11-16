@@ -7,7 +7,8 @@
 # every dotfiles commit walked by the split), this splits the subtree
 # locally, finds the commit whose tree matches the current remote tip,
 # and cherry-picks only the new commits onto remote tip. Result:
-# fast-forward pushes, remote SHAs preserved across pushes.
+# fast-forward pushes, remote SHAs preserved across pushes. A split that
+# already contains the remote tip is pushed as is.
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" ]]; then
@@ -18,8 +19,8 @@ Usage: subtrees-push.sh
 Run from the superproject root with the work already committed and pushed: the
 split walks HEAD, so nothing uncommitted reaches a mirror. Each prefix is split
 locally, matched to the remote tip by tree, and the new commits cherry-picked on
-top — fast-forward push, remote SHAs preserved. Exits non-zero if a prefix needs
-a manual push.
+top — fast-forward push, remote SHAs preserved. A split that already contains the
+remote tip is pushed as is. Exits non-zero if a prefix needs a manual push.
 
 Publishing is deliberate. Run the leak scan from CLAUDE.md first and confirm it
 comes back empty; nothing here checks it.
@@ -36,9 +37,18 @@ push_one() {
   local prefix=$1 remote=$2 branch=$3
   local split remote_sha remote_tip remote_tree boundary sha wt
 
-  split=$(git subtree split --prefix="$prefix" HEAD 2>/dev/null)
-
   remote_sha=$(git ls-remote "$remote" "refs/heads/$branch" | awk '{print $1}')
+  # Fetch before splitting: the split resolves the mirror commits that sync's
+  # merge markers name.
+  if [[ -n "$remote_sha" ]]; then
+    git fetch --quiet "$remote" "$branch"
+    remote_tip=$(git rev-parse FETCH_HEAD)
+  fi
+  if ! split=$(git subtree split --prefix="$prefix" HEAD 2>/dev/null) || [[ -z "$split" ]]; then
+    echo "  split failed"
+    return 1
+  fi
+
   if [[ -z "$remote_sha" ]]; then
     echo "  remote branch missing; pushing as new branch"
     git push "$remote" "$split:refs/heads/$branch"
@@ -46,8 +56,18 @@ push_one() {
     return 0
   fi
 
-  git fetch --quiet "$remote" "$branch"
-  remote_tip=$(git rev-parse FETCH_HEAD)
+  # A split already holding the remote tip (the mirror only ever received this
+  # split, or a pull merged its tip in) is a fast-forward as it stands.
+  if git merge-base --is-ancestor "$remote_tip" "$split"; then
+    if [[ "$remote_tip" == "$split" ]]; then
+      echo "  up to date"
+    else
+      git push --quiet "$remote" "$split:refs/heads/$branch"
+      echo "  pushed"
+    fi
+    return 0
+  fi
+
   remote_tree=$(git rev-parse "$remote_tip^{tree}")
 
   boundary=""
