@@ -64,6 +64,45 @@ lab_project_key() {
   printf '%s' "$1" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9' '_'
 }
 
+# lab_project_load <PROJECT_KEY> [cwd-project] — set a project's values:
+#   LAB_PROJECT_KEY LAB_CHECKOUT LAB_PREFIX LAB_PROVISIONER LAB_BASE_OVERRIDE
+#   LAB_DEFAULT_BACKEND
+# A project lab.conf does not list is still a project: the repo the cwd is in,
+# with nothing to provision and no prefix. cwd-project is find-project.sh's
+# answer for the cwd, when the caller already has it.
+lab_project_load() {
+  local key=$1
+  lab_conf_load
+  LAB_PROJECT_KEY=$key
+  LAB_CHECKOUT=$(lab_conf_key "$key" CHECKOUT)
+  LAB_PREFIX=$(lab_conf_key "$key" CONTAINER_PREFIX)
+  LAB_PROVISIONER=$(lab_conf_key "$key" PROVISIONER)
+  LAB_BASE_OVERRIDE=$(lab_conf_key "$key" BASE)
+  LAB_DEFAULT_BACKEND=$(lab_conf_key "$key" BACKEND)
+  if [ -z "$LAB_CHECKOUT" ]; then
+    LAB_CHECKOUT=$(lab_cwd_checkout "$key" "${2:-}") || {
+      echo "lab: '$(printf '%s' "$key" | tr '[:upper:]' '[:lower:]')' is not in $LAB_CONF, and its checkout cannot be found from $PWD" >&2
+      return 1
+    }
+  fi
+  # Host is the one backend lab_provision builds without a provisioner, so
+  # without one it is the only answer there is, not a guess.
+  [ -n "$LAB_DEFAULT_BACKEND" ] || [ -n "$LAB_PROVISIONER" ] || LAB_DEFAULT_BACKEND=host
+}
+
+# lab_cwd_checkout <PROJECT_KEY> [cwd-project] — the main checkout of the repo
+# the cwd is in, when that repo is the project. Through git's common dir rather
+# than the toplevel: inside a lab the toplevel is the lab, and a lab made from
+# there has to land beside the repo, not beside the lab.
+lab_cwd_checkout() {
+  local here=${2:-} common
+  [ -n "$here" ] || here=$(lab_project_from_cwd) || return 1
+  [ "$(lab_project_key "$here")" = "$1" ] || return 1
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  [[ "$common" == */.git ]] || return 1
+  printf '%s' "${common%/.git}"
+}
+
 # --- name derivation --------------------------------------------------------
 
 # lab_backend <name> — host | docker | coder, from the name's first letter.
@@ -192,11 +231,12 @@ lab_project_from_cwd() { find-project.sh 2>/dev/null; }
 # project's, and only the creation paths have any use for it.
 #
 # The name carries the backend but not the project, so the project comes from
-# whichever declared one owns it: a single declared project is unambiguous, else
-# the worktree dir or the container settles it (both local checks), and a coder
-# lab — which has neither on the host — falls back to the caller's cwd.
+# whichever one owns it: a declared project's worktree dir or container settles it
+# (both local checks), else the caller's cwd — which is also the only thing that
+# can name an undeclared repo — and a coder lab, which has neither on the host,
+# falls back to the declared projects' workspaces.
 lab_resolve() {
-  local name=$1 p key checkout prefix
+  local name=$1 p key checkout prefix from_cwd=""
   lab_conf_load
   LAB_BACKEND=$(lab_backend "$name") || { echo "lab: unknown backend for '$name'" >&2; return 1; }
 
@@ -204,8 +244,6 @@ lab_resolve() {
   [ -n "$key" ] && key=$(lab_project_key "$key")
 
   set -- $LAB_PROJECTS
-  # One declared project cannot be ambiguous.
-  [ -z "$key" ] && [ $# -eq 1 ] && key=$1
 
   # Local evidence: the worktree dir, then the container. The backend gates both
   # — a coder lab has no worktree, only docker has a container — so nothing asks
@@ -222,16 +260,24 @@ lab_resolve() {
   fi
 
   # The caller's cwd: a launchpad stands in its project's main checkout, so the
-  # cwd is the project selector. Only trusted when that project is configured —
-  # otherwise this is a shell that happens to be somewhere else.
+  # cwd is the project selector. A declared project is trusted for any backend,
+  # an undeclared repo only for host, the one backend it can have — otherwise
+  # this is a shell that happens to be somewhere else.
   if [ -z "$key" ]; then
-    local from_cwd
     from_cwd=$(lab_project_from_cwd) || from_cwd=""
     if [ -n "$from_cwd" ]; then
       p=$(lab_project_key "$from_cwd")
-      [ -n "$(lab_conf_key "$p" CHECKOUT)" ] && key=$p
+      if [ -n "$(lab_conf_key "$p" CHECKOUT)" ] || [ "$LAB_BACKEND" = host ]; then
+        key=$p
+      else
+        from_cwd=""
+      fi
     fi
   fi
+
+  # An undeclared repo cannot have a coder lab, so a lone declared project owns
+  # it with nothing left to ask.
+  [ -z "$key" ] && [ "$LAB_BACKEND" = coder ] && [ $# -eq 1 ] && key=$1
 
   # Last resort. A coder lab has no worktree and no container, so when the cwd
   # could not answer either, the workspace list is the only thing left to ask —
@@ -248,26 +294,19 @@ lab_resolve() {
     return 1
   fi
 
-  LAB_PROJECT_KEY="$key"
-  LAB_CHECKOUT=$(lab_conf_key "$key" CHECKOUT)
-  LAB_PREFIX=$(lab_conf_key "$key" CONTAINER_PREFIX)
-  LAB_PROVISIONER=$(lab_conf_key "$key" PROVISIONER)
-  LAB_BASE_OVERRIDE=$(lab_conf_key "$key" BASE)
-  LAB_DEFAULT_BACKEND=$(lab_conf_key "$key" BACKEND)
-  if [ -z "$LAB_CHECKOUT" ]; then
-    echo "lab: no checkout configured for project '$(printf '%s' "$key" | tr '[:upper:]' '[:lower:]')' (see $LAB_CONF)" >&2
-    return 1
-  fi
+  lab_project_load "$key" "$from_cwd" || return 1
   # The project NAME (not the key) indexes ~/repos/tasks and the state file, and
   # the key is lossy — uppercased with separators flattened. Ask find-project.sh
   # in the checkout, which is what task-lib.sh answers with inside the lab. It is
   # a pure function of the checkout, and it forks a bash per call on paths as hot
-  # as every pane spawn and every popup keypress, so it is answered once.
+  # as every pane spawn and every popup keypress, so it is answered once — and
+  # not at all when the cwd already gave it.
   local cached="LAB_PROJECT_CACHE_$key"
   if [ -n "${!cached+x}" ]; then
     LAB_PROJECT="${!cached}"
   else
-    LAB_PROJECT=$(cd "$LAB_CHECKOUT" 2>/dev/null && find-project.sh 2>/dev/null) || LAB_PROJECT=""
+    LAB_PROJECT=$from_cwd
+    [ -n "$LAB_PROJECT" ] || LAB_PROJECT=$(cd "$LAB_CHECKOUT" 2>/dev/null && find-project.sh 2>/dev/null) || LAB_PROJECT=""
     [ -n "$LAB_PROJECT" ] || LAB_PROJECT=$(printf '%s' "$key" | tr '[:upper:]' '[:lower:]')
     printf -v "$cached" '%s' "$LAB_PROJECT"
   fi
@@ -279,20 +318,13 @@ lab_resolve() {
 # lab_project_paths <project> — the same config lookup keyed by project name
 # rather than by lab name, for the scripts that start from a cwd.
 lab_project_paths() {
-  lab_conf_load
   LAB_PROJECT="$1"
-  LAB_PROJECT_KEY=$(lab_project_key "$1")
-  LAB_CHECKOUT=$(lab_conf_key "$LAB_PROJECT_KEY" CHECKOUT)
-  LAB_PREFIX=$(lab_conf_key "$LAB_PROJECT_KEY" CONTAINER_PREFIX)
-  LAB_PROVISIONER=$(lab_conf_key "$LAB_PROJECT_KEY" PROVISIONER)
-  LAB_BASE_OVERRIDE=$(lab_conf_key "$LAB_PROJECT_KEY" BASE)
-  LAB_DEFAULT_BACKEND=$(lab_conf_key "$LAB_PROJECT_KEY" BACKEND)
-  [ -n "$LAB_CHECKOUT" ] || { echo "lab: no checkout configured for project '$1' (see $LAB_CONF)" >&2; return 1; }
+  lab_project_load "$(lab_project_key "$1")"
 }
 
 # lab_backend_fallback [caller-pane] — the backend a creation path takes when
-# none is named: the caller pane's lab, else the project's declared default.
-# Empty when neither answers — nothing here invents one. Needs the project
+# none is named: the caller pane's lab, else the project's default. Empty when
+# neither answers — nothing here invents one. Needs the project
 # resolved first (LAB_DEFAULT_BACKEND), and TMUX cleared by the caller, since a
 # popup's own server knows nothing about the pane it was opened from.
 lab_backend_fallback() {

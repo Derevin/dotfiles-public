@@ -15,6 +15,9 @@ fi
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/test-lib.sh"
 
+# The working tree's find-project.sh, not whatever the installer last linked.
+export PATH="$SCRIPT_DIR/../scripts:$PATH"
+
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
@@ -26,6 +29,8 @@ LAB_ONE_PROVISIONER=$TMP/provision.sh
 LAB_ONE_BACKEND=docker
 LAB_TWO_CHECKOUT=$TMP/two/Two
 LAB_TWO_CONTAINER_PREFIX=two-
+LAB_THREE_CHECKOUT=$TMP/three/Three
+LAB_THREE_PROVISIONER=$TMP/provision.sh
 CONF
 
 export LAB_CONF="$TMP/lab.conf"
@@ -104,16 +109,56 @@ mkdir -p "$TMP/two/Two"
 (cd "$TMP/two/Two" && git init -q .) 2>/dev/null
 ok "cwd decides when nothing local says" \
     "$(cd "$TMP/two/Two" && lab_resolve clab-007-y && echo "$LAB_CONTAINER")" two-clab-007-y
-# A cwd whose project is not configured is just a shell that happens to be
-# elsewhere, not an answer.
+# A cwd outside any repo is just a shell that happens to be elsewhere, not an
+# answer.
 fails bash -c 'cd /tmp && source "'"$SCRIPT_DIR"'/../scripts/lab-lib.sh" && lab_resolve hlab-tmp9'
 
-# The backend a project's labs land in when nothing else says. A project that
-# declares none gets none invented for it — creation asks there instead.
+# The backend a project's labs land in when nothing else says. Without a
+# provisioner host is the only backend that can be built, so it is the default
+# rather than a guess. A project that could build another and declares none gets
+# none invented for it — creation asks there instead.
 lab_project_paths one
 ok "project default backend" "$LAB_DEFAULT_BACKEND" docker
 lab_project_paths two
-ok "no default backend declared" "$LAB_DEFAULT_BACKEND" ""
+ok "no provisioner defaults to host" "$LAB_DEFAULT_BACKEND" host
+lab_project_paths three
+ok "a provisioner and no default declared" "$LAB_DEFAULT_BACKEND" ""
+
+# --- undeclared projects ------------------------------------------------------
+# A repo lab.conf does not list still gets labs: host ones, beside its main
+# checkout, which only a cwd inside the repo can locate.
+G="$TMP/repos/gadget"
+mkdir -p "$G/src"
+git -C "$G" init -q
+git -C "$G" -c user.email=t@t -c user.name=T commit -q --allow-empty -m init
+git -C "$G" worktree add -q --detach "$G-hlab-tmp1" 2>/dev/null
+ok "undeclared: checkout, default backend, nothing to provision" \
+    "$(cd "$G/src" && lab_project_paths gadget && echo "$LAB_CHECKOUT|$LAB_DEFAULT_BACKEND|$LAB_PROVISIONER")" \
+    "$G|host|"
+# From inside one of its labs the checkout is still the repo's own, or a lab made
+# there would land beside the lab instead of beside the repo.
+ok "undeclared: a lab answers with the main checkout" \
+    "$(cd "$G-hlab-tmp1" && lab_project_paths gadget && echo "$LAB_CHECKOUT")" "$G"
+fails bash -c 'cd "'"$TMP/two/Two"'" && source "'"$SCRIPT_DIR"'/../scripts/lab-lib.sh" && lab_project_paths gadget'
+
+ok "undeclared: resolve from the repo" \
+    "$(cd "$G" && lab_resolve hlab-tmp1 && echo "$LAB_PROJECT|$LAB_WORKTREE|$LAB_BACKEND")" \
+    "gadget|$G-hlab-tmp1|host"
+ok "undeclared: resolve from inside the lab" \
+    "$(cd "$G-hlab-tmp1" && lab_resolve hlab-tmp1 && echo "$LAB_WORKTREE")" "$G-hlab-tmp1"
+# Host is the only backend an undeclared repo can have, so standing in one says
+# nothing about another project's coder lab.
+fails bash -c 'cd "'"$G"'" && source "'"$SCRIPT_DIR"'/../scripts/lab-lib.sh" && LAB_WORKSPACES= lab_resolve clab-007-y'
+
+# A lone declared project answers only for a coder lab, which has no local
+# evidence and which an undeclared repo cannot have.
+printf 'LAB_ONE_CHECKOUT=%s\nLAB_ONE_CONTAINER_PREFIX=one-\n' "$TMP/one/Proj" > "$TMP/one-only.conf"
+ok "one declared project leaves an undeclared lab alone" \
+    "$(cd "$G" && LAB_CONF="$TMP/one-only.conf" bash -c 'source "'"$SCRIPT_DIR"'/../scripts/lab-lib.sh" && lab_resolve hlab-tmp1 && echo "$LAB_PROJECT"')" \
+    gadget
+ok "one declared project still answers for a coder lab" \
+    "$(cd /tmp && LAB_CONF="$TMP/one-only.conf" bash -c 'source "'"$SCRIPT_DIR"'/../scripts/lab-lib.sh" && lab_resolve clab-001-x && echo "$LAB_CONTAINER"')" \
+    one-clab-001-x
 
 # What a creation path takes when nothing names a backend. The caller pane's
 # lab answers first: standing in one backend and asking for a task is not a
@@ -123,7 +168,7 @@ tmux() { [ "$*" = "show-options -pvt %9 @backend" ] && printf 'coder\n'; }
 lab_project_paths one
 ok "pane answers before the project" "$(lab_backend_fallback %9)" coder
 ok "no pane leaves the project's" "$(lab_backend_fallback)" docker
-lab_project_paths two
+lab_project_paths three
 ok "neither answers" "$(lab_backend_fallback %1)" ""
 unset -f tmux
 

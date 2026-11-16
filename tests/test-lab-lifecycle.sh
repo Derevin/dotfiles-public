@@ -45,9 +45,11 @@ mkdir -p "$TMUX_TMPDIR"
 unset TMUX
 
 # Neither backend is under test here, and coder list is a network round trip that
-# can hang with no timeout. Stub both so the run is hermetic either way.
+# can hang with no timeout. Stub both so the run is hermetic either way. uv too:
+# lab creation installs a repo's git hooks through it, and the log is how the
+# undeclared-repo section below tells whether it tried.
 mkdir -p "$TMP/bin"
-for stub in docker coder; do
+for stub in docker coder uv; do
     printf '#!/usr/bin/env bash\nprintf "%%s %%s\\n" "%s" "$*" >> "%s/stub.log"\nexit 1\n' \
         "$stub" "$TMP" > "$TMP/bin/$stub"
     chmod +x "$TMP/bin/$stub"
@@ -298,6 +300,13 @@ ok "backends lead with the project's" "$(lab-backends.sh | tr '\n' ' ')" "host d
 grep -v '_PROVISIONER=' "$TMP/lab.conf" > "$TMP/lab-hostonly.conf"
 ok "no provisioner leaves only host" \
     "$(LAB_CONF="$TMP/lab-hostonly.conf" lab-backends.sh)" host
+# And with nothing declared either, host is still the one answer there is — so it
+# is taken without asking.
+grep -v '_PROVISIONER=\|_BACKEND=' "$TMP/lab.conf" > "$TMP/lab-bare.conf"
+N6=$(LAB_CONF="$TMP/lab-bare.conf" lab-new.sh 2>/dev/null)
+ok "no provisioner and no default takes host" "$N6" hlab-tmp1
+ok "and the chooser leads with it" "$(LAB_CONF="$TMP/lab-bare.conf" lab-backends.sh)" host
+[ -n "$N6" ] && lab-drop.sh --force "$N6" >/dev/null
 # Nothing to lead with is nothing to offer: the recipes this feeds cannot run
 # outside a configured project anyway.
 ok "no default, no list" "$(LAB_CONF="$TMP/lab-nodefault.conf" lab-backends.sh)" ""
@@ -337,5 +346,52 @@ fails env TMUX_PANE=%9 lab-reconstruct.sh 238
 fails env TMUX_PANE=%9 lab-reconstruct.sh 777
 lab-drop.sh --force "$NEW" >/dev/null
 rm "$TMP/bin/lab-attach.sh"
+
+# --- an undeclared repo -------------------------------------------------------
+# A repo lab.conf does not list gets host labs beside its main checkout, from
+# nothing more than standing in it.
+git init -q --bare "$TMP/gadget-origin.git"
+git clone -q "$TMP/gadget-origin.git" "$TMP/Gadget" 2>/dev/null
+q -C "$TMP/Gadget" config user.email t@t
+q -C "$TMP/Gadget" config user.name T
+q -C "$TMP/Gadget" commit --allow-empty -m init
+q -C "$TMP/Gadget" branch -M main
+q -C "$TMP/Gadget" push -u origin main
+mkdir -p "$TMP/tasks/gadget"/{todo,planning,planned,active,done,canceled}
+printf '# Polish the knobs\nWorker: main\n\nbody\n' > "$TMP/tasks/gadget/active/N301-polish-the-knobs.md"
+q -C "$TMP/tasks" add -A
+q -C "$TMP/tasks" commit -m gadget
+q -C "$TMP/tasks" push
+
+# A pre-commit config is the repo asking for its hooks, declared or not, so
+# creation wires them here as it does for a declared project.
+cd "$TMP/Gadget"
+: > "$TMP/stub.log"
+printf 'repos: []\n' > .pre-commit-config.yaml
+U=$(lab-new.sh 2>/dev/null)
+ok "undeclared: new takes host" "$U" hlab-tmp1
+ok "undeclared: the lab sits beside the repo" "$([ -d "$TMP/Gadget-$U" ] && echo y)" y
+ok "undeclared: hooks wired" "$(grep -c '^uv run prek install' "$TMP/stub.log")" 1
+ok "undeclared: host is all there is to offer" "$(lab-backends.sh)" host
+
+UC=$(lab-claim.sh "$U" 301 2>/dev/null)
+ok "undeclared: claim renames" "$UC" hlab-301-polish-the-knobs
+ok "undeclared: claim restamps the task" \
+    "$(sed -n 's/^Worker: //p' "$TMP/tasks/gadget/active/N301-polish-the-knobs.md")" hlab-301
+yn() { if "$@" >/dev/null 2>&1; then echo y; else echo n; fi; }
+listed() { lab-list.sh | grep -qx "$1"; }
+ok "undeclared: listed from the repo" "$(yn listed "$UC")" y
+ok "undeclared: not listed from another project" "$(cd "$TMP/Widget" && yn listed "$UC")" n
+
+# From inside a lab the repo is still its main checkout: the next lab lands
+# beside the repo, not inside the first one.
+U2=$(cd "$TMP/Gadget-$UC" && lab-new.sh 2>/dev/null)
+ok "undeclared: new from inside a lab lands beside the repo" "$([ -d "$TMP/Gadget-$U2" ] && echo y)" y
+ok "undeclared: listed from inside a lab" "$(cd "$TMP/Gadget-$UC" && yn listed "$U2")" y
+
+lab-drop.sh --force "$U2" >/dev/null
+lab-drop.sh --force "$UC" >/dev/null
+ok "undeclared: drop removes the worktree" "$([ -d "$TMP/Gadget-$UC" ] && echo y)" ""
+cd "$TMP/Widget"
 
 report

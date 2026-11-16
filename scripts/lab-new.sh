@@ -5,7 +5,8 @@
 # before it is worth filing. Claiming it later renames it (lab-claim.sh).
 #
 # Usage: lab-new.sh [host|docker|coder]
-#   backend  omit to take the project's declared default (lab.conf).
+#   backend  omit to take the project's default (lab.conf; host without a
+#            provisioner).
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
@@ -22,8 +23,9 @@ PROJECT="${LAB_PROJECT_OVERRIDE:-}"
 lab_project_paths "$PROJECT"
 
 # Most projects only ever use one backend, so the project declares it and the
-# argument is for the exception. Nothing declared is not permission to guess: a
-# lab in the wrong backend is provisioned, named and claimed before it shows.
+# argument is for the exception — and one with no provisioner has only host.
+# Otherwise nothing declared is not permission to guess: a lab in the wrong
+# backend is provisioned, named and claimed before it shows.
 WANT="${1:-$LAB_DEFAULT_BACKEND}"
 [ -n "$WANT" ] || { echo "lab-new: no backend given, and $PROJECT declares none (see $LAB_CONF)" >&2; exit 2; }
 BACKEND=$(lab_backend "$WANT") || { echo "lab-new: unknown backend '$WANT'" >&2; exit 2; }

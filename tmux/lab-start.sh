@@ -6,7 +6,7 @@
 # pane's cwd is what says which project, exactly as it does for the task
 # scripts. Creating the lab is the moment its backend is decided, and a
 # launchpad stands for no backend — so it comes from the argument, else the
-# caller pane's lab, else the project's declared default.
+# caller pane's lab, else the project's default.
 #
 # Usage: lab-start.sh <task-id> <prompt> [backend [claude-arg...]]
 #   backend     omit or leave empty to take the caller pane's lab, else the

@@ -29,10 +29,9 @@ lab_conf_load
 known() { lab_is_lab "$1" || [[ "$1" =~ ^[hdc]wt[0-9]+$ ]]; }
 
 names=""
-for key in $LAB_PROJECTS; do
-    checkout=$(lab_conf_key "$key" CHECKOUT)
-    prefix=$(lab_conf_key "$key" CONTAINER_PREFIX)
-
+# scan <checkout> <prefix> — the labs beside a checkout and under a prefix.
+scan() {
+    local checkout=$1 prefix=$2 d n c w
     if [ -n "$checkout" ]; then
         for d in "$checkout"-*; do
             [ -d "$d" ] || continue
@@ -51,7 +50,21 @@ for key in $LAB_PROJECTS; do
             known "$n" && names+="$n"$'\n'
         done < <(coder list --output json 2>/dev/null | jq -r '.[].name' 2>/dev/null | grep -F "$prefix" || true)
     fi
+    return 0
+}
+
+for key in $LAB_PROJECTS; do
+    scan "$(lab_conf_key "$key" CHECKOUT)" "$(lab_conf_key "$key" CONTAINER_PREFIX)"
 done
+
+# An undeclared repo has host labs only, beside its main checkout, and nothing
+# but a cwd inside the repo can say where that is.
+if here=$(lab_project_from_cwd); then
+    key=$(lab_project_key "$here")
+    if [ -z "$(lab_conf_key "$key" CHECKOUT)" ] && checkout=$(lab_cwd_checkout "$key" "$here"); then
+        scan "$checkout" ""
+    fi
+fi
 
 names=$(printf '%s' "$names" | sort -u)
 [ -n "$names" ] || exit 0

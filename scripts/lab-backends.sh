@@ -3,13 +3,12 @@
 #
 # The first line is the default — the M-j picker passes it without asking and
 # shows it in the preview, so what leads here is what Enter does. That is the
-# caller pane's lab, else the project's declared backend; the rest follow, for
+# caller pane's lab, else the project's default backend; the rest follow, for
 # the time it is the exception. A backend the project has no provisioner for is
 # left out: offering it is offering a failure at creation.
 #
-# Nothing at all when the project declares no backend. The recipes this feeds
-# cannot run outside a configured project anyway, and a list leading with some
-# backend would make one up.
+# Nothing at all when a project with a provisioner declares no backend — a list
+# leading with some backend would make one up — or outside any repo.
 #
 # Usage: lab-backends.sh
 set -uo pipefail
