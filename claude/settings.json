@@ -75,7 +75,6 @@
       "Bash(gh pr comment *)",
       "Bash(gh pr close *)",
       "Bash(gh pr merge *)",
-      "Bash(gh pr edit *)",
       "Bash(gh pr review *)",
       "Bash(gh pr ready *)",
       "Bash(gh pr reopen *)",
