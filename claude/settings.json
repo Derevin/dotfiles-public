@@ -92,7 +92,7 @@
       "Bash(fd *--exec*)"
     ]
   },
-  "model": "opus[1m]",
+  "model": "opus",
   "disableClaudeAiConnectors": true,
   "skillOverrides": {
     "artifact-capabilities": "off",
