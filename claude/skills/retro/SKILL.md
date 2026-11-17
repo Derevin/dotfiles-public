@@ -12,7 +12,7 @@ You are running a **retrospective**: mining a finished coding session for improv
 
 2. Read the session's primary sources. Default to the current session; if the user names another, find its transcript under `~/.claude/projects/`. Every finding cites the moment that motivates it: quote it, don't paraphrase a vibe.
 
-3. Resolve `<project>` with `find-project.sh`, then run `context-sync.sh` before reading the context store at `~/repos/context/<project>/`.
+3. Resolve `<project>` with `find-project.sh`, then run `context-sync.sh` before reading the context store at `~/repos/context/<project>/`. Two machine-local stores hold what no transcript shows; read their records for the session's branch: the local CI run log `~/.local/state/local-ci/<project>.jsonl` (one line per `local-ci` run: caller, per-hook result and duration) and review triage, `~/.claude/forks/*/scratch/reports/triage.md` (each review finding with its Apply/Drop/Ask verdict).
 
 4. Scan for candidates across the categories below.
 

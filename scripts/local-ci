@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Local CI: the current repo's prek hooks at the manual stage, run through uv.
+# Ours, not a hosted CI: nothing leaves the machine.
+#
+# Hooks with no `stages` run at every stage, manual included; hooks staged
+# `manual` run nowhere else, so a repo parks the checks too slow for a commit
+# there. A repo without a .pre-commit-config.yaml has no local CI (exit 3).
+#
+# Covers the files changed since the branch left its base (main/master, local
+# or origin), in the working tree, untracked included: agents run it before
+# committing. Output goes to a file, also streamed when stdout is a terminal.
+#
+# Every run appends one JSON line to $XDG_STATE_HOME/local-ci/<project>.jsonl
+# (default ~/.local/state): caller, branch, commit, per-hook result and
+# duration. Machine-local evidence for introspection, never for a handoff.
+set -uo pipefail
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "Run the repo's local CI (prek's manual stage over the branch); exit 0 green, 1 red, 3 none."
+    echo "Usage: [LOCAL_CI_CALLER=merge|agent] local-ci"
+    exit 0
+fi
+[ $# -eq 0 ] || { echo "local-ci: takes no arguments (see --help)" >&2; exit 2; }
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+top=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "local-ci: not in a git repo, no local CI" >&2; exit 3; }
+cd "$top" || exit 1
+[ -f .pre-commit-config.yaml ] || { echo "local-ci: no .pre-commit-config.yaml, no local CI" >&2; exit 3; }
+
+# Without jq the run log would be lost silently.
+command -v jq >/dev/null || { echo "local-ci: needs jq" >&2; exit 1; }
+
+project=$("$SCRIPT_DIR/find-project.sh" 2>/dev/null) || project=$(basename "$top")
+LOG="${XDG_STATE_HOME:-$HOME/.local/state}/local-ci/$project.jsonl"
+
+# Where the branch left its base: the latest fork point among the candidates,
+# so a stale local main doesn't drag upstream's changes into the file list.
+base=""
+for ref in refs/heads/main refs/heads/master refs/remotes/origin/HEAD \
+    refs/remotes/origin/main refs/remotes/origin/master; do
+    git rev-parse -q --verify "$ref^{commit}" >/dev/null || continue
+    mb=$(git merge-base "$ref" HEAD 2>/dev/null) || continue
+    if [ -z "$base" ] || git merge-base --is-ancestor "$base" "$mb"; then
+        base=$mb
+    fi
+done
+[ -n "$base" ] || base=HEAD
+
+mapfile -t files < <({
+    git diff --name-only --diff-filter=d "$base"
+    git ls-files --others --exclude-standard
+} | sort -u)
+
+# What was checked, read before the fixer hooks can touch the tree.
+branch=$(git symbolic-ref --short -q HEAD || echo detached)
+commit=$(git rev-parse HEAD)
+dirty=$([ -n "$(git status --porcelain)" ] && echo true || echo false)
+
+out=$(mktemp --suffix=.out "${TMPDIR:-/tmp}/local-ci-$project.XXXXXX")
+args=(run prek run --hook-stage manual --verbose --color=never)
+[ "${#files[@]}" -eq 0 ] || args+=(--files "${files[@]}")
+
+if [ -t 1 ]; then
+    uv "${args[@]}" 2>&1 | tee "$out"
+    rc=$?
+else
+    uv "${args[@]}" > "$out" 2>&1
+    rc=$?
+fi
+
+# One step per hook that ran: a status line, then its `- hook id:` and
+# `- duration:`. prek prints no id for a skipped hook, so a skip leaves no
+# step. Requiring the id line right after keeps a hook's own output that
+# happens to end in "Passed" out of the steps.
+steps=$(awk '
+    function emit() { if (id != "") printf "%s\t%s\t%s\n", id, res, ms; id = "" }
+    prev_res != "" && /^- hook id: / { emit(); id = substr($0, 12); res = prev_res; ms = ""; prev_res = ""; next }
+    id != "" && /^- duration: / { d = substr($0, 13); sub(/s$/, "", d); ms = int(d * 1000 + 0.5); emit(); next }
+    { emit(); prev_res = "" }
+    /\.\.\.(\([^)]*\))?Passed$/ { prev_res = "pass" }
+    /\.\.\.(\([^)]*\))?Failed$/ { prev_res = "fail" }
+    END { emit() }
+' "$out" | jq -Rsc '[split("\n")[] | select(. != "") | split("\t")
+    | {step: .[0], result: .[1]} + (if .[2] == "" then {} else {ms: (.[2] | tonumber)} end)]')
+
+result=$([ "$rc" -eq 0 ] && echo pass || echo fail)
+mkdir -p "$(dirname "$LOG")"
+jq -cn \
+    --arg ts "$(date -Iseconds)" \
+    --arg branch "$branch" \
+    --arg commit "$commit" \
+    --argjson dirty "$dirty" \
+    --arg caller "${LOCAL_CI_CALLER:-manual}" \
+    --arg result "$result" \
+    --argjson steps "$steps" \
+    '{ts: $ts, branch: $branch, commit: $commit, dirty: $dirty, caller: $caller,
+      result: $result, steps: $steps}' >> "$LOG"
+
+if [ "$rc" -eq 0 ]; then
+    rm -f "$out"
+    echo ">> local-ci: green"
+    exit 0
+fi
+# prek dying before any hook (bad config, not installed) leaves no red hook.
+red=$(jq -r '[.[] | select(.result == "fail") | .step] | first // "prek"' <<< "$steps")
+echo ">> local-ci: RED at $red, output: $out" >&2
+exit 1

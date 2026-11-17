@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# Unit tests for scripts/local-ci, against a fake `uv run prek`.
+# Usage: test-local-ci.sh
+set -uo pipefail
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "Run the local-ci unit tests."
+    echo "Usage: test-local-ci.sh"
+    exit 0
+fi
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$SCRIPT_DIR/test-lib.sh"
+CI="$SCRIPT_DIR/../scripts/local-ci"
+
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+export XDG_STATE_HOME="$TMP/state"
+export TMPDIR="$TMP/out" && mkdir -p "$TMPDIR"
+unset LOCAL_CI_CALLER
+
+# The fake uv records its argv and prints prek's verbose report for FAKE_MODE:
+# green (two hooks pass, one skips), red (the second hook fails) or dead (prek
+# never starts). prek names no id for a skipped hook and indents hook output.
+mkdir -p "$TMP/bin"
+cat > "$TMP/bin/uv" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$FAKE_ARGS"
+if [ "$FAKE_MODE" = dead ]; then
+    echo "error: Failed to spawn: \`prek\`" >&2
+    exit 2
+fi
+cat <<'OUT'
+check yaml...........................................(no files to check)Skipped
+fmt......................................................................Passed
+- hook id: fmt
+- duration: 0.54s
+
+  test result: ok. 3 passed.....................................Passed
+OUT
+if [ "$FAKE_MODE" = red ]; then
+    cat <<'OUT'
+cargo test...............................................................Failed
+- hook id: cargo-test
+- duration: 12.30s
+- exit code: 101
+
+  boom
+OUT
+    exit 1
+fi
+cat <<'OUT'
+cargo test...............................................................Passed
+- hook id: cargo-test
+- duration: 12.30s
+OUT
+EOF
+chmod +x "$TMP/bin/uv"
+export FAKE_ARGS="$TMP/args"
+export PATH="$TMP/bin:$PATH"
+
+git_q() { git "$@" >/dev/null 2>&1; }
+
+# A repo with a main branch and a task branch carrying committed, uncommitted,
+# untracked and deleted changes.
+REPO="$TMP/proj"
+mkdir -p "$REPO"
+cd "$REPO" || exit 1
+git_q init -b main
+git_q config user.email t@t
+git_q config user.name t
+echo repos: [] > .pre-commit-config.yaml
+echo base > untouched.txt
+echo base > doomed.txt
+echo base > edited.txt
+git_q add -A
+git_q commit -m base
+git_q switch -c task
+echo branch > committed.txt
+git rm -q doomed.txt
+git_q add -A
+git_q commit -m work
+echo dirty >> edited.txt
+echo new > untracked.txt
+
+LOG="$XDG_STATE_HOME/local-ci/proj.jsonl"
+last() { tail -n 1 "$LOG" | jq -r "$1"; }
+
+ok "help exits 0" "$("$CI" --help >/dev/null; echo $?)" 0
+
+FAKE_MODE=green LOCAL_CI_CALLER=agent "$CI" > "$TMP/stdout" 2>&1
+ok "green exits 0" "$?" 0
+ok "runs prek through uv" "$(sed -n 1,3p "$FAKE_ARGS" | paste -sd' ')" "run prek run"
+ok "runs the manual stage" "$(grep -c -x -- manual "$FAKE_ARGS")" 1
+ok "checks the branch's files, deletions out" \
+    "$(sed -n '/^--files$/,$p' "$FAKE_ARGS" | tail -n +2 | paste -sd' ')" \
+    "committed.txt edited.txt untracked.txt"
+ok "green logs one record" "$(wc -l < "$LOG")" 1
+ok "green record passes" "$(last .result)" pass
+ok "caller from LOCAL_CI_CALLER" "$(last .caller)" agent
+ok "branch recorded" "$(last .branch)" task
+ok "commit recorded" "$(last .commit)" "$(git rev-parse HEAD)"
+ok "a dirty tree is recorded" "$(last .dirty)" true
+ok "each hook that ran a step, hook output not" "$(last '[.steps[].step] | join(" ")')" "fmt cargo-test"
+ok "step results" "$(last '[.steps[].result] | join(" ")')" "pass pass"
+ok "durations in ms" "$(last '.steps[1].ms')" 12300
+ok "green prints one line" "$(wc -l < "$TMP/stdout")" 1
+ok "green leaves no output file" "$(find "$TMPDIR" -type f | wc -l)" 0
+
+FAKE_MODE=red "$CI" > "$TMP/stdout" 2>&1
+ok "red exits 1" "$?" 1
+ok "red record fails" "$(last .result)" fail
+ok "red step last" "$(last '.steps[-1] | "\(.step) \(.result)"')" "cargo-test fail"
+ok "unset caller is manual" "$(last .caller)" manual
+out=$(grep -o "$TMPDIR/[^ ]*" "$TMP/stdout")
+ok "red names the hook" "$(grep -c cargo-test "$TMP/stdout")" 1
+ok "red names its output file" "$(grep -c boom "$out")" 1
+
+FAKE_MODE=dead "$CI" > "$TMP/stdout" 2>&1
+ok "a runner that never starts is red" "$?" 1
+ok "red without a hook names prek" "$(grep -c 'RED at prek' "$TMP/stdout")" 1
+ok "and logs no steps" "$(last '.steps | length')" 0
+
+# On the base branch with a clean tree nothing is changed, yet CI still runs.
+git_q stash -u
+git_q switch main
+FAKE_MODE=green "$CI" >/dev/null 2>&1
+ok "base branch, clean: runs" "$?" 0
+ok "base branch, clean: no files" "$(sed -n '/^--files$/,$p' "$FAKE_ARGS" | tail -n +2 | wc -l)" 0
+
+# No config, no CI: exit 3, and nothing logged.
+NOCFG="$TMP/bare"
+mkdir -p "$NOCFG"
+git -C "$NOCFG" init -q
+before=$(wc -l < "$LOG")
+(cd "$NOCFG" && FAKE_MODE=green "$CI" >/dev/null 2>&1)
+ok "no config exits 3" "$?" 3
+ok "no config logs nothing" "$(wc -l < "$LOG")" "$before"
+
+report
