@@ -56,8 +56,10 @@ SubagentStart)
         }
     }'
 
-    # Opportunistic prune of long-settled entries.
+    # Opportunistic prune of long-settled entries. A review's triage and reports
+    # are kept for /retro, which reads them long after the fork closed.
     find "$ROOT" -maxdepth 1 -mindepth 1 -type d -mtime "+$RETAIN_DAYS" \
+        ! -exec test -e {}/scratch/reports/triage.md \; \
         -exec grep -lq '"status": *"closed"' {}/meta.json \; \
         -exec rm -rf {} + 2>/dev/null
     ;;

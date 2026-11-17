@@ -28,6 +28,8 @@ Run the deep review in isolation. You start cold, which is what makes this a bac
 
 4. **Apply that bucket.** Edit directly, in place. Don't commit — leave the changes in the working tree for the user to inspect.
 
-5. **Return.** Before listing anything, put every surviving item to one question: *is this the user's to decide, or mine?* Anything you could settle by reading further is yours. Most of the bucket fails this, and a review that returns no questions is a good review.
+5. **Record.** Write `triage.md` beside the reviewers' reports in your scratchpad's `reports/`: a header naming the branch, the commit (`git rev-parse HEAD`) and the task file, then one line per finding — verdict (Apply/Drop/Ask), perspective, `file:line`, the finding in a sentence. The registry keeps it after the fork closes, for later introspection; it stays out of your return.
+
+6. **Return.** Before listing anything, put every surviving item to one question: *is this the user's to decide, or mine?* Anything you could settle by reading further is yours. Most of the bucket fails this, and a review that returns no questions is a good review.
 
    Then the **Ask** bucket as a numbered list, each item `file:line — one-line description — proposed fix — strongest case against`. If the against-case is plainly stronger, the item was a **Drop** — resolve it there rather than returning it. Then one line for how many findings you applied and how many you dropped. Nothing else: no walk through the diff, no recap of the review.
