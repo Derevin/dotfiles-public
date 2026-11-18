@@ -12,13 +12,13 @@ Format each question like so:
 ```
 ❓ **Q<n>** <question as a clause> → **<recommendation>**, <why>
 
-<body: what backs the recommendation — facts found, costs, rejected options' downsides; omit when the headline carries everything>
+<body: the lettered options, if any; what backs the recommendation — facts found, costs, rejected options' downsides; omit when the headline carries everything>
 ```
 
 The headline is the **quickfire**: assume I read only the headlines, so each must be answerable without its body.
 
 - Name the concrete thing, not shorthand only the body explains.
-- When the question has lettered options, list them in the headline so a "3 b" reply works: `❓ **Q3** Fold cancel/stale into move? (a) delete both, (b) keep, (c) one-line wrappers → **(a)**, move is already the primitive`
+- Lettered options go in the body, never the headline. The headline names the pick by letter and meaning, so it still reads alone: `❓ **Q3** Fold cancel/stale into move? → **(a) delete both**, move is already the primitive`
 - The why is mandatory: the reason, not the recommendation reworded.
 
 A later message that changes a question or its recommendation restates that question's headline.
