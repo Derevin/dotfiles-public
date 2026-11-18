@@ -21,8 +21,10 @@ export TMPDIR="$TMP/out" && mkdir -p "$TMPDIR"
 unset LOCAL_CI_CALLER
 
 # The fake uv records its argv and prints prek's verbose report for FAKE_MODE:
-# green (two hooks pass, one skips), red (the second hook fails) or dead (prek
-# never starts). prek names no id for a skipped hook and indents hook output.
+# green (two hooks pass, one skips), red (the second hook fails), dead (prek
+# never starts) or workspace (red, nested configs: prek heads each project and
+# indents everything under it). prek names no id for a skipped hook and indents
+# hook output.
 mkdir -p "$TMP/bin"
 cat > "$TMP/bin/uv" <<'EOF'
 #!/usr/bin/env bash
@@ -30,6 +32,23 @@ printf '%s\n' "$@" > "$FAKE_ARGS"
 if [ "$FAKE_MODE" = dead ]; then
     echo "error: Failed to spawn: \`prek\`" >&2
     exit 2
+fi
+if [ "$FAKE_MODE" = workspace ]; then
+    cat <<'OUT'
+✓ sub
+  check yaml.........................................(no files to check)Skipped
+  fmt....................................................................Passed
+  - hook id: fmt
+  - duration: 0.54s
+× <workspace>
+  cargo test.............................................................Failed
+  - hook id: cargo-test
+  - duration: 12.30s
+  - exit code: 101
+
+    boom
+OUT
+    exit 1
 fi
 cat <<'OUT'
 check yaml...........................................(no files to check)Skipped
@@ -113,13 +132,18 @@ ok "red exits 1" "$?" 1
 ok "red record fails" "$(last .result)" fail
 ok "red step last" "$(last '.steps[-1] | "\(.step) \(.result)"')" "cargo-test fail"
 ok "unset caller is manual" "$(last .caller)" manual
-out=$(grep -o "$TMPDIR/[^ ]*" "$TMP/stdout")
-ok "red names the hook" "$(grep -c cargo-test "$TMP/stdout")" 1
-ok "red names its output file" "$(grep -c boom "$out")" 1
+ok "red prints prek's output" "$(grep -c boom "$TMP/stdout")" 1
+ok "red leaves no output file" "$(find "$TMPDIR" -type f | wc -l)" 0
+
+FAKE_MODE=workspace "$CI" > "$TMP/stdout" 2>&1
+ok "workspace red exits 1" "$?" 1
+ok "workspace steps" "$(last '[.steps[] | "\(.step) \(.result) \(.ms)"] | join(", ")')" \
+    "fmt pass 540, cargo-test fail 12300"
+ok "workspace red prints the project heads" "$(grep -c -e '^✓ sub$' -e '^× <workspace>$' "$TMP/stdout")" 2
 
 FAKE_MODE=dead "$CI" > "$TMP/stdout" 2>&1
 ok "a runner that never starts is red" "$?" 1
-ok "red without a hook names prek" "$(grep -c 'RED at prek' "$TMP/stdout")" 1
+ok "red prints the runner's error" "$(grep -c 'Failed to spawn' "$TMP/stdout")" 1
 ok "and logs no steps" "$(last '.steps | length')" 0
 
 # On the base branch with a clean tree nothing is changed, yet CI still runs.

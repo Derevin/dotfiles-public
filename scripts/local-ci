@@ -8,7 +8,8 @@
 #
 # Covers the files changed since the branch left its base (main/master, local
 # or origin), in the working tree, untracked included: agents run it before
-# committing. Output goes to a file, also streamed when stdout is a terminal.
+# committing. Green prints one line; red prints prek's whole output, streamed
+# as it runs when stdout is a terminal.
 #
 # Every run appends one JSON line to $XDG_STATE_HOME/local-ci/<project>.jsonl
 # (default ~/.local/state): caller, branch, commit, per-hook result and
@@ -73,11 +74,12 @@ fi
 # One step per hook that ran: a status line, then its `- hook id:` and
 # `- duration:`. prek prints no id for a skipped hook, so a skip leaves no
 # step. Requiring the id line right after keeps a hook's own output that
-# happens to end in "Passed" out of the steps.
+# happens to end in "Passed" out of the steps. A repo with nested configs
+# runs as a prek workspace, which indents all of it under per-project heads.
 steps=$(awk '
     function emit() { if (id != "") printf "%s\t%s\t%s\n", id, res, ms; id = "" }
-    prev_res != "" && /^- hook id: / { emit(); id = substr($0, 12); res = prev_res; ms = ""; prev_res = ""; next }
-    id != "" && /^- duration: / { d = substr($0, 13); sub(/s$/, "", d); ms = int(d * 1000 + 0.5); emit(); next }
+    prev_res != "" && /^ *- hook id: / { emit(); id = $0; sub(/^ *- hook id: /, "", id); res = prev_res; ms = ""; prev_res = ""; next }
+    id != "" && /^ *- duration: / { d = $0; sub(/^ *- duration: /, "", d); sub(/s$/, "", d); ms = int(d * 1000 + 0.5); emit(); next }
     { emit(); prev_res = "" }
     /\.\.\.(\([^)]*\))?Passed$/ { prev_res = "pass" }
     /\.\.\.(\([^)]*\))?Failed$/ { prev_res = "fail" }
@@ -98,12 +100,11 @@ jq -cn \
     '{ts: $ts, branch: $branch, commit: $commit, dirty: $dirty, caller: $caller,
       result: $result, steps: $steps}' >> "$LOG"
 
+[ "$rc" -eq 0 ] || [ -t 1 ] || cat "$out"
+rm -f "$out"
 if [ "$rc" -eq 0 ]; then
-    rm -f "$out"
     echo ">> local-ci: green"
     exit 0
 fi
-# prek dying before any hook (bad config, not installed) leaves no red hook.
-red=$(jq -r '[.[] | select(.result == "fail") | .step] | first // "prek"' <<< "$steps")
-echo ">> local-ci: RED at $red, output: $out" >&2
+echo ">> local-ci: RED" >&2
 exit 1
