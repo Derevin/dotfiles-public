@@ -58,7 +58,8 @@ commit=$(git rev-parse HEAD)
 dirty=$([ -n "$(git status --porcelain)" ] && echo true || echo false)
 
 out=$(mktemp --suffix=.out "${TMPDIR:-/tmp}/local-ci-$project.XXXXXX")
-args=(run prek run --hook-stage manual --verbose --color=never)
+# --locked: a uv.lock out of step with pyproject is red, never rewritten mid-run.
+args=(run --locked prek run --hook-stage manual --verbose --color=never)
 [ "${#files[@]}" -eq 0 ] || args+=(--files "${files[@]}")
 
 if [ -t 1 ]; then

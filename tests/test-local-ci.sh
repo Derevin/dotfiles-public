@@ -91,7 +91,7 @@ ok "help exits 0" "$("$CI" --help >/dev/null; echo $?)" 0
 
 FAKE_MODE=green LOCAL_CI_CALLER=agent "$CI" > "$TMP/stdout" 2>&1
 ok "green exits 0" "$?" 0
-ok "runs prek through uv" "$(sed -n 1,3p "$FAKE_ARGS" | paste -sd' ')" "run prek run"
+ok "runs prek through uv, lock untouched" "$(sed -n 1,4p "$FAKE_ARGS" | paste -sd' ')" "run --locked prek run"
 ok "runs the manual stage" "$(grep -c -x -- manual "$FAKE_ARGS")" 1
 ok "checks the branch's files, deletions out" \
     "$(sed -n '/^--files$/,$p' "$FAKE_ARGS" | tail -n +2 | paste -sd' ')" \
