@@ -10,18 +10,18 @@ Work the tree in **rounds**. The **frontier** is every decision whose prerequisi
 Format each question like so:
 
 ```
-❓ **Q<n>** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
+❓ **Q<n>** <question as a clause> → **<recommendation>**, <why>
 
-➡️ <your recommended answer>
+<body: what backs the recommendation — facts found, costs, rejected options' downsides; omit when the headline carries everything>
 ```
 
-Close each round with a **quickfire** recap — one line per question in it, enough to answer from without scrolling back to the full question:
+The headline is the **quickfire**: assume I read only the headlines, so each must be answerable without its body.
 
-```
-Q<n>: <question as a clause> → <recommendation>, <why>
-```
+- Name the concrete thing, not shorthand only the body explains.
+- When the question has lettered options, list them in the headline so a "3 b" reply works: `❓ **Q3** Fold cancel/stale into move? (a) delete both, (b) keep, (c) one-line wrappers → **(a)**, move is already the primitive`
+- The why is mandatory: the reason, not the recommendation reworded.
 
-e.g. `Q4: Does the cache own eviction, or the caller? → the cache, callers only read`
+A later message that changes a question or its recommendation restates that question's headline.
 
 Each round's answers reshape the tree — settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a *later* round, not this one.
 
