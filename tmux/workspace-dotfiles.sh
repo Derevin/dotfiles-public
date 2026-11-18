@@ -129,7 +129,7 @@ fi
 # dotfiles queue would otherwise be invisible, and outside it the second column
 # is the same project and collapses away.
 if [[ -d ~/repos/tasks ]] && command -v taskania >/dev/null; then
-    tmux send-keys -t "$P2" "taskania --with dotfiles" Enter
+    tmux send-keys -t "$P2" "taskania --watch --with dotfiles" Enter
 fi
 
 # Extra-repo mode: bottom-right pane runs claude in the given repo. Also a host
