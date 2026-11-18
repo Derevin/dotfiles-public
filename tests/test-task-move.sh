@@ -112,6 +112,9 @@ ok "leaving stale strips it too" "$(wcount planned "$T")" 0
 seed active
 run task-move.sh "$T" stale
 ok "landing in stale keeps it" "$(wcount stale "$T")" 1
+seed stale
+run task-move.sh "$T" canceled
+ok "canceling strips it" "$(wcount canceled "$T")" 0
 
 # --- refusals change nothing -----------------------------------------------------
 

@@ -89,14 +89,14 @@ for suffix in "" ".md"; do
     ok "done takes $what" "$(at done "$T")" y
 
     next todo
-    run task-cancel.sh "$T$suffix"
+    run task-move.sh "$T$suffix" canceled
     ok "cancel takes $what" "$(at canceled "$T")" y
 
     # stale round-trip: active -> stale keeps the worker (the lab lives on next
     # to it); stale -> active resumes without doubling the Worker: line.
     next planned
     run task-claim.sh "$T$suffix"
-    run task-stale.sh "$T$suffix"
+    run task-move.sh "$T$suffix" stale
     ok "stale takes $what" "$(at stale "$T")" y
     ok "stale keeps worker ($what)" "$(worker stale "$T")" main
     run task-claim.sh "$T$suffix"
@@ -105,12 +105,12 @@ for suffix in "" ".md"; do
         "$(grep -c '^Worker: ' "$TASKS/active/$T.md" 2>/dev/null)" 1
 
     # a lab renamed while its task sits stale carries the Worker: with it
-    run task-stale.sh "$T$suffix"
+    run task-move.sh "$T$suffix" stale
     run task-restamp.sh "$T$suffix" hlab-7
     ok "restamp reaches stale/ ($what)" "$(worker stale "$T")" hlab-7
 
     # cancel reaches a stale task directly, no resume first
-    run task-cancel.sh "$T$suffix"
+    run task-move.sh "$T$suffix" canceled
     ok "cancel reaches stale/ ($what)" "$(at canceled "$T")" y
 done
 

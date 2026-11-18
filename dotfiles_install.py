@@ -60,9 +60,7 @@ COMMON = [
     ("scripts/task-list.sh", ".local/bin/task-list.sh"),
     ("scripts/task-claim.sh", ".local/bin/task-claim.sh"),
     ("scripts/task-done.sh", ".local/bin/task-done.sh"),
-    ("scripts/task-cancel.sh", ".local/bin/task-cancel.sh"),
     ("scripts/task-unclaim.sh", ".local/bin/task-unclaim.sh"),
-    ("scripts/task-stale.sh", ".local/bin/task-stale.sh"),
     ("scripts/task-move.sh", ".local/bin/task-move.sh"),
     ("scripts/task-restamp.sh", ".local/bin/task-restamp.sh"),
     ("scripts/task-next-id.sh", ".local/bin/task-next-id.sh"),
@@ -161,6 +159,8 @@ REMOVED = [
     ".local/bin/lab-split.sh",
     ".local/bin/overview.sh",
     ".local/bin/task-watch.sh",
+    ".local/bin/task-cancel.sh",
+    ".local/bin/task-stale.sh",
 ]
 
 # Sibling repos under ~/repos are declared in each layer's repos.conf (shared
