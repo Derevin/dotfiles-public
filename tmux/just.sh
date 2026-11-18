@@ -149,11 +149,11 @@ lab_pane_busy() {
 }
 
 # Is a host pane busy? pane_current_command names the foreground process, and
-# that name is "bash" both for an idle shell and for a bash script running in it
-# (a workspace pane's task-watch.sh, say), where send-keys would be swallowed by
-# the running program. The tty's foreground process group separates the two: an
-# idle shell owns it, a foreground child does not. tpgid is the 6th field past
-# the comm, stripped first because a comm can itself hold spaces and parens.
+# that name is "bash" both for an idle shell and for a bash script running in
+# it, where send-keys would be swallowed by the running program. The tty's
+# foreground process group separates the two: an idle shell owns it, a
+# foreground child does not. tpgid is the 6th field past the comm, stripped
+# first because a comm can itself hold spaces and parens.
 # Where procfs can't answer (Git Bash), report idle so the command-name check
 # stands as the only signal.
 pane_busy() {

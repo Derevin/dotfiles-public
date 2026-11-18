@@ -2,9 +2,9 @@
 # Dotfiles workspace: claude on left, live task list over a terminal on the
 # right, sync strip on top.
 #
-# The top-right pane is parked in the workspace's own repo and runs
-# task-watch.sh, a live queue view: the pane is rarely typed in, and Ctrl-C
-# leaves a shell there when it is.
+# The top-right pane is parked in the workspace's own repo and runs Taskania,
+# the live task dashboard: the pane is rarely typed in, and Ctrl-C leaves a
+# shell there when it is.
 #
 # Optional args: <extra-repo-path> [window-name] [claude-name]. When given, both
 # right-hand panes are rooted in that repo, the bottom one runs its own claude
@@ -123,12 +123,13 @@ else
     tmux send-keys -t "$P1" "claude-update.sh --wait-host $T0 && $(lab_claude_cmd dotfiles "$CONT")" Enter
 fi
 
-# Guarded on the tasks repo: a clone without it keeps a plain shell here.
-# --with is unconditional: in extra-repo mode this pane is parked in that repo
-# and the dotfiles queue would otherwise be invisible, and outside it the
-# second column is the same project and collapses away.
-if [[ -d ~/repos/tasks ]]; then
-    tmux send-keys -t "$P2" "task-watch.sh --with dotfiles" Enter
+# Guarded on the tasks repo and Taskania, which ships only as a private Linux
+# binary: Git Bash and a public clone keep a plain shell here. --with is
+# unconditional: in extra-repo mode this pane is parked in that repo and the
+# dotfiles queue would otherwise be invisible, and outside it the second column
+# is the same project and collapses away.
+if [[ -d ~/repos/tasks ]] && command -v taskania >/dev/null; then
+    tmux send-keys -t "$P2" "taskania --with dotfiles" Enter
 fi
 
 # Extra-repo mode: bottom-right pane runs claude in the given repo. Also a host

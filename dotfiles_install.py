@@ -58,7 +58,6 @@ COMMON = [
     ("scripts/lab-lib.sh", ".local/bin/lab-lib.sh"),
     ("scripts/pane-lib.sh", ".local/bin/pane-lib.sh"),
     ("scripts/task-list.sh", ".local/bin/task-list.sh"),
-    ("scripts/task-watch.sh", ".local/bin/task-watch.sh"),
     ("scripts/task-claim.sh", ".local/bin/task-claim.sh"),
     ("scripts/task-done.sh", ".local/bin/task-done.sh"),
     ("scripts/task-cancel.sh", ".local/bin/task-cancel.sh"),
@@ -161,6 +160,7 @@ REMOVED = [
     ".local/bin/wt-cleanup.sh",
     ".local/bin/lab-split.sh",
     ".local/bin/overview.sh",
+    ".local/bin/task-watch.sh",
 ]
 
 # Sibling repos under ~/repos are declared in each layer's repos.conf (shared
