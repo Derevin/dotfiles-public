@@ -9,9 +9,6 @@
 export EDITOR=micro
 export VISUAL=micro
 
-# Taskania's repo-to-project map lives here, not in its default $TASKS_ROOT
-export TASKANIA_PROJECTS_CONF=~/repos/dotfiles/projects.conf
-
 # Rust (rustup)
 [[ -f ~/.cargo/env ]] && . ~/.cargo/env
 
