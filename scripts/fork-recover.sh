@@ -11,7 +11,8 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo "  --all          every project, not just this directory"
     echo "  --session ID   only forks of that parent session"
     echo "  --idle SECS    transcript silence before STALE (default 300)"
-    echo "  AGENT_ID       full detail: scratchpad, transcript trail, last words"
+    echo "  AGENT_ID       full detail: scratchpad, transcript trail, last words;"
+    echo "                 for a Codex run, the command that resumes it"
     echo "  --tokens       what returned forks kept out of the caller's context"
     echo "  --prune        drop settled entries"
     echo
@@ -147,6 +148,19 @@ if [ -n "$TARGET" ]; then
     else
         echo
         echo "=== scratchpad: empty (fork wrote nothing) ==="
+    fi
+
+    # A Codex run's transcript is its rollout, which Codex itself resumes from.
+    if [ "$(jq -r '.agent_type // empty' "$meta" 2>/dev/null)" = codex ]; then
+        sid=$(jq -r '.codex_session_id // empty' "$meta" 2>/dev/null)
+        echo
+        if [ -n "$sid" ]; then
+            echo "=== resume ==="
+            echo "  codex exec resume $sid"
+        else
+            echo "=== no Codex session recorded: nothing to resume, the reason is in scratch/stderr.log ==="
+        fi
+        exit 0
     fi
 
     tr_path=$(jq -r '.fork_transcript // empty' "$meta" 2>/dev/null)
