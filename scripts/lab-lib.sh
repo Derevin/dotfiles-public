@@ -129,8 +129,8 @@ lab_backend_letter() {
   esac
 }
 
-# lab_head <name> — the worker stamp and Claude label: <b>lab-<id> for a claimed
-# lab, the whole name for an anonymous one. Legacy fixtures are already heads.
+# lab_head <name> — the Claude label: <b>lab-<id> for a claimed lab, the whole
+# name for an anonymous one. Legacy fixtures are already heads.
 lab_head() {
   local name=$1
   if [[ "$name" =~ ^([hdc]lab-[0-9]{3})- ]]; then
@@ -200,9 +200,8 @@ lab_strip_prefix() {
   printf '%s' "$1"
 }
 
-# lab_current — the lab the caller is standing in, or nothing. The head that
-# detect_worker returns is deliberately not the whole name, and the whole name is
-# what lab-drop.sh and lab-attach.sh take, so this is the other half.
+# lab_current — the lab the caller is standing in, or nothing: the whole name,
+# which is what lab-drop.sh and lab-attach.sh take.
 lab_current() {
   if [ -n "${CODER_WORKSPACE_NAME:-}" ]; then lab_strip_prefix "$CODER_WORKSPACE_NAME"; return 0; fi
   if [ -n "${LAB_NAME:-}" ]; then printf '%s' "$LAB_NAME"; return 0; fi
@@ -297,7 +296,7 @@ lab_resolve() {
   lab_project_load "$key" "$from_cwd" || return 1
   # The project NAME (not the key) indexes ~/repos/tasks and the state file, and
   # the key is lossy — uppercased with separators flattened. Ask find-project.sh
-  # in the checkout, which is what task-lib.sh answers with inside the lab. It is
+  # in the checkout, which agrees with taskania inside the lab. It is
   # a pure function of the checkout, and it forks a bash per call on paths as hot
   # as every pane spawn and every popup keypress, so it is answered once — and
   # not at all when the cwd already gave it.
@@ -624,14 +623,14 @@ lab_state_rows() {
 
 # --- tasks ------------------------------------------------------------------
 
-# Through TASKS_ROOT, so relocating the queue moves lab_task_find and the task
-# scripts together — two roots that can disagree would let a claim restamp a
-# same-numbered task in the other tree.
+# Through TASKS_ROOT, so relocating the queue moves lab_task_find and taskania
+# together — two roots that can disagree would name a lab after a task taskania
+# does not see.
 LAB_TASKS_ROOT="${LAB_TASKS_ROOT:-${TASKS_ROOT:-$HOME/repos/tasks}}"
 
 # lab_task_find <project> <id> [dir...] — the task path for a bare 3-digit id.
 # Ids repeat across projects and the letter prefix is priority
-# (task-reprioritize.sh rewrites it), so the glob matches on the digits alone.
+# (taskania reprioritize rewrites it), so the glob matches on the digits alone.
 # More than one hit is an error: nothing here may guess which task a lab is for.
 # Exits 1 for "none" and 2 for "ambiguous" — a caller that treats a missing task
 # as permission to proceed must not read an unresolved one the same way.

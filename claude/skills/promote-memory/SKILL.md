@@ -49,7 +49,7 @@ For each memory file, decide target kind:
 
 Disambiguation:
 - **CLAUDE.md vs done task** — CLAUDE.md is forward-looking behavior; done task is backward-looking archive of an event or recipe.
-- **CLAUDE.md vs CONTEXT.md** — CLAUDE.md is *how to behave*; CONTEXT.md is *what things mean*. "Use `task-commit.sh`, not raw git" → CLAUDE.md. "An **Order** is a customer's request to purchase" → CONTEXT.md.
+- **CLAUDE.md vs CONTEXT.md** — CLAUDE.md is *how to behave*; CONTEXT.md is *what things mean*. "Use `taskania commit`, not raw git" → CLAUDE.md. "An **Order** is a customer's request to purchase" → CONTEXT.md.
 
 ## Propose
 
@@ -57,7 +57,7 @@ Present each promote candidate with:
 
 - source memory file
 - target file (proposed via the heuristic; user can override)
-- **target location** within that file — for CLAUDE.md, existing section by topic match or new section name; for CONTEXT.md, the `## Language` subsection (or relationships); for ADR, the proposed `NNNN-slug.md` filename; for done task, the proposed `<letter><NNN>-<slug>.md` filename (get next ID via `task-next-id.sh <project>`). User must confirm or override.
+- **target location** within that file — for CLAUDE.md, existing section by topic match or new section name; for CONTEXT.md, the `## Language` subsection (or relationships); for ADR, the proposed `NNNN-slug.md` filename; for done task, the proposed `<letter><NNN>-<slug>.md` filename (get next ID via `taskania next-id --project <project>`). User must confirm or override.
 - terse target-style prose to insert — rewrite memory body in the host file's voice:
   - CLAUDE.md: telegraphic, no Why/How structure
   - CONTEXT.md: one-sentence "what it IS", no rationale
@@ -79,7 +79,7 @@ Wait for user confirmation. User can skip items, override target file, change se
 2. **Context-store edits (CONTEXT.md / ADR)** — write via Edit/Write. Commit each via `context-commit.sh "<message>"` immediately after the write:
    - term added/updated: `<project>: term — <term>`
    - ADR created: `<project>: adr — <slug>`
-3. **Tasks repo edits** — write via Write. Commit via `task-commit.sh "Done: <slug> [<worker>]"` (`<worker>` = worktree suffix or `main`). Multiple files per run: a single `task-commit.sh` call with a freeform message ("Archive X + Y") since the script does `git add -A` — splitting requires raw git.
+3. **Tasks repo edits** — write via Write. Commit via `taskania commit "Done: <slug>"`. Multiple files per run: a single `taskania commit` call with a freeform message ("Archive X + Y") since it commits everything changed — splitting requires raw git.
 4. **Purges** — delete the memory file AND remove its line from MEMORY.md index. Leave commit to the user.
 
 Report changes grouped: CLAUDE.md edits, context-store edits (with commit hashes), tasks edits (with commit hashes), purges.

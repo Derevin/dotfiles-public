@@ -68,9 +68,9 @@ When fixing bugs or implementing new features in a project that has tests: write
 
 Task data lives in `~/repos/tasks/` — personal, not shared with collaborators. Don't reference task IDs or contents in PRs, commits, or any external comms. See its CLAUDE.md for conventions (naming, priorities, format, claiming). Don't auto-complete on PR merge — user's call.
 
-Task scripts are on PATH — invoke them directly, never with a `~/repos/tasks/` prefix. **All state changes (claim/complete/cancel/move) go through the task scripts, never `git mv` or `mv` by hand.** They handle the commit message + remote sync atomically; manual moves leave the repo out of sync with origin.
+Listing tasks and every state change (claim/complete/cancel/move) go through `taskania <verb>`; `taskania --help` lists the verbs. **Never `git mv` or `mv` task files by hand** — the verbs commit and push; a manual move leaves the repo out of sync with origin.
 
-Verify pwd before any task script — project (via `find-project.sh`) and worker both derive from it; wrong cwd → wrong project listed or wrong worker stamped.
+Verify pwd before any `taskania` call — the project derives from it; wrong cwd → wrong project. `--project NAME` names another (not on `commit` or `project`).
 
 ## Context store
 

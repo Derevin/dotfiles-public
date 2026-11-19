@@ -1,22 +1,22 @@
 ---
-allowed-tools: Bash(task-*),Read(~/repos/tasks/**)
+allowed-tools: Bash(taskania *),Read(~/repos/tasks/**)
 description: Pick the next groomed task from planned/ and implement it
 disable-model-invocation: true
 ---
 
 Pick a groomed task from `planned/` and implement it from its snapshotted plan. The task file plus the context store is your entire brief.
 
-1. **List.** Run `task-list.sh --status planned` to see groomed tasks (highest priority first). Skip when an id was given.
+1. **List.** Run `taskania list --status planned` to see groomed tasks (highest priority first). Skip when an id was given.
 
 2. **Pick.** An id in the arguments (`039`, `039-some-slug`, or the filename `N039-some-slug`) names the task: resolve it to the filename in `planned/` and go straight to step 3. Otherwise take the first one, or the one the user names.
 
-3. **Claim.** Run `task-claim.sh <filename>` — syncs, moves planned/ → active/, stamps you as worker, outputs task content.
+3. **Claim.** Run `taskania claim <filename>` — syncs, moves planned/ → active/, commits, outputs task content.
 
 4. **Orient.** Read the task file — the recorded plan and status sections are your brief. Read the referenced CONTEXT.md / ADRs. If the brief has a genuine gap that blocks implementation, surface it to the user before writing code rather than guessing — a well-groomed task shouldn't have one, so a gap is a signal worth raising.
 
 5. **Implement.** Invoke `/forkwc-implement`. The fork it dispatches takes the plan, the orientation above, and any steer the user has given from this conversation, implements the plan, proves the tests red-green, and returns the decisions the diff can't show. The reading and build output stay behind in the fork, so the review and handoff below run on a context that carries no implementation baggage. If it returns a question instead of an implementation, the plan had a gap — take it to the user, then dispatch again. If it returns local CI red, take that to the user too instead of starting review.
 
-6. **Deep review.** As a backstop, invoke `/fork-review` — a multi-perspective fan-out over the diff, run in its own fork with the Apply/Drop/Ask gate applied inside it. It comes in cold and returns only the judgment calls that survived, so carry those to the handoff. Hand it nothing: reviewing the diff on its own terms is what makes it an independent check.
+6. **Deep review.** As a backstop, invoke `/fork-review` — a multi-perspective fan-out over the diff, run in its own fork with the Apply/Drop/Ask gate applied inside it. It comes in cold and returns only the judgment calls that survived, so carry those to the handoff. Pass it the task filename and nothing else: reviewing the diff on its own terms is what makes it an independent check.
 
 7. **Local CI.** The review edited a branch the implement step left green, so run `LOCAL_CI_CALLER=agent local-ci` once more. Exit 3: the project has no local CI, skip this step. Green prints one line, red prints prek's whole output. Red: a fix round — invoke `/forkwc-implement` with that output as the plan (a fix that changes no behaviour owes no new test), then rerun. Never fix inline. Still red after two rounds: hand off anyway.
 

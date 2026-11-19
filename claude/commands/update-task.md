@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(task-*),Bash(git *),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
+allowed-tools: Bash(taskania *),Bash(git *),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
 description: Refresh the claimed task file with current state. Reached by the fork that `/forkwc-update-task` spawns.
 user-invocable: false
 ---
@@ -10,9 +10,9 @@ Only the fork that `/forkwc-update-task` spawns runs this. Reached any other way
 
 Write it self-sufficient. Whoever picks this up gets this file and the context store, nothing else: the plan, the affected files, and any gotchas explicit. A terse jog-my-memory note doesn't survive a cold handoff. Where the file's original body contradicts what was agreed in this conversation, rewrite it rather than leaving both.
 
-1. **Find.** Run `task-list.sh --status active planning`. The first two lines are `Tasks: <project>` and `Worker: <worker>`. Filter rows to those with `[worker]` matching `Worker:`. If not exactly one match, stop and report.
+1. **Find.** The task is the one this conversation claimed. Its file is `~/repos/tasks/<project>/<status>/<filename>`: `<project>` from `taskania project`, `<status>` the directory the claim moved it to (`planning/` or `active/`).
 
-2. **Read.** Read the task file at `~/repos/tasks/<project>/<status>/<filename>` (status per the section it was listed under) so you know its existing structure (sections, prior status notes, user-written Context).
+2. **Read.** Read the task file so you know its existing structure (sections, prior status notes, user-written Context).
 
 3. **Ground.** Run `git log --oneline -20` and `git status` so the update reflects committed work + in-flight changes, not just conversation memory.
 
@@ -22,6 +22,6 @@ Write it self-sufficient. Whoever picks this up gets this file and the context s
    - **Capture the resume breadcrumb**: branch name, commands to re-enter the loop, gotchas surfaced this session, anything a cold reader would otherwise miss.
    - **Do NOT** add `## Resolution` — that's for `/complete-task`.
 
-5. **Commit.** Run `task-commit.sh "Update: <slug> [<worker>]"`.
+5. **Commit.** Run `taskania commit "Update: <slug>"`.
 
 **Return** one line: that the file is written, and its path. Whoever called this agreed the plan and doesn't need it read back.

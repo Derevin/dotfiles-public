@@ -129,10 +129,4 @@ for d in "${STRANDED[@]}"; do
     cp -an "$d/." "$NEW_PROJ/" 2>/dev/null || true
 done
 
-# Still in the queue → mark it ours, the stamp a claim would set. Gone to done or
-# canceled → nothing to stamp, and recovery does not reopen it.
-if TASK_PATH=$(lab_task_find "$PROJECT" "$ID" 2>/dev/null); then
-    (cd "$LAB_CHECKOUT" && task-restamp.sh "$(basename "$TASK_PATH")" "$(lab_head "$NAME")") >/dev/null 2>&1 || true
-fi
-
 exec lab-attach.sh --pane "$CALLER" "$NAME" --continue

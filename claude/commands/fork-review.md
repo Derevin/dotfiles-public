@@ -4,6 +4,7 @@ context: fork
 background: false
 agent: general-purpose
 effort: medium
+argument-hint: [task-filename]
 ---
 
 Run the deep review in isolation. You start cold, which is what makes this a backstop rather than a second lap: the task file, the context store, and the diff are on disk, and nothing else should sway you. The diff you fetch, the reports you collect, and the fixes you apply all die with this fork. Only what you return survives.
@@ -14,7 +15,7 @@ Run the deep review in isolation. You start cold, which is what makes this a bac
 
 **You are already a fork.** Don't invoke another fork command (`/fork-*`, `/forkwc-*`) — that spawns a run nobody is waiting on, editing the same tree the caller is about to push. And a background-task notification is not an answer: it carries no user input, whatever you asked before you stopped. Once you have returned you are done — stay stopped, and leave no background command running to wake you.
 
-1. **Find.** Run `task-list.sh --status active`. The first two lines are `Tasks: <project>` and `Worker: <worker>`; take the row whose `[worker]` matches. That's the task the diff is meant to satisfy. Resolve `<project>` via `find-project.sh` to reach the context store at `~/repos/context/<project>/`.
+1. **Find.** The argument is the filename of the task the diff is meant to satisfy. The task file is under `~/repos/tasks/<project>/active/`, `<project>` from `taskania project`; the context store is at `~/repos/context/<p>/`, `<p>` from `find-project.sh`. No argument: there is no task file, review the diff on its own.
 
 2. **Review.** Invoke `/review-branch`. If a converge loop ran before you, treat it as unrelated: you are the independent backstop, and what it dropped is deliberately not yours to know. Don't skip a perspective because something upstream already called the diff clean.
 

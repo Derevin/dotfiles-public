@@ -1,16 +1,16 @@
 ---
-allowed-tools: Bash(task-*),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
+allowed-tools: Bash(taskania *),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
 description: Pick the next todo task, grill it to an agreed plan, and park it in planned/
 disable-model-invocation: true
 ---
 
 Groom the next task: pick it, grill it to an agreed plan, snapshot that plan, and park it in `planned/` — stopping at the agreed plan, not implementing. An implementer picks it up later via `/implement-task`, possibly in another pane with no access to this conversation — so the snapshot must stand on its own.
 
-1. **List.** Run `task-list.sh --status todo` to see available tasks. Skip when an id was given.
+1. **List.** Run `taskania list --status todo` to see available tasks. Skip when an id was given.
 
-2. **Pick.** An id in the arguments (`039`, `039-some-slug`, or the filename `N039-some-slug`) names the task: resolve it to the filename in `todo/` and go straight to step 3. Otherwise take the first one (highest priority). If it has `Depends:`, check if those IDs exist in done/ (use `task-list.sh --status done` or read the file).
+2. **Pick.** An id in the arguments (`039`, `039-some-slug`, or the filename `N039-some-slug`) names the task: resolve it to the filename in `todo/` and go straight to step 3. Otherwise take the first one (highest priority). If it has `Depends:`, check if those IDs exist in done/ (use `taskania list --status done` or read the file).
 
-3. **Claim.** Run `task-claim.sh <filename>` — syncs, moves to planning/, commits, and outputs task content.
+3. **Claim.** Run `taskania claim <filename>` — syncs, moves to planning/, commits, and outputs task content.
 
 4. **Frame.** Read the task file. Either path ends with a framing the user wrote. A pre-written body is *additional context*, never the spec — an agent likely wrote it and nobody has verified it since.
    - **Reminder-only task** (just `# Title`, no real body): you have zero context. Do NOT explore the codebase, propose a plan, or guess intent. Your only permitted response is to ask the user what the task is about. Their answer is the body — skip the recap, they just told you.
@@ -24,6 +24,6 @@ Groom the next task: pick it, grill it to an agreed plan, snapshot that plan, an
 
 8. **Snapshot.** Invoke `/forkwc-update-task`: it inherits the grill and records the agreed plan as a self-sufficient brief, then returns one line. The git reads, the file re-reads, and the commit die in the fork.
 
-9. **Cold-read.** Invoke `/fork-cold-read`: forked, it puts a context-free reader on the brief and returns the gaps that survive triage. The reader's report and the triage stay in the fork. Answer each returned gap into the task file yourself — the fork returns questions rather than filling them because you hold the grill and it doesn't. Leave those edits uncommitted; `task-planned.sh` sweeps them into the park commit. A gap you can't answer means the plan wasn't final after all: take it to the user, then run the cold read again.
+9. **Cold-read.** Invoke `/fork-cold-read`, passing the task filename as its argument: forked, it puts a context-free reader on the brief and returns the gaps that survive triage. The reader's report and the triage stay in the fork. Answer each returned gap into the task file yourself — the fork returns questions rather than filling them because you hold the grill and it doesn't. Leave those edits uncommitted; `taskania planned` sweeps them into the park commit. A gap you can't answer means the plan wasn't final after all: take it to the user, then run the cold read again.
 
-10. **Park.** Run `task-planned.sh <filename>` to move the task into `planned/` (this strips the worker — the task is now unowned and groomed). Stop there: do NOT implement, do NOT run `/complete-task`. Tell the user it's parked in `planned/`, ready for `/implement-task`.
+10. **Park.** Run `taskania planned <filename>` to move the task into `planned/`. Stop there: do NOT implement, do NOT run `/complete-task`. Tell the user it's parked in `planned/`, ready for `/implement-task`.

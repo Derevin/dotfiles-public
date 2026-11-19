@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Print the lab the caller is standing in. Nothing, and a non-zero exit, outside
-# one. Complements the task scripts' worker stamp, which is the head only.
+# one.
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then

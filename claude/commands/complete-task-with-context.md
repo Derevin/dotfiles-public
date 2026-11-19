@@ -1,18 +1,19 @@
 ---
-allowed-tools: Bash(task-*),Bash(lab-current.sh),Bash(git *),Bash(gh *),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
-description: Mark current task as completed
+allowed-tools: Bash(taskania *),Bash(task-cleanup-branch.sh),Bash(lab-current.sh),Bash(git *),Bash(gh *),Read(~/repos/tasks/**),Edit(~/repos/tasks/**)
+description: Mark a task as completed — the argument, else the lab's own
+argument-hint: [task]
 disable-model-invocation: true
 ---
 
-Complete the current active task.
+Complete one active task.
 
-1. **Find.** Run `task-list.sh --status active` to find active task(s). If multiple, ask which.
+1. **Find.** The task id comes from the argument (`055`, `055-some-slug`, `N055-some-slug`), else from the lab name `lab-current.sh` prints (`hlab-055-…` → `055`). Its filename is the matching line of `taskania list --status active --ids`. No match: ask the user which.
 
 2. **PR check.** Run `gh pr view --json state -q .state` for the current branch. If a PR exists and its state is not `MERGED`, stop and tell the user. If no PR exists, continue.
 
 3. **Resolve.** Read the task file. Append a `## Resolution` section: brief summary, branch name (from `git branch --show-current`), PR link if any.
 
-4. **Done.** Run `task-done.sh <filename>` — moves to done, commits, pushes.
+4. **Done.** Run `taskania done <filename>` — moves to done, commits, pushes.
 
 5. **Cleanup.** Run `task-cleanup-branch.sh` — detaches to `origin/<base>` and deletes the task branch. Refuses if PR isn't merged or if not on a branch.
 

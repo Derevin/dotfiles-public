@@ -30,17 +30,18 @@ config leans on for diagnostics in place of the built-in linter — that needs
 - `alacritty/`, `windows-terminal/` — terminal config per platform
 - `micro/` — the micro editor
 - `claude/` — global Claude Code config: `CLAUDE.md`, skills, commands
-- `scripts/` — workflow tooling (sync, project resolution, a task queue, a context store)
+- `scripts/` — workflow tooling (sync, project resolution, a context store)
 - `just/justfile` — global `just` recipes
 - `docs/` — gotchas worth reading first
 
 ## Task queue & context store
 
-Some shipped scripts and skills (`task-*.sh`, `context-*.sh`, `/list-tasks`,
-`/plan-task`) drive two personal, file-based systems kept in **separate** repos
-(not included here):
+Some shipped scripts and commands (`context-*.sh`, `/list-tasks`, `/plan-task`)
+drive two personal, file-based systems kept in **separate** repos (not included
+here):
 
-- **Tasks** — a markdown task queue under `~/repos/tasks/<project>/`.
+- **Tasks** — a markdown task queue under `~/repos/tasks/<project>/`, driven by
+  [taskania](https://github.com/Derevin/taskania), installed separately.
 - **Context** — per-project glossaries and decision records under `~/repos/context/<project>/`.
 
 Point them at your own repos in `repos.conf`. Without those repos the tooling

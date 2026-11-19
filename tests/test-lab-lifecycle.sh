@@ -67,13 +67,14 @@ q -C "$TMP/Widget" commit -m init
 q -C "$TMP/Widget" branch -M main
 q -C "$TMP/Widget" push -u origin main
 
-# A throwaway tasks repo: the restamp commits and pushes, so it needs a remote.
+# A throwaway tasks repo with an origin, shaped like the real one.
 git init -q --bare "$TMP/tasks-origin.git"
 git clone -q "$TMP/tasks-origin.git" "$TMP/tasks" 2>/dev/null
 q -C "$TMP/tasks" config user.email t@t
 q -C "$TMP/tasks" config user.name T
 mkdir -p "$TMP/tasks/widget"/{todo,planning,planned,active,done,canceled}
 TASK="$TMP/tasks/widget/active/N238-make-the-build-faster.md"
+# A Worker: line, which some task files carry: inert body text.
 printf '# Make the build faster\nWorker: main\n\nbody\n' > "$TASK"
 q -C "$TMP/tasks" add -A
 q -C "$TMP/tasks" commit -m init
@@ -118,6 +119,7 @@ CLEAN_PROJ_DIRS+=("$PROJ_OLD")
 mkdir -p "$PROJ_OLD"
 echo session > "$PROJ_OLD/x.jsonl"
 
+TASKS_STATE=$(git -C "$TMP/tasks" rev-parse HEAD)
 NEW=$(lab-claim.sh "$N" 238 2>/dev/null)
 PROJ_NEW="$HOME/.claude/projects/$(enc "$TMP/Widget-$NEW")"
 CLEAN_PROJ_DIRS+=("$PROJ_NEW")
@@ -129,17 +131,12 @@ ok "claim moves the worktree" "$([ -d "$TMP/Widget-$NEW" ] && echo y)" y
 ok "claim leaves no old worktree" "$([ -d "$TMP/Widget-$N" ] && echo y)" ""
 # Without this the conversation the claim exists to preserve is stranded.
 ok "claim carries the claude session dir" "$([ -f "$PROJ_NEW/x.jsonl" ] && echo y)" y
-# The stamp is the head, not the whole name: it lands in commit subjects too.
-ok "claim restamps the task" "$(sed -n 's/^Worker: //p' "$TASK")" hlab-238
-ok "restamp commits" "$(git -C "$TMP/tasks" log --oneline -1 | sed 's/^[0-9a-f]* //')" \
-    "Restamp: make-the-build-faster [hlab-238]"
-ok "restamp pushes" "$(git -C "$TMP/tasks" rev-parse HEAD)" \
-    "$(git -C "$TMP/tasks" rev-parse origin/main)"
+# The lab's name is all that ties it to the task: the queue, the Worker: line
+# included, is not touched.
+ok "claim leaves the tasks repo alone" \
+    "$(git -C "$TMP/tasks" status --porcelain; git -C "$TMP/tasks" rev-parse HEAD)" "$TASKS_STATE"
 
 # Inside the lab, every identity question agrees.
-ok "worker inside the lab" \
-    "$(cd "$TMP/Widget-$NEW" && source "$(command -v task-lib.sh)" && detect_worker && echo "$WORKER")" \
-    hlab-238
 ok "project inside the lab" "$(cd "$TMP/Widget-$NEW" && find-project.sh)" widget
 ok "lab-current inside the lab" "$(cd "$TMP/Widget-$NEW" && lab-current.sh)" "$NEW"
 
@@ -219,7 +216,7 @@ ok "drop allows a finished task" "$([ -d "$TMP/Widget-$NEW" ] && echo y)" ""
 ok "drop keeps the claude session dir" "$([ -d "$PROJ_NEW" ] && echo y)" y
 
 # A canceled task is finished with, the same as done: the lab has nothing left.
-printf '# Abandoned\nWorker: main\n\nbody\n' > "$TMP/tasks/widget/active/N241-abandoned.md"
+printf '# Abandoned\n\nbody\n' > "$TMP/tasks/widget/active/N241-abandoned.md"
 q -C "$TMP/tasks" add -A
 q -C "$TMP/tasks" commit -m add-241
 q -C "$TMP/tasks" push
@@ -233,28 +230,22 @@ ok "nothing left to list" "$(lab-list.sh)" ""
 
 # --- claiming from outside the checkout --------------------------------------
 # The lab is identified by its worktree, not by where the claim was invoked, so
-# every project-keyed step has to be pinned the same way. The restamp is the one
-# that reads its tasks dir off the cwd, and it runs after the worktree has
-# already moved — an unpinned failure there leaves half a claim.
+# every project-keyed step has to be pinned the same way.
 TASK239="$TMP/tasks/widget/active/N239-tidy-the-logs.md"
-printf '# Tidy the logs\nWorker: main\n\nbody\n' > "$TASK239"
+printf '# Tidy the logs\n\nbody\n' > "$TASK239"
 q -C "$TMP/tasks" add -A
 q -C "$TMP/tasks" commit -m add-239
 q -C "$TMP/tasks" push
 N3=$(lab-new.sh host 2>/dev/null)
 OUT=$(cd "$TMP" && lab-claim.sh "$N3" 239 2>/dev/null)
 ok "claim works from outside the checkout" "$OUT" hlab-239-tidy-the-logs
-ok "restamp keys on the lab's project, not the cwd's" \
-    "$(sed -n 's/^Worker: //p' "$TASK239")" hlab-239
 
 mv "$TASK239" "$TMP/tasks/widget/done/"
 lab-drop.sh "$OUT" >/dev/null
 
 # --- claiming a task that is still in todo/ ----------------------------------
-# The claim may not move queue state, and a task in todo/ carries no Worker:
-# line — the slash command's own task-claim.sh stamps it later, from inside the
-# lab. So the restamp is a no-op here, and it must not reach the tasks repo:
-# a stamped todo/ task would be pushed to a queue shared with everyone else.
+# The claim may not move queue state: a task still in todo/ stays there, for the
+# slash command to claim from inside the lab.
 TASK240="$TMP/tasks/widget/todo/N240-read-the-manual.md"
 printf '# Read the manual\n\nbody\n' > "$TASK240"
 q -C "$TMP/tasks" add -A
@@ -264,8 +255,8 @@ HEAD_BEFORE=$(git -C "$TMP/tasks" rev-parse HEAD)
 N4=$(lab-new.sh host 2>/dev/null)
 OUT4=$(lab-claim.sh "$N4" 240 2>/dev/null)
 ok "claim works on a task still in todo/" "$OUT4" hlab-240-read-the-manual
-ok "claim leaves a todo/ task unstamped" "$(grep -c '^Worker: ' "$TASK240")" 0
-ok "an unstamped task reaches no commit" "$(git -C "$TMP/tasks" rev-parse HEAD)" "$HEAD_BEFORE"
+ok "claim leaves a todo/ task in todo/" "$([ -f "$TASK240" ] && echo y)" y
+ok "and reaches no commit" "$(git -C "$TMP/tasks" rev-parse HEAD)" "$HEAD_BEFORE"
 
 mv "$TASK240" "$TMP/tasks/widget/done/"
 lab-drop.sh "$OUT4" >/dev/null
@@ -358,7 +349,7 @@ q -C "$TMP/Gadget" commit --allow-empty -m init
 q -C "$TMP/Gadget" branch -M main
 q -C "$TMP/Gadget" push -u origin main
 mkdir -p "$TMP/tasks/gadget"/{todo,planning,planned,active,done,canceled}
-printf '# Polish the knobs\nWorker: main\n\nbody\n' > "$TMP/tasks/gadget/active/N301-polish-the-knobs.md"
+printf '# Polish the knobs\n\nbody\n' > "$TMP/tasks/gadget/active/N301-polish-the-knobs.md"
 q -C "$TMP/tasks" add -A
 q -C "$TMP/tasks" commit -m gadget
 q -C "$TMP/tasks" push
@@ -376,8 +367,6 @@ ok "undeclared: host is all there is to offer" "$(lab-backends.sh)" host
 
 UC=$(lab-claim.sh "$U" 301 2>/dev/null)
 ok "undeclared: claim renames" "$UC" hlab-301-polish-the-knobs
-ok "undeclared: claim restamps the task" \
-    "$(sed -n 's/^Worker: //p' "$TMP/tasks/gadget/active/N301-polish-the-knobs.md")" hlab-301
 yn() { if "$@" >/dev/null 2>&1; then echo y; else echo n; fi; }
 listed() { lab-list.sh | grep -qx "$1"; }
 ok "undeclared: listed from the repo" "$(yn listed "$UC")" y

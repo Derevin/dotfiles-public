@@ -2,14 +2,13 @@
 # Tag an anonymous lab with a task: the rename that turns dlab-tmp1 into
 # dlab-238-fix-the-nasty-bug.
 #
-# The name is the path, so the rename has to carry five things together or the
+# The name is the path, so the rename has to carry four things together or the
 # lab loses part of its identity: the worktree, the container, Claude's
-# per-project session dir, the pane's @lab, and the task's Worker: line. For a
-# coder lab the session dir is a no-op carrier — state lives inside the
-# workspace and travels with it.
+# per-project session dir, and the pane's @lab. For a coder lab the session dir
+# is a no-op carrier — state lives inside the workspace and travels with it.
 #
 # Requires an existing task and never moves queue state: creation and placement
-# stay with the task scripts.
+# stay with taskania.
 #
 # Usage: lab-claim.sh <lab> <task-id>
 set -euo pipefail
@@ -22,7 +21,6 @@ fi
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/lab-lib.sh"
-source "$SCRIPT_DIR/task-lib.sh"
 
 OLD="${1:-}"
 ID="${2:-}"
@@ -43,8 +41,8 @@ BACKEND="$LAB_BACKEND"
 PROJECT="$LAB_PROJECT"
 
 TASK_PATH=$(lab_task_find "$PROJECT" "$ID")
-TASK_FILE=$(basename "$TASK_PATH")
-SLUG=$(slug_from_filename "$TASK_FILE")
+SLUG=$(basename "$TASK_PATH" .md)
+SLUG=${SLUG#?"$ID"-}
 
 NEW=$(lab_claimed_name "$BACKEND" "$ID" "$SLUG" "$LAB_PREFIX")
 # Pinned: the new name has neither a worktree nor a container yet, so resolving
@@ -87,7 +85,7 @@ case "$BACKEND" in
 esac
 
 # 1. The container. LAB_NAME is baked into a docker container's environment at
-# create and `docker rename` cannot change it, while detect_worker prefers it
+# create and `docker rename` cannot change it, while lab_current reads it
 # and the provisioner derives the worktree path from it — so the container is
 # destroyed and recreated against the moved worktree rather than renamed.
 # Nothing is lost: home is a shared volume, code is a bind mount, ~/.claude is a
@@ -125,15 +123,9 @@ case "$BACKEND" in
         ;;
 esac
 
-# 5. The task's Worker: line. No-op while the task is still in todo/ — the slash
-# command's own task-claim.sh stamps it from inside the lab. Run from the
-# checkout: task-restamp.sh picks its tasks dir off the cwd, and the lab was
-# identified by its worktree, not by where the claim was invoked.
-(cd "$LAB_CHECKOUT" && task-restamp.sh "$TASK_FILE" "$(lab_head "$NEW")") >/dev/null
-
 lab_state_rename "$PROJECT" "$OLD" "$NEW"
 
-# 6. Any pane showing the lab. Relaunching with --continue picks the
+# 5. Any pane showing the lab. Relaunching with --continue picks the
 # conversation back up out of the dir just moved, so an investigation survives
 # becoming a task.
 # `tmux info` needs a client and fails outside one, so it cannot stand in for

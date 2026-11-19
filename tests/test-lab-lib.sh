@@ -198,7 +198,7 @@ touch "$TMP/tasks/proj/planned/N039-settle-agent-environment-flow.md"
 ok "task found by bare id" "$(lab_task_find proj 039)" \
     "$TMP/tasks/proj/planned/N039-settle-agent-environment-flow.md"
 fails lab_task_find proj 111
-# The letter is priority and task-reprioritize.sh rewrites it, so two files can
+# The letter is priority and taskania reprioritize rewrites it, so two files can
 # share an id only by mistake — and guessing between them would bind the lab to
 # the wrong task.
 touch "$TMP/tasks/proj/todo/A039-other.md"
