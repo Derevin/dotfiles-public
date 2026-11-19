@@ -38,6 +38,7 @@ COMMON = [
     ("claude/skills/retro", ".claude/skills/retro"),
     ("claude/agents", ".claude/agents"),
     ("claude/commands", ".claude/commands"),
+    ("claude/prompts", ".claude/prompts"),
     ("tmux/.tmux.conf", ".tmux.conf"),
     ("tmux/.tmux-base.conf", ".tmux-base.conf"),
     ("tmux/.tmux-popup.conf", ".tmux-popup.conf"),

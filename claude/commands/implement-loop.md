@@ -13,10 +13,4 @@ Only a fork that `/forkwc-implement` or `/fork-implement` spawns runs this. Reac
 
 **Keep your cache warm.** Your prompt cache expires after 5 minutes without a request, and the turn after re-sends your whole context. When something runs longer — a build, a full test suite — don't block on it in one call or stop until its notification wakes you: run it in the background and wait in chunks under 4 minutes (`timeout 230 tail --pid=<pid> -f /dev/null`), checking on it between chunks. A check costs a cached read; a lapsed cache costs a re-send.
 
-1. **Implement.** Execute the agreed plan.
-
-2. **Red-green.** Before returning, prove the tests test the change: temporarily revert the implementation while keeping the tests — stash the non-test changes (implementation already committed: park uncommitted work in a WIP commit, `git checkout <merge-base> -- <impl paths>`). Run the new/changed tests: every one must fail (failing to compile counts). Restore, rerun: all green. A test that passes without the implementation isn't testing it — fix the test before moving on. Tests sharing a file with implementation don't split by path; revert at hunk level. Skip only when the task touches no testable code — a code change with no new/changed tests is a gap to return, not a pass.
-
-3. **Local CI.** Run `LOCAL_CI_CALLER=agent local-ci` (the repo's prek hooks at the manual stage). Exit 3: the project has no local CI, skip this step. Otherwise it must be green before you return; red prints prek's whole output. A red hook is a failing test: fix and rerun, no attempt bound. Give up only as you would on an unfixable test, and then return local CI red as a gap naming the hook.
-
-4. **Return.** Report only what the caller cannot reconstruct from the diff: decisions the plan left open and how you settled them, places the plan turned out wrong and what you did instead, approaches you tried and rejected, and what a reviewer should know before reading the code. Not a walk through the diff — that's on disk, and the review step fetches it itself. The caller keeps this return and screens the cold review's findings against it, so anything settled here that a reviewer could reopen belongs in it.
+@~/.claude/prompts/implement-steps.md
