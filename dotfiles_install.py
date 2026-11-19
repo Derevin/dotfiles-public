@@ -29,6 +29,8 @@ COMMON = [
     # cargo config needs sccache on PATH — a public clone installs it itself.
     ("config/cargo/config.toml", ".cargo/config.toml"),
     ("claude/CLAUDE.md", ".claude/CLAUDE.md"),
+    # Codex reads AGENTS.md, not CLAUDE.md: the same global rules reach it.
+    ("claude/CLAUDE.md", ".codex/AGENTS.md"),
     ("claude/keybindings.json", ".claude/keybindings.json"),
     ("claude/settings.json", ".claude/settings.json"),
     ("claude/statusline.sh", ".claude/statusline.sh"),
