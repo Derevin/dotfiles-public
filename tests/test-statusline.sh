@@ -30,4 +30,35 @@ ok "keeps the version" "$(model 'Opus 4.8')" "Opus 4.8"
 ok "drops the context suffix" "$(model 'Opus 5.5 (1M context)')" "Opus 5.5"
 ok "keeps a long name whole" "$(model 'Sonnet 5')" "Sonnet 5"
 
+# Codex usage comes from the rate-limit snapshot in its newest session log and
+# rides beside Claude's: block <claude>/<codex>, wk <claude>/<codex>.
+usage() { echo '{"rate_limits":{"five_hour":{"used_percentage":20},"seven_day":{"used_percentage":40}}}' | "$SL"; }
+snapshot() {  # <5h%> <5h reset> <wk%> <wk reset>
+    printf '{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":%s,"window_minutes":300,"resets_at":%s},"secondary":{"used_percent":%s,"window_minutes":10080,"resets_at":%s}}}}\n' "$@"
+}
+
+ok "shows Claude alone without codex logs" "$(usage)" "(block 20% · wk 40%)"
+
+now=$(date +%s)
+later=$((now + 3600))
+earlier=$((now - 3600))
+old="$HOME/.codex/sessions/2026/11/18"
+new="$HOME/.codex/sessions/2026/11/19"
+mkdir -p "$old" "$new"
+snapshot 90 "$later" 90 "$later" > "$old/rollout-a.jsonl"
+{ snapshot 1 "$later" 2 "$later"; snapshot 12.4 "$later" 30.6 "$later"; } > "$new/rollout-b.jsonl"
+touch -d '1 hour ago' "$old/rollout-a.jsonl"
+
+ok "pairs codex usage from the newest snapshot" "$(usage)" "(block 20%/12% · wk 40%/31%)"
+ok "skips codex without Claude usage" "$(model 'Opus 5.5')" "Opus 5.5"
+
+snapshot 12 "$earlier" 30 "$later" > "$new/rollout-b.jsonl"
+ok "zeroes a window that has reset" "$(usage)" "(block 20%/0% · wk 40%/30%)"
+
+touch -d '2 hours ago' "$new/rollout-b.jsonl"
+ok "reads a session that spans days by mtime" "$(usage)" "(block 20%/90% · wk 40%/90%)"
+
+rm -r "$old"
+ok "reads a lone day dir" "$(usage)" "(block 20%/0% · wk 40%/30%)"
+
 report
