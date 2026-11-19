@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 Pick a groomed task from `planned/` and implement it from its snapshotted plan. The task file plus the context store is your entire brief.
 
+With `--codex` in the arguments, Codex implements: pass the flag on to every `/forkwc-implement` call below, step 5's dispatches and step 7's fix rounds alike.
+
 1. **List.** Run `taskania list --status planned` to see groomed tasks (highest priority first). Skip when an id was given.
 
 2. **Pick.** An id in the arguments (`039`, `039-some-slug`, or the filename `N039-some-slug`) names the task: resolve it to the filename in `planned/` and go straight to step 3. Otherwise take the first one, or the one the user names.
