@@ -63,6 +63,7 @@ COMMON = [
     ("scripts/claude-update.sh", ".local/bin/claude-update.sh"),
     ("scripts/subtrees-push.sh", ".local/bin/subtrees-push.sh"),
     ("scripts/review-diff.sh", ".local/bin/review-diff.sh"),
+    ("scripts/codex-run.sh", ".local/bin/codex-run.sh"),
     ("scripts/codex-review.sh", ".local/bin/codex-review.sh"),
     ("scripts/fork-registry.sh", ".local/bin/fork-registry.sh"),
     ("scripts/fork-recover.sh", ".local/bin/fork-recover.sh"),
