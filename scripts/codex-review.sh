@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Review the branch diff with Codex: a second vendor's read beside the Claude
-# reviewers. Codex gets the same review-diff.sh output they do, on stdin, in a
-# read-only sandbox, and its final message becomes the report.
+# reviewers. Codex gets the same review-diff.sh output they do, in a read-only
+# sandbox through codex-run.sh, and its final message becomes the report.
 #
 # Never fails the review it serves: a missing, failing or silent codex still exits
 # 0 and leaves a report saying why, which the synthesizer reads as "no findings".
@@ -14,7 +14,7 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 fi
 
 REPORT="${1:?usage: codex-review.sh <report-path>}"
-MODEL=gpt-6.2-sol
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # Under the Bash tool's 10-minute ceiling, so the caller sees the report, not a kill.
 TIMEOUT=540
 
@@ -48,12 +48,11 @@ stderr=$(mktemp)
 trap 'rm -f "$stderr"' EXIT
 rm -f "$REPORT"
 
-review-diff.sh | timeout "$TIMEOUT" codex exec -s read-only -m "$MODEL" --color never \
-    -o "$REPORT" "$PROMPT" >/dev/null 2>"$stderr"
+{ printf '%s\n\n<stdin>\n' "$PROMPT"; review-diff.sh; printf '</stdin>\n'; } \
+    | timeout "$TIMEOUT" "$SCRIPT_DIR/codex-run.sh" -l review -s read-only -o "$REPORT" \
+        >/dev/null 2>"$stderr"
 rc=${PIPESTATUS[1]}
 
 [ "$rc" -eq 124 ] && unavailable "timed out after ${TIMEOUT}s"
-[ "$rc" -ne 0 ] && unavailable "codex exited $rc
-$(tail -n 20 "$stderr")"
-[ -s "$REPORT" ] || unavailable "codex returned no final message"
+[ "$rc" -ne 0 ] && unavailable "$(sed 's/^codex-run.sh: //' "$stderr")"
 exit 0

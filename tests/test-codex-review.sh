@@ -24,6 +24,8 @@ trap 'rm -rf "$TMP"' EXIT
 BIN="$TMP/bin"
 mkdir -p "$BIN"
 export CR_LOG="$TMP/log"
+export FORK_REGISTRY_ROOT="$TMP/forks"
+export CODEX_HOME="$TMP/codex"
 
 cat > "$BIN/review-diff.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -67,23 +69,29 @@ FAKE_CODEX=ok run "$REPORT"; rc=$?
 ok "ok exit" "$rc" 0
 ok "ok report" "$(cat "$REPORT")" "src/a.c:3 off-by-one"
 ok "diff on stdin" "$(grep -c '^+fake hunk$' "$CR_LOG.stdin")" 1
+ok "prompt on stdin" "$(grep -c '^You are one reviewer' "$CR_LOG.stdin")" 1
+ok "diff inside stdin block" "$(sed -n '/^<stdin>$/,/^<\/stdin>$/p' "$CR_LOG.stdin" | grep -c '^+fake hunk$')" 1
 ok "exec subcommand" "$(head -1 "$CR_LOG.argv")" exec
 ok "read-only sandbox" "$(grep -A1 -x -- -s "$CR_LOG.argv" | tail -1)" read-only
 ok "model" "$(grep -A1 -x -- -m "$CR_LOG.argv" | tail -1)" gpt-6.2-sol
 ok "report as -o" "$(grep -A1 -x -- -o "$CR_LOG.argv" | tail -1)" "$REPORT"
+# The run registers like any Codex run, under the review label.
+review_meta() { jq -r "select(.label == \"review\") | .$1" "$FORK_REGISTRY_ROOT"/*/meta.json 2>/dev/null; }
+ok "review registered" "$(review_meta status)" closed
 
 # Failure: exit 0, the report names the failure and carries codex's stderr.
 REPORT="$TMP/fail.md"
 FAKE_CODEX=fail run "$REPORT"; rc=$?
 ok "fail exit" "$rc" 0
 ok "fail report headline" "$(grep -c '^Codex review unavailable' "$REPORT")" 1
+ok "fail report first line" "$(head -1 "$REPORT")" "Codex review unavailable: codex exited 1"
 ok "fail report stderr" "$(grep -c 'not logged in' "$REPORT")" 1
 
 # Silent: codex exits 0 without a final message.
 REPORT="$TMP/silent.md"
 FAKE_CODEX=silent run "$REPORT"; rc=$?
 ok "silent exit" "$rc" 0
-ok "silent report" "$(grep -c '^Codex review unavailable' "$REPORT")" 1
+ok "silent report" "$(cat "$REPORT")" "Codex review unavailable: codex returned no final message"
 
 # No codex installed: the report says so instead of the review failing.
 mv "$BIN/codex" "$TMP/codex.off"
@@ -92,5 +100,7 @@ REPORT="$TMP/missing.md"
 run "$REPORT"; rc=$?
 ok "missing exit" "$rc" 0
 ok "missing report" "$(cat "$REPORT")" "Codex review unavailable: codex not installed"
+# ok, fail and silent reached codex; the missing run did not.
+ok "only runs that reached codex registered" "$(find "$FORK_REGISTRY_ROOT" -name meta.json | wc -l)" 3
 
 report
