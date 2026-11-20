@@ -26,19 +26,27 @@ czk_rate=$(cat "$rate_file" 2>/dev/null)
 # Codex logs an account-wide rate-limit snapshot after each turn; the newest log
 # holds the latest. Logs sit in YYYY/MM/DD dirs by session start, so a session
 # spanning midnight is in yesterday's — scan the last two, pick by mtime.
+# Logged out, the snapshot is stale and Codex unusable: a lock replaces it.
 cx5="" cx7="" codex_log=""
-codex_days=( "${CODEX_HOME:-$HOME/.codex}"/sessions/*/*/* )
-skip=$(( ${#codex_days[@]} > 2 ? ${#codex_days[@]} - 2 : 0 ))
-for d in "${codex_days[@]:skip}"; do
-    for f in "$d"/*.jsonl; do
-        [[ $f -nt $codex_log ]] && codex_log=$f
+codex_home="${CODEX_HOME:-$HOME/.codex}"
+if ! command -v codex >/dev/null; then
+    :  # not installed: no Codex segment at all
+elif [[ ! -f $codex_home/auth.json ]]; then
+    cx5="🔒" cx7="🔒"
+else
+    codex_days=( "$codex_home"/sessions/*/*/* )
+    skip=$(( ${#codex_days[@]} > 2 ? ${#codex_days[@]} - 2 : 0 ))
+    for d in "${codex_days[@]:skip}"; do
+        for f in "$d"/*.jsonl; do
+            [[ $f -nt $codex_log ]] && codex_log=$f
+        done
     done
-done
-# A window past its reset is empty, however stale the snapshot.
-[[ -n "$codex_log" ]] && read -r cx5 cx7 < <(tac "$codex_log" | grep -m1 '"rate_limits":{' \
-    | jq -r '.payload.rate_limits | [.primary, .secondary]
-        | map(if .resets_at > now then .used_percent | round else 0 end)
-        | "\(.[0]) \(.[1])"' 2>/dev/null)
+    # A window past its reset is empty, however stale the snapshot.
+    [[ -n "$codex_log" ]] && read -r cx5 cx7 < <(tac "$codex_log" | grep -m1 '"rate_limits":{' \
+        | jq -r '.payload.rate_limits | [.primary, .secondary]
+            | map(if .resets_at > now then .used_percent | round else 0 end)
+            | "\(.[0])% \(.[1])%"' 2>/dev/null)
+fi
 
 parts=()
 # CLAUDE_LABEL is set at launch by the workspace scripts; unlike a Claude session
@@ -56,7 +64,7 @@ fi
 extras=()
 if [[ -n "$rl5" ]]; then
     p="block $(printf '%.0f' "$rl5")%"
-    [[ -n "$cx5" ]] && p="$p/$cx5%"
+    [[ -n "$cx5" ]] && p="$p/$cx5"
     [[ -n "$rl5_reset" ]] && p="$p $(date -d "@$rl5_reset" +%H%M)"
     extras+=("$p")
 fi
@@ -71,7 +79,7 @@ if [[ -n "$cost" ]]; then
 fi
 if [[ -n "$rl7" ]]; then
     p="wk $(printf '%.0f' "$rl7")%"
-    [[ -n "$cx7" ]] && p="$p/$cx7%"
+    [[ -n "$cx7" ]] && p="$p/$cx7"
     if [[ -n "$rl7_reset" ]]; then
         dow=$(date -d "@$rl7_reset" +%a)
         p="$p ${dow:0:2}$(date -d "@$rl7_reset" +%H)"

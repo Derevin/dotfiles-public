@@ -32,6 +32,12 @@ ok "keeps a long name whole" "$(model 'Sonnet 5')" "Sonnet 5"
 
 # Codex usage comes from the rate-limit snapshot in its newest session log and
 # rides beside Claude's: block <claude>/<codex>, wk <claude>/<codex>.
+# A stub codex on PATH and an auth file stand for an installed, logged-in Codex.
+mkdir -p "$TMP/bin" "$HOME/.codex"
+printf '#!/bin/sh\n' > "$TMP/bin/codex"
+chmod +x "$TMP/bin/codex"
+export PATH="$TMP/bin:$PATH"
+touch "$HOME/.codex/auth.json"
 usage() { echo '{"rate_limits":{"five_hour":{"used_percentage":20},"seven_day":{"used_percentage":40}}}' | "$SL"; }
 snapshot() {  # <5h%> <5h reset> <wk%> <wk reset>
     printf '{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":%s,"window_minutes":300,"resets_at":%s},"secondary":{"used_percent":%s,"window_minutes":10080,"resets_at":%s}}}}\n' "$@"
@@ -60,5 +66,16 @@ ok "reads a session that spans days by mtime" "$(usage)" "(block 20%/90% · wk 4
 
 rm -r "$old"
 ok "reads a lone day dir" "$(usage)" "(block 20%/0% · wk 40%/30%)"
+
+rm "$HOME/.codex/auth.json"
+ok "locks codex usage when logged out" "$(usage)" "(block 20%/🔒 · wk 40%/🔒)"
+
+# Every tool the script runs except codex, so its absence is the only difference.
+nocodex="$TMP/nocodex"
+mkdir -p "$nocodex"
+for t in bash jq git cut date stat cat tac grep awk mkdir; do
+    ln -s "$(command -v "$t")" "$nocodex/$t"
+done
+ok "skips codex when not installed" "$(PATH="$nocodex" usage)" "(block 20% · wk 40%)"
 
 report
