@@ -350,14 +350,15 @@ recipes=$(printf '%s\n' "$recipes" | awk '
               if (desc[i] != "") printf "%-*s # %s\n", w, col[i], desc[i]
               else print col[i] }')
 
-# fzf picker with preview. tiebreak=begin ranks by match position — the default
-# `length` tiebreak settles ties on total line length, which lets a doc comment
-# two characters longer rank `target-mock` above `mock` for the query "mock".
+# fzf picker with preview. Ties break on match position, then on input order
+# (alphabetical), never on line length: names are padded to one width, so length
+# only compares doc comments, which would rank `target-mock` above `mock` for
+# "mock" or flip `x`/`x-codex` from one pair to the next.
 selection=$(echo "$recipes" | fzf \
     --prompt "recipe> " \
     --header 'enter: run    ctrl-o: fill in optional args' \
     --expect=ctrl-o \
-    --tiebreak=begin,length \
+    --tiebreak=begin,index \
     --preview "\"$SCRIPT_DIR/just.sh\" --preview {1} {2}" \
     --preview-window=right:50%:wrap)
 
