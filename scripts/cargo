@@ -32,7 +32,7 @@ sub=${1-}
 [[ $sub == +* ]] && sub=${2-}
 
 case $sub in
-    build|b|test|t|check|c|clippy|run|r|bench|doc|d|rustc|rustdoc|install|nextest) heavy=1 ;;
+    build|b|test|t|check|c|clippy|run|r|bench|doc|d|rustc|rustdoc|install|nextest|xwin) heavy=1 ;;
     *) heavy= ;;
 esac
 

@@ -89,6 +89,9 @@ if [ "$have_socket" = 1 ]; then
     run +nightly build
     ok "a +toolchain heavy command still scopes" "$(grep -c 'scoped=1' "$REALLOG")" 1
 
+    run xwin build --target x86_64-pc-windows-msvc
+    ok "a cross-compile through cargo-xwin is scoped" "$(grep -c 'scoped=1' "$REALLOG")" 1
+
     ( export CARGO_SCOPE_MEMORY_HIGH=3G CARGO_SCOPE_CPU_WEIGHT=50; run build )
     ok "MemoryHigh honors its env override" "$(grep -c 'MemoryHigh=3G' "$SDLOG")" 1
     ok "CPUWeight honors its env override" "$(grep -c 'CPUWeight=50' "$SDLOG")" 1
