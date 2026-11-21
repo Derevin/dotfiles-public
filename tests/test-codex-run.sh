@@ -255,10 +255,15 @@ ok "latest none stdout" "$out" ""
 ok "latest none ran no codex" "$(test -e "$CR_LOG.argv" && echo ran || echo none)" none
 ok "latest none registered nothing" "$(entries)" "$before"
 
-# No codex installed: fails before registering.
-mv "$BIN/codex" "$TMP/codex.off"
+# No codex installed: fails before registering. The system dirs may hold a real
+# codex, so the PATH is every tool the script reaches before the check, alone.
+nocodex="$TMP/nocodex"
+mkdir -p "$nocodex"
+for t in bash jq grep cat od tr mkdir rm dirname realpath date; do
+    ln -s "$(command -v "$t")" "$nocodex/$t"
+done
 before=$(entries)
-err=$(echo p | run -C "$TMP/work" 2>&1 >/dev/null); rc=$?
+err=$(echo p | PATH="$nocodex" bash "$CRUN" -C "$TMP/work" 2>&1 >/dev/null); rc=$?
 ok "missing exit" "$([ "$rc" -ne 0 ] && echo nonzero || echo zero)" nonzero
 ok "missing stderr" "$(grep -c 'codex not found' <<<"$err")" 1
 ok "missing registered nothing" "$(entries)" "$before"

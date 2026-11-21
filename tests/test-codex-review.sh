@@ -93,11 +93,17 @@ FAKE_CODEX=silent run "$REPORT"; rc=$?
 ok "silent exit" "$rc" 0
 ok "silent report" "$(cat "$REPORT")" "Codex review unavailable: codex returned no final message"
 
-# No codex installed: the report says so instead of the review failing.
-mv "$BIN/codex" "$TMP/codex.off"
+# No codex installed: the report says so instead of the review failing. The
+# system dirs may hold a real codex, so the PATH is every tool the script reaches
+# before the check, alone.
+nocodex="$TMP/nocodex"
+mkdir -p "$nocodex"
+for t in bash dirname mkdir; do
+    ln -s "$(command -v "$t")" "$nocodex/$t"
+done
 rm -f "$CR_LOG.argv"
 REPORT="$TMP/missing.md"
-run "$REPORT"; rc=$?
+PATH="$nocodex" bash "$CR" "$REPORT"; rc=$?
 ok "missing exit" "$rc" 0
 ok "missing report" "$(cat "$REPORT")" "Codex review unavailable: codex not installed"
 # ok, fail and silent reached codex; the missing run did not.
