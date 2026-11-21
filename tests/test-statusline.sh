@@ -67,6 +67,9 @@ ok "reads a session that spans days by mtime" "$(usage)" "(block 20%/90% · wk 4
 rm -r "$old"
 ok "reads a lone day dir" "$(usage)" "(block 20%/0% · wk 40%/30%)"
 
+echo '{}' > "$new/rollout-c.jsonl"
+ok "reads past a newest log without a snapshot" "$(usage)" "(block 20%/0% · wk 40%/30%)"
+
 rm "$HOME/.codex/auth.json"
 ok "locks codex usage when logged out" "$(usage)" "(block 20%/🔒 · wk 40%/🔒)"
 

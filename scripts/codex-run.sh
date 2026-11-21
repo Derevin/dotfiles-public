@@ -21,10 +21,16 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     echo "  --resume ID      continue Codex session ID with the prompt as the next turn"
     echo "  --resume-latest  continue the newest closed run with this label and DIR;"
     echo "                   exit 3 when there is none, before any side effect"
+    echo
+    echo "Exits 75 before any side effect when Codex is near its usage limit"
+    echo "(5-hour window >= 93% or week >= 98%), for the caller to fall back to Claude."
     exit 0
 fi
 
 MODEL=gpt-6.2-sol
+MAX_5H=93
+MAX_WEEK=98
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="${FORK_REGISTRY_ROOT:-$HOME/.claude/forks}"
 SESSIONS="${CODEX_HOME:-$HOME/.codex}/sessions"
 
@@ -72,6 +78,12 @@ if [ "$LATEST" = 1 ]; then
 fi
 
 command -v codex >/dev/null || die "codex not found" 127
+
+# No snapshot reads as headroom: a fresh install has logged none yet.
+if read -r used5 usedweek < <("$SCRIPT_DIR/codex-usage.sh" 2>/dev/null) \
+    && { [ "$used5" -ge "$MAX_5H" ] || [ "$usedweek" -ge "$MAX_WEEK" ]; }; then
+    die "codex near its usage limit (5h $used5%, week $usedweek%)" 75
+fi
 
 ID="codex-$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')"
 ENTRY="$ROOT/$ID"

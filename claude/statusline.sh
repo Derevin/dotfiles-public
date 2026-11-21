@@ -23,29 +23,14 @@ if [[ ! -f $rate_file ]] || (( $(date +%s) - $(stat -c %Y "$rate_file" 2>/dev/nu
 fi
 czk_rate=$(cat "$rate_file" 2>/dev/null)
 
-# Codex logs an account-wide rate-limit snapshot after each turn; the newest log
-# holds the latest. Logs sit in YYYY/MM/DD dirs by session start, so a session
-# spanning midnight is in yesterday's — scan the last two, pick by mtime.
 # Logged out, the snapshot is stale and Codex unusable: a lock replaces it.
-cx5="" cx7="" codex_log=""
-codex_home="${CODEX_HOME:-$HOME/.codex}"
+cx5="" cx7=""
 if ! command -v codex >/dev/null; then
     :  # not installed: no Codex segment at all
-elif [[ ! -f $codex_home/auth.json ]]; then
+elif [[ ! -f ${CODEX_HOME:-$HOME/.codex}/auth.json ]]; then
     cx5="🔒" cx7="🔒"
-else
-    codex_days=( "$codex_home"/sessions/*/*/* )
-    skip=$(( ${#codex_days[@]} > 2 ? ${#codex_days[@]} - 2 : 0 ))
-    for d in "${codex_days[@]:skip}"; do
-        for f in "$d"/*.jsonl; do
-            [[ $f -nt $codex_log ]] && codex_log=$f
-        done
-    done
-    # A window past its reset is empty, however stale the snapshot.
-    [[ -n "$codex_log" ]] && read -r cx5 cx7 < <(tac "$codex_log" | grep -m1 '"rate_limits":{' \
-        | jq -r '.payload.rate_limits | [.primary, .secondary]
-            | map(if .resets_at > now then .used_percent | round else 0 end)
-            | "\(.[0])% \(.[1])%"' 2>/dev/null)
+elif read -r cx5 cx7 < <("$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts/codex-usage.sh"); then
+    cx5="$cx5%" cx7="$cx7%"
 fi
 
 parts=()

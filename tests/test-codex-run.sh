@@ -255,6 +255,39 @@ ok "latest none stdout" "$out" ""
 ok "latest none ran no codex" "$(test -e "$CR_LOG.argv" && echo ran || echo none)" none
 ok "latest none registered nothing" "$(entries)" "$before"
 
+# Near the usage limit (5h >= 93% or weekly >= 98%): exit 75 before any side
+# effect, so the caller falls back to Claude. A window past its reset is empty.
+snap="$CODEX_HOME/sessions/2026/11/20/rollout-snap.jsonl"
+mkdir -p "$(dirname "$snap")"
+snapshot() { # <5h%> <5h reset> <wk%> <wk reset>
+    printf '{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":%s,"resets_at":%s},"secondary":{"used_percent":%s,"resets_at":%s}}}}\n' \
+        "$@" > "$snap"
+}
+later=$(( $(date +%s) + 3600 ))
+earlier=$(( $(date +%s) - 3600 ))
+snapshot 93 "$later" 10 "$later"
+rm -f "$CR_LOG.argv"
+before=$(entries)
+err=$(echo p | FAKE_CODEX=ok run -C "$TMP/work" 2>&1 >/dev/null); rc=$?
+ok "5h limit exit" "$rc" 75
+ok "5h limit says why" "$(grep -c 'usage limit' <<<"$err")" 1
+ok "5h limit ran no codex" "$(test -e "$CR_LOG.argv" && echo ran || echo none)" none
+ok "5h limit registered nothing" "$(entries)" "$before"
+snapshot 10 "$later" 98 "$later"
+echo p | FAKE_CODEX=ok run -C "$TMP/work" >/dev/null 2>&1
+ok "weekly limit exit" "$?" 75
+snapshot 92.4 "$later" 97.4 "$later"
+echo p | FAKE_CODEX=ok run -C "$TMP/work" >/dev/null 2>&1
+ok "under limits runs" "$?" 0
+# That run left the newest log, with no snapshot in it: the gate reads past it.
+snapshot 99 "$later" 10 "$later"
+touch -d '1 minute ago' "$snap"
+echo p | FAKE_CODEX=ok run -C "$TMP/work" >/dev/null 2>&1
+ok "reads past a log without a snapshot" "$?" 75
+snapshot 99 "$earlier" 10 "$later"
+echo p | FAKE_CODEX=ok run -C "$TMP/work" >/dev/null 2>&1
+ok "reset window is empty" "$?" 0
+
 # No codex installed: fails before registering. The system dirs may hold a real
 # codex, so the PATH is every tool the script reaches before the check, alone.
 nocodex="$TMP/nocodex"
