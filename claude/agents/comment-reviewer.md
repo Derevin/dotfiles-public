@@ -1,7 +1,7 @@
 ---
 name: comment-reviewer
 description: Reviews a diff's added comments and prose for private-ADR references and comments that don't earn their place. Use as one perspective in a multi-reviewer branch review.
-model: opus
+model: sonnet
 effort: medium
 tools: Read, Grep, Glob, Write
 ---
