@@ -84,13 +84,16 @@ if [ "$have_socket" = 1 ]; then
     ok "a heavy command runs real cargo" "$(grep -c 'args=build --release' "$REALLOG")" 1
     ok "a heavy command is scoped" "$(grep -c 'scoped=1' "$REALLOG")" 1
     ok "the scope sets CPUWeight" "$(grep -c 'CPUWeight=20' "$SDLOG")" 1
-    ok "MemoryHigh defaults to a RAM percentage" "$(grep -c 'MemoryHigh=75%' "$SDLOG")" 1
+    ok "MemoryHigh defaults to a RAM percentage" "$(grep -c 'MemoryHigh=60%' "$SDLOG")" 1
 
     run +nightly build
     ok "a +toolchain heavy command still scopes" "$(grep -c 'scoped=1' "$REALLOG")" 1
 
     run xwin build --target x86_64-pc-windows-msvc
     ok "a cross-compile through cargo-xwin is scoped" "$(grep -c 'scoped=1' "$REALLOG")" 1
+
+    run mutants --in-place
+    ok "cargo-mutants and its builds run in the scope" "$(grep -c 'scoped=1' "$REALLOG")" 1
 
     ( export CARGO_SCOPE_MEMORY_HIGH=3G CARGO_SCOPE_CPU_WEIGHT=50; run build )
     ok "MemoryHigh honors its env override" "$(grep -c 'MemoryHigh=3G' "$SDLOG")" 1
