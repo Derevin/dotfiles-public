@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Inspect the fork registry: what never returned, and what forks kept out of the caller.
-# Usage: fork-recover.sh [--all] [--session ID] [--idle SECS] [--tokens] [--prune] [AGENT_ID]
+# Usage: fork-recover.sh [--all] [--session ID] [--idle SECS] [--tokens [--since WHEN]] [--prune] [AGENT_ID]
 
 set -uo pipefail
 
@@ -14,7 +14,10 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo "  AGENT_ID       full detail: scratchpad, transcript trail, last words;"
     echo "                 for a Codex run, the command that resumes it"
     echo "  --tokens       what returned forks kept out of the caller's context"
-    echo "  --prune        drop settled entries"
+    echo "  --since WHEN   with --tokens: only forks started since WHEN"
+    echo "                 (anything date -d takes: 00:00 for today, 2026-11-20;"
+    echo "                 bare 'today' means now)"
+    echo "  --prune       drop settled entries"
     echo
     echo "Status: DEAD = owning session gone. STALE = session alive but the fork's"
     echo "transcript has been silent (may be dead, or mid-build). running = active."
@@ -30,6 +33,7 @@ ROOT="${FORK_REGISTRY_ROOT:-$HOME/.claude/forks}"
 ALL=0
 SESSION=""
 TOKENS=0
+SINCE=""
 TARGET=""
 IDLE_SECS=300
 SCRATCH_CAP=400
@@ -41,6 +45,9 @@ while [ $# -gt 0 ]; do
     --session)
         [ $# -ge 2 ] || { echo "--session needs an ID" >&2; exit 2; }
         SESSION="$2"; shift ;;
+    --since)
+        [ $# -ge 2 ] || { echo "--since needs a date" >&2; exit 2; }
+        SINCE="$2"; shift ;;
     --idle)
         [ $# -ge 2 ] || { echo "--idle needs seconds" >&2; exit 2; }
         IDLE_SECS="$2"; shift ;;
@@ -56,6 +63,13 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+since_epoch=null
+if [ -n "$SINCE" ]; then
+    [ "$TOKENS" = 1 ] || { echo "--since applies to --tokens only" >&2; exit 2; }
+    since_epoch=$(date -d "$SINCE" +%s 2>/dev/null) \
+        || { echo "--since: can't parse date: $SINCE" >&2; exit 2; }
+fi
+
 # The registry records what a fork kept out of its caller when the fork closes
 # (see fork-registry.sh), so open entries and ones predating the accounting have
 # no numbers to show.
@@ -69,17 +83,26 @@ if [ "$TOKENS" = 1 ]; then
     else
         mode=cwd; scope="$PWD"; label="this directory"
     fi
+    [ -n "$SINCE" ] && label="$label since $(date -d "@$since_epoch" '+%F %H:%M')"
 
-    report=$(jq -sr --arg mode "$mode" --arg scope "$scope" --arg label "$label" '
+    report=$(jq -sr --arg mode "$mode" --arg scope "$scope" --arg label "$label" \
+        --argjson since "$since_epoch" '
         def k: if . == null then "-"
                elif . >= 10000 then "\(. / 1000 | floor)k"
                elif . >= 1000 then "\(. / 100 | floor / 10)k"
                else "\(.)" end;
         def l(n): tostring | . + ((" " * (n - length)) // "");
         def r(n): tostring | ((" " * (n - length)) // "") + .;
+        # started is "date -Iseconds": its offset follows DST, so compare instants.
+        def epoch: (.[0:19] + "Z" | fromdateiso8601)
+            - (.[19:] | if . == "" or . == "Z" then 0
+                        else (if .[0:1] == "-" then -1 else 1 end)
+                             * ((.[1:3] | tonumber) * 3600 + (.[4:6] | tonumber) * 60) end);
         [ .[] | select($mode == "all"
                        or ($mode == "session" and .session_id == $scope)
-                       or ($mode == "cwd" and .cwd == $scope)) ] as $scoped
+                       or ($mode == "cwd" and .cwd == $scope))
+              | select($since == null
+                       or ((.started // "") != "" and (.started | epoch) >= $since)) ] as $scoped
         | ([ $scoped[] | select(.tokens) ] | sort_by(.started // "")) as $rows
         | ([ $scoped[] | select(.tokens | not) ] | length) as $bare
         | ($rows | map(.tokens.kept) | add // 0) as $kept
