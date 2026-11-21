@@ -28,6 +28,6 @@ Fast-path a bugfix: a compressed `/plan-task` front-end (frame, recon, one endor
 
 9. **Deep review.** As a backstop, invoke `/fork-review` — the full multi-perspective fan-out, run cold in its own fork with the Apply/Drop/Ask gate applied inside it. Pass it the task filename and nothing else; reviewing the diff on its own terms is what makes it an independent check.
 
-10. **Local CI.** As `/implement-task`'s **Local CI** step: rerun `LOCAL_CI_CALLER=agent local-ci` after the review (exit 3: no local CI, skip), up to two fix rounds through `/forkwc-implement`.
+10. **Local CI.** Follow `/implement-task`'s **Local CI** step. Run `LOCAL_CI_CALLER=post-review local-ci` in the background after review and wait for its completion notification, with up to two fix rounds through `/forkwc-implement`. Skip this step on exit 3.
 
 11. **Hand off.** As `/implement-task` closes: filter the review's judgment calls — drop what this conversation already settled, drop what you can now answer yourself. Open with one line of counts (items fixed), then one line naming the red hook if local CI is still red (green adds nothing), then a numbered list of survivors, each `file:line — one-line description — proposed fix — strongest case against`. Then summarize the fix as a whole. Leave it in `active/`; do NOT run `/complete-task` or suggest it. The task stays there until the user says it's done and runs `/complete-task` themselves.

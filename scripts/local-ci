@@ -18,7 +18,7 @@ set -uo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     echo "Run the repo's local CI (prek's manual stage over the branch); exit 0 green, 1 red, 3 none."
-    echo "Usage: [LOCAL_CI_CALLER=merge|agent] local-ci"
+    echo "Usage: [LOCAL_CI_CALLER=merge|agent|post-review] local-ci"
     exit 0
 fi
 [ $# -eq 0 ] || { echo "local-ci: takes no arguments (see --help)" >&2; exit 2; }
