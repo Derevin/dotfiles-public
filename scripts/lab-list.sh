@@ -6,12 +6,14 @@
 # fixtures (dwt1, hwt3, cwt2), which can be attached to from a launchpad but
 # never claimed.
 #
-# Usage: lab-list.sh [--long]
+# --here keeps only the cwd project's labs; outside any repo it lists them all.
+#
+# Usage: lab-list.sh [--long] [--here]
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     echo "List existing labs (and legacy fixtures), one name per line."
-    echo "Usage: lab-list.sh [--long]"
+    echo "Usage: lab-list.sh [--long] [--here]"
     exit 0
 fi
 
@@ -19,7 +21,13 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/lab-lib.sh"
 
 LONG=0
-[ "${1:-}" = "--long" ] && LONG=1
+HERE=0
+for arg in "$@"; do
+    case "$arg" in
+        --long) LONG=1 ;;
+        --here) HERE=1 ;;
+    esac
+done
 
 lab_conf_load
 
@@ -53,18 +61,20 @@ scan() {
     return 0
 }
 
-for key in $LAB_PROJECTS; do
-    scan "$(lab_conf_key "$key" CHECKOUT)" "$(lab_conf_key "$key" CONTAINER_PREFIX)"
-done
-
 # An undeclared repo has host labs only, beside its main checkout, and nothing
 # but a cwd inside the repo can say where that is.
+here_key=""
 if here=$(lab_project_from_cwd); then
-    key=$(lab_project_key "$here")
-    if [ -z "$(lab_conf_key "$key" CHECKOUT)" ] && checkout=$(lab_cwd_checkout "$key" "$here"); then
+    here_key=$(lab_project_key "$here")
+    if [ -z "$(lab_conf_key "$here_key" CHECKOUT)" ] && checkout=$(lab_cwd_checkout "$here_key" "$here"); then
         scan "$checkout" ""
     fi
 fi
+
+for key in $LAB_PROJECTS; do
+    [ "$HERE" -eq 1 ] && [ -n "$here_key" ] && [ "$key" != "$here_key" ] && continue
+    scan "$(lab_conf_key "$key" CHECKOUT)" "$(lab_conf_key "$key" CONTAINER_PREFIX)"
+done
 
 names=$(printf '%s' "$names" | sort -u)
 [ -n "$names" ] || exit 0

@@ -381,6 +381,22 @@ ok "undeclared: listed from inside a lab" "$(cd "$TMP/Gadget-$UC" && yn listed "
 lab-drop.sh --force "$U2" >/dev/null
 lab-drop.sh --force "$UC" >/dev/null
 ok "undeclared: drop removes the worktree" "$([ -d "$TMP/Gadget-$UC" ] && echo y)" ""
+
+# Tmp indexes are per project, so each repo gets its own hlab-tmp1. --here lists
+# only the cwd project's labs, and what it lists resolves to that project.
+GT=$(lab-new.sh 2>/dev/null)
+WT=$(cd "$TMP/Widget" && lab-new.sh host 2>/dev/null)
+ok "shared name: one per project" "$GT $WT" "hlab-tmp1 hlab-tmp1"
+WT2=$(cd "$TMP/Widget" && lab-new.sh host 2>/dev/null)
+ok "here: only the cwd project" "$(lab-list.sh --here | tr '\n' ' ')" "$GT "
+ok "here: the other project" "$(cd "$TMP/Widget" && lab-list.sh --here | tr '\n' ' ')" "$WT $WT2 "
+ok "here: --long names the cwd project" "$(lab-list.sh --here --long | awk '{print $3}' | sort -u)" gadget
+ok "here: outside any repo lists every project" \
+    "$(cd "$TMP" && lab-list.sh --here | tr '\n' ' ')" "$WT $WT2 "
+lab-drop.sh --force "$GT" >/dev/null
+ok "shared name: drop takes the cwd's lab" "$([ -d "$TMP/Gadget-$GT" ] && echo y)" ""
+ok "shared name: and leaves the other's" "$([ -d "$TMP/Widget-$WT" ] && echo y)" y
+(cd "$TMP/Widget" && lab-drop.sh --force "$WT" >/dev/null && lab-drop.sh --force "$WT2" >/dev/null)
 cd "$TMP/Widget"
 
 report

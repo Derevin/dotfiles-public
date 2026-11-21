@@ -148,6 +148,19 @@ ok "undeclared: resolve from the repo" \
     "gadget|$G-hlab-tmp1|host"
 ok "undeclared: resolve from inside the lab" \
     "$(cd "$G-hlab-tmp1" && lab_resolve hlab-tmp1 && echo "$LAB_WORKTREE")" "$G-hlab-tmp1"
+# Tmp indexes and task ids are per project, so a name can exist in two. The one
+# beside the caller's own checkout is the one meant; elsewhere the declared
+# project still answers.
+mkdir -p "$TMP/one/Proj-hlab-tmp1"
+ok "shared name: the cwd's undeclared repo wins" \
+    "$(cd "$G" && lab_resolve hlab-tmp1 && echo "$LAB_PROJECT|$LAB_WORKTREE")" "gadget|$G-hlab-tmp1"
+ok "shared name: away from the repo the declared project answers" \
+    "$(cd /tmp && lab_resolve hlab-tmp1 && echo "$LAB_PROJECT_KEY")" ONE
+mkdir -p "$TMP/two/Two-dlab-238-x"
+ok "shared name: the cwd's declared project wins" \
+    "$(cd "$TMP/two/Two" && lab_resolve dlab-238-x && echo "$LAB_PROJECT_KEY")" TWO
+rmdir "$TMP/one/Proj-hlab-tmp1" "$TMP/two/Two-dlab-238-x"
+
 # Host is the only backend an undeclared repo can have, so standing in one says
 # nothing about another project's coder lab.
 fails bash -c 'cd "'"$G"'" && source "'"$SCRIPT_DIR"'/../scripts/lab-lib.sh" && LAB_WORKSPACES= lab_resolve clab-007-y'

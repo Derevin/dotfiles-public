@@ -95,9 +95,15 @@ lab_project_load() {
 # than the toplevel: inside a lab the toplevel is the lab, and a lab made from
 # there has to land beside the repo, not beside the lab.
 lab_cwd_checkout() {
-  local here=${2:-} common
+  local here=${2:-}
   [ -n "$here" ] || here=$(lab_project_from_cwd) || return 1
   [ "$(lab_project_key "$here")" = "$1" ] || return 1
+  lab_here_checkout
+}
+
+# lab_here_checkout — the main checkout of whatever repo the cwd is in.
+lab_here_checkout() {
+  local common
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
   [[ "$common" == */.git ]] || return 1
   printf '%s' "${common%/.git}"
@@ -230,12 +236,13 @@ lab_project_from_cwd() { find-project.sh 2>/dev/null; }
 # project's, and only the creation paths have any use for it.
 #
 # The name carries the backend but not the project, so the project comes from
-# whichever one owns it: a declared project's worktree dir or container settles it
-# (both local checks), else the caller's cwd — which is also the only thing that
-# can name an undeclared repo — and a coder lab, which has neither on the host,
-# falls back to the declared projects' workspaces.
+# whichever one owns it: a worktree dir beside the caller's own checkout, then a
+# declared project's worktree dir or container (both local checks), else the
+# caller's cwd — which is also the only thing that can name an undeclared repo —
+# and a coder lab, which has neither on the host, falls back to the declared
+# projects' workspaces.
 lab_resolve() {
-  local name=$1 p key checkout prefix from_cwd=""
+  local name=$1 p key checkout prefix here from_cwd=""
   lab_conf_load
   LAB_BACKEND=$(lab_backend "$name") || { echo "lab: unknown backend for '$name'" >&2; return 1; }
 
@@ -243,6 +250,21 @@ lab_resolve() {
   [ -n "$key" ] && key=$(lab_project_key "$key")
 
   set -- $LAB_PROJECTS
+
+  # Tmp indexes and task ids are per project, so one name can sit beside two
+  # checkouts, and the one beside the caller's own is the one meant. A declared
+  # project is matched by its checkout; an undeclared repo can only have host
+  # labs.
+  if [ -z "$key" ] && [ "$LAB_BACKEND" != coder ] && here=$(lab_here_checkout) && [ -d "${here}-${name}" ]; then
+    for p in "$@"; do
+      checkout=$(lab_conf_key "$p" CHECKOUT)
+      [ -n "$checkout" ] && [ "$checkout" -ef "$here" ] && { key=$p; break; }
+    done
+    if [ -z "$key" ] && [ "$LAB_BACKEND" = host ] && from_cwd=$(lab_project_from_cwd); then
+      p=$(lab_project_key "$from_cwd")
+      if [ -z "$(lab_conf_key "$p" CHECKOUT)" ]; then key=$p; else from_cwd=""; fi
+    fi
+  fi
 
   # Local evidence: the worktree dir, then the container. The backend gates both
   # — a coder lab has no worktree, only docker has a container — so nothing asks

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Pick a lab to drop. Lists what exists, resolves each through `lab-drop.sh
-# --check` in the background, and by default shows only the ones that check
-# passes — the labs a real drop would not refuse. ctrl-a toggles to showing
-# every lab, each annotated with why it is held back.
+# Pick a lab to drop. Lists the cwd project's labs (every project's outside a
+# repo), resolves each through `lab-drop.sh --check` in the background, and by
+# default shows only the ones that check passes — the labs a real drop would not
+# refuse. ctrl-a toggles to showing every lab, each annotated with why it is held
+# back.
 #
 # The list fills in as checks land: fzf runs with --listen, and each resolver
 # pokes it to reload once its verdict is written. Coder is the one backend whose
@@ -117,7 +118,7 @@ spawn)
     trap 'rm -rf "$STATE"' EXIT
     mkdir -p "$STATE/v"
     echo droppable > "$STATE/mode"
-    lab-list.sh --long > "$STATE/labs" 2>/dev/null || true
+    lab-list.sh --long --here > "$STATE/labs" 2>/dev/null || true
     if [ ! -s "$STATE/labs" ]; then
         echo "lab-drop-pick: no labs to drop" >&2
         exit 0
