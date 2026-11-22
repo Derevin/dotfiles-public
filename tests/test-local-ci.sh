@@ -24,15 +24,20 @@ unset LOCAL_CI_CALLER
 # green (two hooks pass, one skips), red (the second hook fails), dead (prek
 # never starts) or workspace (red, nested configs: prek heads each project and
 # indents everything under it). prek names no id for a skipped hook and indents
-# hook output.
+# hook output. `prek list` records its argv apart and answers FAKE_LIST.
 mkdir -p "$TMP/bin"
 cat > "$TMP/bin/uv" <<'EOF'
 #!/usr/bin/env bash
-printf '%s\n' "$@" > "$FAKE_ARGS"
 if [ "$FAKE_MODE" = dead ]; then
     echo "error: Failed to spawn: \`prek\`" >&2
     exit 2
 fi
+if [ "$4" = list ]; then
+    printf '%s\n' "$@" > "$FAKE_LIST_ARGS"
+    echo "${FAKE_LIST:-[]}"
+    exit 0
+fi
+printf '%s\n' "$@" > "$FAKE_ARGS"
 if [ "$FAKE_MODE" = workspace ]; then
     cat <<'OUT'
 ✓ sub
@@ -77,6 +82,7 @@ OUT
 EOF
 chmod +x "$TMP/bin/uv"
 export FAKE_ARGS="$TMP/args"
+export FAKE_LIST_ARGS="$TMP/list-args"
 export PATH="$TMP/bin:$PATH"
 
 git_q() { git "$@" >/dev/null 2>&1; }
@@ -126,6 +132,17 @@ ok "step results" "$(last '[.steps[].result] | join(" ")')" "pass pass"
 ok "durations in ms" "$(last '.steps[1].ms')" 12300
 ok "green prints one line" "$(wc -l < "$TMP/stdout")" 1
 ok "green leaves no output file" "$(find "$TMPDIR" -type f | wc -l)" 0
+ok "asks for caller-scoped hooks outside the caller's group" \
+    "$(sed -n '4,$p' "$FAKE_LIST_ARGS" | paste -sd' ')" \
+    "list --hook-stage manual --output-format json --group caller-scoped --no-group agent"
+ok "none, none skipped" "$(grep -c -x -- --skip "$FAKE_ARGS")" 0
+
+FAKE_MODE=green FAKE_LIST='[{"id":"slow","full_id":".:slow"},{"id":"slower","full_id":"sub:slower"}]' \
+    "$CI" >/dev/null 2>&1
+ok "unset caller scopes as manual" "$(tail -n 1 "$FAKE_LIST_ARGS")" manual
+ok "skips another caller's hooks" "$(sed -n '/^--skip$/{n;p}' "$FAKE_ARGS" | paste -sd' ')" ".:slow sub:slower"
+ok "logs them skipped" "$(last '[.steps[] | "\(.step) \(.result)"] | join(", ")')" \
+    "fmt pass, cargo-test pass, slow skip, slower skip"
 
 FAKE_MODE=red "$CI" > "$TMP/stdout" 2>&1
 ok "red exits 1" "$?" 1

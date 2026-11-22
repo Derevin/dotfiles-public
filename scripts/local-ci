@@ -11,6 +11,10 @@
 # committing. Green prints one line; red prints prek's whole output, streamed
 # as it runs when stdout is a terminal.
 #
+# A hook in the `caller-scoped` group runs only for the callers its other
+# groups name (`groups: [caller-scoped, post-review]`); prek reports it
+# Skipped for the rest.
+#
 # Every run appends one JSON line to $XDG_STATE_HOME/local-ci/<project>.jsonl
 # (default ~/.local/state): caller, branch, commit, per-hook result and
 # duration. Machine-local evidence for introspection, never for a handoff.
@@ -58,9 +62,17 @@ branch=$(git symbolic-ref --short -q HEAD || echo detached)
 commit=$(git rev-parse HEAD)
 dirty=$([ -n "$(git status --porcelain)" ] && echo true || echo false)
 
+caller=${LOCAL_CI_CALLER:-manual}
+# prek warns on a group no hook carries, i.e. in most repos.
+skipped=$(uv run --locked prek list --hook-stage manual --output-format json \
+    --group caller-scoped --no-group "$caller" 2>/dev/null)
+[ -n "$skipped" ] || skipped='[]'
+
 out=$(mktemp --suffix=.out "${TMPDIR:-/tmp}/local-ci-$project.XXXXXX")
 # --locked: a uv.lock out of step with pyproject is red, never rewritten mid-run.
 args=(run --locked prek run --hook-stage manual --verbose --color=never)
+mapfile -t skip_ids < <(jq -r '.[].full_id' <<< "$skipped")
+for id in "${skip_ids[@]}"; do args+=(--skip "$id"); done
 [ "${#files[@]}" -eq 0 ] || args+=(--files "${files[@]}")
 
 if [ -t 1 ]; then
@@ -94,11 +106,12 @@ jq -cn \
     --arg branch "$branch" \
     --arg commit "$commit" \
     --argjson dirty "$dirty" \
-    --arg caller "${LOCAL_CI_CALLER:-manual}" \
+    --arg caller "$caller" \
     --arg result "$result" \
     --argjson steps "$steps" \
+    --argjson skipped "$skipped" \
     '{ts: $ts, branch: $branch, commit: $commit, dirty: $dirty, caller: $caller,
-      result: $result, steps: $steps}' >> "$LOG"
+      result: $result, steps: ($steps + [$skipped[] | {step: .id, result: "skip"}])}' >> "$LOG"
 
 [ "$rc" -eq 0 ] || [ -t 1 ] || cat "$out"
 rm -f "$out"
