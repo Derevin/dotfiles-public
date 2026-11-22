@@ -25,7 +25,7 @@ A later message that changes a question or its recommendation restates that ques
 
 Each round's answers reshape the tree — settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a *later* round, not this one.
 
-Finding *facts* is your job, never mine. When a frontier question needs a fact from the environment, dispatch a subagent to find it rather than asking me something you could look up. When you dispatch an exploration, wait until every running subagent has finished before asking the round — a round posted while agents are still landing gets mangled by their output and I have to reask. The *decisions* are mine — put each one to me and wait.
+Finding *facts* is your job, never mine. When a frontier question needs a fact from the environment, dispatch a subagent to find it rather than asking me something you could look up: `recon` for anything in the code or the repo, `general-purpose` for what recon's tools can't reach (the web, running something). Never a fork — it copies this whole conversation onto the session's model. When you dispatch an exploration, wait until every running subagent has finished before asking the round — a round posted while agents are still landing gets mangled by their output and I have to reask. The *decisions* are mine — put each one to me and wait.
 
 The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not enact the plan until I confirm we have reached a shared understanding.
 
