@@ -30,8 +30,8 @@ elif [[ -n "$dir" ]]; then
 fi
 
 session=()
-[[ -n "$model" ]] && session+=("$model")
 [[ -n "$ctx" ]] && session+=("${ctx}%")
+[[ -n "$model" ]] && session+=("$model")
 [[ -n "$cost" ]] && session+=("$(printf '$%.0f' "$cost")")
 (( ${#session[@]} )) && parts+=("${session[*]}")
 [[ -n "$branch" ]] && parts+=("$branch")
