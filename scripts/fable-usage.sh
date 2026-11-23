@@ -4,9 +4,9 @@
 #
 # Claude Code hands its statusline only the all-models limits, so this reads the
 # usage API behind /usage. The reply is cached and, once older than MAX_AGE,
-# refreshed in the background: a call never waits on the network, and every
-# session's statusline makes one, so while Fable is being spent the cache trails
-# by at most that. Until a refresh lands it reads Claude Code's own cache, which
+# refreshed in the background: a call never waits on the network, and the tmux
+# status bar makes one (via ai-usage.sh) every few seconds, so the cache trails by
+# about that. Until a refresh lands it reads Claude Code's own cache, which
 # Claude Code refreshes only when it reads usage itself.
 # Usage: fable-usage.sh
 set -uo pipefail
@@ -17,7 +17,7 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     exit 0
 fi
 
-MAX_AGE=300
+MAX_AGE=60
 cache=$HOME/.cache/claude-usage.json
 creds=$HOME/.claude/.credentials.json
 

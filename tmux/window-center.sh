@@ -3,12 +3,13 @@
 # an odd visible count the middle window's centre lands there, with an even count
 # the gap between the two middle windows does. Printed into status-left, which
 # status-justify left then places the list after. Recomputed each status-interval
-# via the #() job in .tmux.conf.
-# Usage: window-center.sh <client_width> <session>
+# via the #() job in .tmux.conf. Optional left text leads the bar, its width taken
+# out of the pad so the list stays put until the text outgrows the pad.
+# Usage: window-center.sh <client_width> <session> [left_text]
 
 if [[ "${1:-}" == "--help" ]]; then
     echo "Print the left padding that centres the window list on its middle window (odd) or middle gap (even)."
-    echo "Usage: window-center.sh <client_width> <session>"
+    echo "Usage: window-center.sh <client_width> <session> [left_text]"
     exit 0
 fi
 
@@ -70,7 +71,7 @@ _strip_width() {
 }
 
 _main() {
-    local width=${1:-0} session=${2:-}
+    local width=${1:-0} session=${2:-} left=${3:-}
     [[ -n $session ]] || { printf ''; return; }
 
     local sep_s
@@ -87,7 +88,12 @@ _main() {
 
     local pad
     pad=$(window_center_pad "$width" "$sep" "${widths[@]}")
-    printf '%*s' "$pad" ''
+    if [[ -n $left ]]; then
+        left=" $left"
+        pad=$((pad - $(_strip_width "$left")))
+        ((pad < 1)) && pad=1
+    fi
+    printf '%s%*s' "$left" "$pad" ''
 }
 
 # Run only when executed; tests source the file for window_center_pad alone.

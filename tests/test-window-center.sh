@@ -63,4 +63,13 @@ ok "_main strips style" "$(padlen ' ' ' 1:alpha '$'\n'' #[bold]2:bb#[nobold] '$'
 # A hidden window renders empty; it must still count as a separator-bordered gap.
 ok "_main hidden mid"   "$(padlen ' ' ' 1:alpha '$'\n\n'' 3:ccccccc ')" 30
 
+# Left text leads after a one-column margin and comes out of the pad, so the
+# list starts where it would without it (column 27).
+left() { FAKE_SEP=' ' FAKE_LABELS=' 1:alpha '$'\n'' 2:bb '$'\n'' 3:ccccccc ' _main 80 x "$1"; }
+out=$(left 'ab')
+ok "_main leads with left text" "${out:0:3}" " ab"
+ok "_main left text keeps the list put" "${#out}" 27
+ok "_main left style carries no width" "$(_strip_width "$(left '#[bold]ab')")" 27
+ok "_main left text past the pad keeps a gap" "$(left "$(printf '%040d' 0)" | wc -c)" 42
+
 report

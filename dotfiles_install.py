@@ -54,6 +54,7 @@ COMMON = [
     ("tmux/zoom.sh", ".local/bin/zoom.sh"),
     ("tmux/zoom-dir.sh", ".local/bin/zoom-dir.sh"),
     ("tmux/window-center.sh", ".local/bin/window-center.sh"),
+    ("tmux/ai-usage.sh", ".local/bin/ai-usage.sh"),
     ("tmux/pane-split.sh", ".local/bin/pane-split.sh"),
     ("just/justfile", ".justfile"),
     ("scripts/find-project.sh", ".local/bin/find-project.sh"),
