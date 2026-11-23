@@ -23,13 +23,16 @@ cd "$TMP" || exit 1
 
 model() { printf '{"model":{"display_name":"%s"}}' "$1" | "$SL"; }
 
-ok "keeps the version" "$(model 'Opus 4.8')" "Opus 4.8"
-ok "drops the context suffix" "$(model 'Opus 5.5 (1M context)')" "Opus 5.5"
-ok "keeps a long name whole" "$(model 'Sonnet 5')" "Sonnet 5"
-ok "shows cost in USD" "$(echo '{"cost":{"total_cost_usd":1.234}}' | "$SL")" '($1.23)'
+ok "abbreviates the family" "$(model 'Opus 4.8')" "O4.8"
+ok "drops the context suffix" "$(model 'Opus 5.5 (1M context)')" "O5.5"
+ok "keeps a versionless name whole" "$(model 'Opus')" "Opus"
+ok "shows cost in whole USD" "$(echo '{"cost":{"total_cost_usd":1.234}}' | "$SL")" '$1'
+ok "joins model, context and cost in one segment" \
+    "$(echo '{"model":{"display_name":"Opus 5.5"},"context_window":{"used_percentage":23.4},"cost":{"total_cost_usd":3.21}}' | "$SL")" \
+    'O5.5 23% $3'
 
 # Codex usage comes from the rate-limit snapshot in its newest session log and
-# rides beside Claude's: block <claude>/<codex>, wk <claude>/<codex>.
+# rides beside Claude's: 5h <claude>/<codex>%, 7d <claude>/<codex>%.
 # A stub codex on PATH and an auth file stand for an installed, logged-in Codex.
 mkdir -p "$TMP/bin" "$HOME/.codex"
 printf '#!/bin/sh\n' > "$TMP/bin/codex"
@@ -41,7 +44,7 @@ snapshot() {  # <5h%> <5h reset> <wk%> <wk reset>
     printf '{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":%s,"window_minutes":300,"resets_at":%s},"secondary":{"used_percent":%s,"window_minutes":10080,"resets_at":%s}}}}\n' "$@"
 }
 
-ok "shows Claude alone without codex logs" "$(usage)" "(block 20% · wk 40%)"
+ok "shows Claude alone without codex logs" "$(usage)" "5h 20% · 7d 40%"
 
 now=$(date +%s)
 later=$((now + 3600))
@@ -53,23 +56,23 @@ snapshot 90 "$later" 90 "$later" > "$old/rollout-a.jsonl"
 { snapshot 1 "$later" 2 "$later"; snapshot 12.4 "$later" 30.6 "$later"; } > "$new/rollout-b.jsonl"
 touch -d '1 hour ago' "$old/rollout-a.jsonl"
 
-ok "pairs codex usage from the newest snapshot" "$(usage)" "(block 20%/12% · wk 40%/31%)"
-ok "skips codex without Claude usage" "$(model 'Opus 5.5')" "Opus 5.5"
+ok "pairs codex usage from the newest snapshot" "$(usage)" "5h 20/12% · 7d 40/31%"
+ok "skips codex without Claude usage" "$(model 'Opus 5.5')" "O5.5"
 
 snapshot 12 "$earlier" 30 "$later" > "$new/rollout-b.jsonl"
-ok "zeroes a window that has reset" "$(usage)" "(block 20%/0% · wk 40%/30%)"
+ok "zeroes a window that has reset" "$(usage)" "5h 20/0% · 7d 40/30%"
 
 touch -d '2 hours ago' "$new/rollout-b.jsonl"
-ok "reads a session that spans days by mtime" "$(usage)" "(block 20%/90% · wk 40%/90%)"
+ok "reads a session that spans days by mtime" "$(usage)" "5h 20/90% · 7d 40/90%"
 
 rm -r "$old"
-ok "reads a lone day dir" "$(usage)" "(block 20%/0% · wk 40%/30%)"
+ok "reads a lone day dir" "$(usage)" "5h 20/0% · 7d 40/30%"
 
 echo '{}' > "$new/rollout-c.jsonl"
-ok "reads past a newest log without a snapshot" "$(usage)" "(block 20%/0% · wk 40%/30%)"
+ok "reads past a newest log without a snapshot" "$(usage)" "5h 20/0% · 7d 40/30%"
 
 # Fable's weekly limit comes from the usage Claude Code caches in ~/.claude.json
-# and sits between Claude's and Codex's: wk <claude>/<fable>/<codex>.
+# and sits between Claude's and Codex's: 7d <claude>/<fable>/<codex>%.
 fable() {  # <percent> <reset epoch>
     printf '{"cachedUsageUtilization":{"utilization":{"limits":[
         {"kind":"weekly_all","percent":99,"resets_at":"%s","scope":null},
@@ -78,13 +81,13 @@ fable() {  # <percent> <reset epoch>
         > "$HOME/.claude.json"
 }
 fable 51.4 "$later"
-ok "puts fable between Claude and Codex weekly" "$(usage)" "(block 20%/0% · wk 40%/51%/30%)"
+ok "puts fable between Claude and Codex weekly" "$(usage)" "5h 20/0% · 7d 40/51/30%"
 fable 51 "$earlier"
-ok "zeroes fable past its reset" "$(usage)" "(block 20%/0% · wk 40%/0%/30%)"
+ok "zeroes fable past its reset" "$(usage)" "5h 20/0% · 7d 40/0/30%"
 rm "$HOME/.claude.json"
 
 rm "$HOME/.codex/auth.json"
-ok "locks codex usage when logged out" "$(usage)" "(block 20%/🔒 · wk 40%/🔒)"
+ok "locks codex usage when logged out" "$(usage)" "5h 20%/🔒 · 7d 40%/🔒"
 
 # Every tool the script runs except codex, so its absence is the only difference.
 nocodex="$TMP/nocodex"
@@ -92,6 +95,6 @@ mkdir -p "$nocodex"
 for t in bash jq git cut date stat cat tac grep awk mkdir readlink dirname; do
     ln -s "$(command -v "$t")" "$nocodex/$t"
 done
-ok "skips codex when not installed" "$(PATH="$nocodex" usage)" "(block 20% · wk 40%)"
+ok "skips codex when not installed" "$(PATH="$nocodex" usage)" "5h 20% · 7d 40%"
 
 report
