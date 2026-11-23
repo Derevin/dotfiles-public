@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Print account-wide AI usage for the tmux status bar: Claude's 5-hour and weekly
-# windows with their resets, Fable's week and Codex's windows beside them, e.g.
-# "5h 20/12% 1630 · 7d 40/51/31% We10". Claude's numbers come from the usage API
-# cache fable-usage.sh keeps, not a session, so they cover sessions in containers
-# too. tmux asks every status-interval; the answer is cached for CACHE_TTL.
+# Print account-wide AI usage for the tmux status bar: the 5-hour then the weekly
+# window, each led by its reset, then a glyph per provider, e.g.
+# "16:30 󰛄20% 󰋙12% · We10 󰛄40% ƒ51% 󰋙31%". Claude's numbers come
+# from the usage API cache fable-usage.sh keeps, not a session, so they cover
+# sessions in containers too. tmux asks every status-interval; the answer is
+# cached for CACHE_TTL.
 # Usage: ai-usage.sh
 set -uo pipefail
 
@@ -56,33 +57,39 @@ claude_window() {
     fi
 }
 
-# Joins percentages under one sign, 20/12%; a lock trails it, 20%/🔒.
-pcts() {
-    local nums=() lock="" v
-    for v; do
-        case $v in
-            '') ;;
-            🔒) lock="/🔒" ;;
-            *) nums+=("$v") ;;
-        esac
-    done
-    local IFS=/
-    printf '%s%%%s' "${nums[*]}" "$lock"
+# Adds <glyph><percent>% to seg; a logged-out Codex adds <glyph>🔒, an unknown
+# percent nothing.
+tag() {
+    case $2 in
+        '') ;;
+        🔒) seg+=("$1🔒") ;;
+        *) seg+=("$1$2%") ;;
+    esac
 }
+
+# Nerd Font icons: drawn to the cell, where a fallback font's glyph spills into
+# the digit after it. Fable's ƒ is in the font itself.
+CLAUDE=󰛄  # nf-md-asterisk
+CODEX=󰋙   # nf-md-hexagon_outline
 
 parts=()
 if read -r p reset < <(claude_window session); then
-    seg="5h $(pcts "$p" "$cx5")"
-    [[ -n $reset ]] && seg+=" $(date -d "@$reset" +%H%M)"
-    parts+=("$seg")
+    seg=()
+    [[ -n $reset ]] && seg+=("$(date -d "@$reset" +%H:%M)")
+    tag "$CLAUDE" "$p"
+    tag "$CODEX" "$cx5"
+    parts+=("${seg[*]}")
 fi
 if read -r p reset < <(claude_window weekly_all); then
-    seg="7d $(pcts "$p" "$fb7" "$cx7")"
+    seg=()
     if [[ -n $reset ]]; then
         dow=$(date -d "@$reset" +%a)
-        seg+=" ${dow:0:2}$(date -d "@$reset" +%H)"
+        seg+=("${dow:0:2}$(date -d "@$reset" +%H)")
     fi
-    parts+=("$seg")
+    tag "$CLAUDE" "$p"
+    tag ƒ "$fb7"
+    tag "$CODEX" "$cx7"
+    parts+=("${seg[*]}")
 fi
 
 line=""
