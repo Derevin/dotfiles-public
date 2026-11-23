@@ -26,6 +26,12 @@ model() { printf '{"model":{"display_name":"%s"}}' "$1" | "$SL"; }
 ok "abbreviates the family" "$(model 'Opus 4.8')" "O4.8"
 ok "drops the context suffix" "$(model 'Opus 5.5 (1M context)')" "O5.5"
 ok "keeps a versionless name whole" "$(model 'Opus')" "Opus"
+
+effort() { printf '{"model":{"display_name":"Opus 5.5"},"effort":{"level":"%s"}}' "$1" | "$SL"; }
+fills=""
+for level in low medium high xhigh max; do fills+="$(effort "$level") "; done
+ok "fills a circle per effort level" "$fills" "O5.5○ O5.5◔ O5.5◑ O5.5◕ O5.5● "
+ok "skips an unknown effort level" "$(effort turbo)" "O5.5"
 ok "shows cost in whole USD" "$(echo '{"cost":{"total_cost_usd":1.234}}' | "$SL")" '$1'
 ok "joins model, context and cost in one segment" \
     "$(echo '{"model":{"display_name":"Opus 5.5"},"context_window":{"used_percentage":23.4},"cost":{"total_cost_usd":3.21}}' | "$SL")" \

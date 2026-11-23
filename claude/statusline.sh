@@ -7,6 +7,15 @@ ctx=$(printf '%s' "$input" | jq -r '.context_window.used_percentage // empty' | 
 model=$(printf '%s' "$input" | jq -r '.model.display_name // empty')
 model=${model%% (*}   # "Opus 5.5 (1M context)"→"Opus 5.5"
 [[ $model == *' '* ]] && model="${model:0:1}${model##* }"   # "Opus 5.5"→"O5.5"
+if [[ -n $model ]]; then
+    case $(printf '%s' "$input" | jq -r '.effort.level // empty') in
+        low) model+="○" ;;
+        medium) model+="◔" ;;
+        high) model+="◑" ;;
+        xhigh) model+="◕" ;;
+        max) model+="●" ;;
+    esac
+fi
 cost=$(printf '%s' "$input" | jq -r '.cost.total_cost_usd // empty')
 rl5=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
 rl5_reset=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
