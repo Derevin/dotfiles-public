@@ -69,6 +69,7 @@ COMMON = [
     ("scripts/codex-run.sh", ".local/bin/codex-run.sh"),
     ("scripts/codex-review.sh", ".local/bin/codex-review.sh"),
     ("scripts/codex-usage.sh", ".local/bin/codex-usage.sh"),
+    ("scripts/fable-usage.sh", ".local/bin/fable-usage.sh"),
     ("scripts/fork-registry.sh", ".local/bin/fork-registry.sh"),
     ("scripts/fork-recover.sh", ".local/bin/fork-recover.sh"),
     ("scripts/fork-collect.sh", ".local/bin/fork-collect.sh"),

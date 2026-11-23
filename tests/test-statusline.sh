@@ -70,13 +70,28 @@ ok "reads a lone day dir" "$(usage)" "(block 20%/0% · wk 40%/30%)"
 echo '{}' > "$new/rollout-c.jsonl"
 ok "reads past a newest log without a snapshot" "$(usage)" "(block 20%/0% · wk 40%/30%)"
 
+# Fable's weekly limit comes from the usage Claude Code caches in ~/.claude.json
+# and sits between Claude's and Codex's: wk <claude>/<fable>/<codex>.
+fable() {  # <percent> <reset epoch>
+    printf '{"cachedUsageUtilization":{"utilization":{"limits":[
+        {"kind":"weekly_all","percent":99,"resets_at":"%s","scope":null},
+        {"kind":"weekly_scoped","percent":%s,"resets_at":"%s","scope":{"model":{"display_name":"Fable"}}}]}}}' \
+        "$(date -u -d "@$2" +%FT%T.123456+00:00)" "$1" "$(date -u -d "@$2" +%FT%T.123456+00:00)" \
+        > "$HOME/.claude.json"
+}
+fable 51.4 "$later"
+ok "puts fable between Claude and Codex weekly" "$(usage)" "(block 20%/0% · wk 40%/51%/30%)"
+fable 51 "$earlier"
+ok "zeroes fable past its reset" "$(usage)" "(block 20%/0% · wk 40%/0%/30%)"
+rm "$HOME/.claude.json"
+
 rm "$HOME/.codex/auth.json"
 ok "locks codex usage when logged out" "$(usage)" "(block 20%/🔒 · wk 40%/🔒)"
 
 # Every tool the script runs except codex, so its absence is the only difference.
 nocodex="$TMP/nocodex"
 mkdir -p "$nocodex"
-for t in bash jq git cut date stat cat tac grep awk mkdir; do
+for t in bash jq git cut date stat cat tac grep awk mkdir readlink dirname; do
     ln -s "$(command -v "$t")" "$nocodex/$t"
 done
 ok "skips codex when not installed" "$(PATH="$nocodex" usage)" "(block 20% · wk 40%)"

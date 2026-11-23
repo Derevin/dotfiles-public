@@ -23,15 +23,19 @@ if [[ ! -f $rate_file ]] || (( $(date +%s) - $(stat -c %Y "$rate_file" 2>/dev/nu
 fi
 czk_rate=$(cat "$rate_file" 2>/dev/null)
 
+scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts"
+
 # Logged out, the snapshot is stale and Codex unusable: a lock replaces it.
 cx5="" cx7=""
 if ! command -v codex >/dev/null; then
     :  # not installed: no Codex segment at all
 elif [[ ! -f ${CODEX_HOME:-$HOME/.codex}/auth.json ]]; then
     cx5="🔒" cx7="🔒"
-elif read -r cx5 cx7 < <("$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts/codex-usage.sh"); then
+elif read -r cx5 cx7 < <("$scripts/codex-usage.sh"); then
     cx5="$cx5%" cx7="$cx7%"
 fi
+
+fb7=$("$scripts/fable-usage.sh") && fb7="$fb7%"
 
 parts=()
 # CLAUDE_LABEL is set at launch by the workspace scripts; unlike a Claude session
@@ -64,6 +68,7 @@ if [[ -n "$cost" ]]; then
 fi
 if [[ -n "$rl7" ]]; then
     p="wk $(printf '%.0f' "$rl7")%"
+    [[ -n "$fb7" ]] && p="$p/$fb7"
     [[ -n "$cx7" ]] && p="$p/$cx7"
     if [[ -n "$rl7_reset" ]]; then
         dow=$(date -d "@$rl7_reset" +%a)
