@@ -34,7 +34,6 @@ COMMON = [
     ("claude/keybindings.json", ".claude/keybindings.json"),
     ("claude/settings.json", ".claude/settings.json"),
     ("claude/statusline.sh", ".claude/statusline.sh"),
-    ("claude/skills/promote-memory", ".claude/skills/promote-memory"),
     ("claude/skills/grill-me-with-docs", ".claude/skills/grill-me-with-docs"),
     ("claude/skills/write-a-skill", ".claude/skills/write-a-skill"),
     ("claude/skills/retro", ".claude/skills/retro"),

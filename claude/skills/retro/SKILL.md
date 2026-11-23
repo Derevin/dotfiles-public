@@ -25,7 +25,7 @@ You are running a **retrospective**: mining a finished coding session for improv
 - **Coding standards** — classify before you act. A **mechanical** violation (a fixed pattern, a banned API, an import or file-location rule) gets a deterministic check — a linter rule, a pre-commit hook, a CI job — never prose. Reserve a CLAUDE.md rule or a **reviewer agent** brief for genuine **judgement calls** (cross-file consistency, "matches the surrounding style"). Default to the check. _When_ a rule kept getting broken, or review let one through.
 - **Reviewer coverage** — should one of the `/review-branch` agents get a new rule, or is a whole dimension unreviewed and owed a new reviewer? Standards sit on the **reviewer agent**, which reads a diff under the least **context pressure**, never on the implementer. _When_ a class of defect reached the branch.
 - **Steering bloat** — a CLAUDE.md line (global or project) that's a **no-op** the agent already obeys, has gone stale, or belongs in a doc behind a pointer. Bloat buries the rules that bite. _When_ a steering file is large, or a rule didn't fire.
-- **Context store** — a term that caused confusion earns a `CONTEXT.md` glossary entry; a decision relitigated mid-session earns an ADR. Durable knowledge capture past the environment is `promote-memory`'s job: hand off, don't duplicate. Commit and push each accepted context edit via `context-commit.sh "<project>: term|adr — …"`. _When_ vocabulary or a settled decision churned.
+- **Context store** — a term that caused confusion earns a `CONTEXT.md` glossary entry; a decision relitigated mid-session earns an ADR. Commit and push each accepted context edit via `context-commit.sh "<project>: term|adr — …"`. _When_ vocabulary or a settled decision churned.
 - **Tool economy** — an expensive or token-noisy tool or script call worth streamlining. _When_ a call was slow or flooded the context.
 - **Information access** — a crucial fact the agent couldn't reach: teed dev-server logs, read-only access to a service, a value locked behind a dashboard. _When_ missing information blocked progress.
 
@@ -35,7 +35,7 @@ You are running a **retrospective**: mining a finished coding session for improv
 
 - Mechanical rule → a check. Prose can't enforce what a linter, hook, or CI job enforces for free.
 - Judgement call → the narrowest steering layer that covers it (module CLAUDE.md, then project, then global `~/.claude/CLAUDE.md`), or a **reviewer agent**'s brief.
-- Durable term, decision, or recipe → `promote-memory`'s targets (`CONTEXT.md`, `adr/`, a done task). retro proposes the *environment* change; `promote-memory` carries the *knowledge*. Keep each in one place.
+- Durable term or decision → the context store: a `CONTEXT.md` entry or an ADR.
 
 ### Implementation vs review
 
