@@ -76,6 +76,8 @@ Taskania's output names the project it acted on; `--project NAME` targets anothe
 
 Per-project domain knowledge — a glossary (`CONTEXT.md`) and decision records (`adr/`) — lives in `~/repos/context/<project>/`, external to the code repo (keeps it out of possibly-public repos). Read before planning non-trivial work; `context-sync.sh` first to avoid stale reads. Resolve `<project>` with `find-project.sh` — not always the dir basename.
 
+After editing, commit and push via `context-commit.sh "<project>: term|adr — …"`. Use `--project NAME` when editing another project's context. Never run Git by hand in the store.
+
 Don't cite a specific ADR or CONTEXT.md entry (by number or title) in a code comment — those records live in an external store the code reader can't open, so the pointer dangles. State the fact the record holds; drop the citation.
 
 ## .claude directory

@@ -176,6 +176,25 @@
             "command": "~/.local/bin/fork-registry.sh"
           }
         ]
+      },
+      {
+        "matcher": "^(Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.local/bin/context-stop.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.local/bin/context-stop.sh"
+          }
+        ]
       }
     ]
   },

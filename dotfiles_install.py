@@ -62,6 +62,7 @@ COMMON = [
     ("scripts/pane-lib.sh", ".local/bin/pane-lib.sh"),
     ("scripts/context-commit.sh", ".local/bin/context-commit.sh"),
     ("scripts/context-sync.sh", ".local/bin/context-sync.sh"),
+    ("scripts/context-stop.sh", ".local/bin/context-stop.sh"),
     ("scripts/task-cleanup-branch.sh", ".local/bin/task-cleanup-branch.sh"),
     ("scripts/sync.sh", ".local/bin/sync.sh"),
     ("scripts/claude-update.sh", ".local/bin/claude-update.sh"),
