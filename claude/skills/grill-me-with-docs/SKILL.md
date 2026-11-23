@@ -3,9 +3,9 @@ name: grill-me-with-docs
 description: Grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation (CONTEXT.md, ADRs) inline as decisions crystallise. Use when user wants to stress-test a plan against their project's language and documented decisions.
 ---
 
-Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
+Interview me relentlessly about every decision that meets the bar for a question until we reach a shared understanding. Map this as a **design tree** where each decision branches into the decisions that depend on it.
 
-Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled — the questions you can ask *now* without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. The counter runs session-wide — the first round opens at Q1 and every later one continues where the last stopped, so a number in my answers names exactly one question. Then wait for my answers before the next round.
+Work the tree in **rounds**. The **frontier** is every question or default whose prerequisites are settled. Post all of them in one round, questions first. Number each question and give your recommended answer. Start at Q1 and count up across the session so a number in my replies names exactly one question.
 
 Format each question like so:
 
@@ -23,11 +23,25 @@ The headline is the **quickfire**: assume I read only the headlines, so each mus
 
 A later message that changes a question or its recommendation restates that question's headline.
 
-Each round's answers reshape the tree — settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a *later* round, not this one.
+## Decision tiers
 
-Finding *facts* is your job, never mine. When a frontier question needs a fact from the environment, dispatch a subagent to find it rather than asking me something you could look up: `recon` for anything in the code or the repo, `general-purpose` for what recon's tools can't reach (the web, running something). Never a fork — it copies this whole conversation onto the session's model. When you dispatch an exploration, wait until every running subagent has finished before asking the round — a round posted while agents are still landing gets mangled by their output and I have to reask. The *decisions* are mine — put each one to me and wait.
+- **Asked** decisions get numbered questions. Ask when a choice changes observable behaviour or scope, is costly to reverse, or has no confident pick. Fine UX details like hint text, markers, and key bindings count as observable behaviour, as do product and tool names.
+- **Defaulted** decisions fall below that bar and are worth showing me so I can object.
+- **Never raised** decisions belong to the implementer. Leave them out of the session and plan.
 
-The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not enact the plan until I confirm we have reached a shared understanding.
+These examples are starting points; the asked bar overrides them, except that observable behaviour alone doesn't make error handling asked.
+
+- Leave automated test design and fixtures to the implementer.
+- Default manual tests and other steps I'd have to do by hand. Say what I'd have to do.
+- Default error and failure handling, internal code structure, and internal names.
+- Side work (follow-up tasks, Asana posts, drive-by doc fixes): when you'd recommend it, default to "no task" and name the work; otherwise don't mention it. Glossary and ADR proposals belong in the closing checkpoint.
+- Leave PR and commit shape to the implementer when one PR is obvious. If a split is worth considering, default to "one PR" and name the split.
+
+Post any defaults in one block after the questions, headed **Defaults, unless you object**, one per line as `**D<n>** <pick>, <why>`, counted from D1 up across the session, separately from Q numbers. The asked decisions are mine. Wait for my reply to every round, including a round with only the defaults block. A default settles when I reply to its round without objecting to it; if I object, retire its D number permanently and ask it as a full question next round under the next Q number. Recompute the frontier after each reply: a decision that depends on an open question or a default posted this round waits for a later round.
+
+Finding *facts* is your job, never mine. When a frontier decision needs a fact from the environment, dispatch a subagent to find it rather than asking me something you could look up: `recon` for anything in the code or the repo, `general-purpose` for what recon's tools can't reach (the web, running something). Never a fork — it copies this whole conversation onto the session's model. When you dispatch an exploration, wait until every running subagent has finished before posting the round — a round posted while agents are still landing gets mangled by their output and I have to reask.
+
+Post the closing checkpoint once the frontier is empty and all questions and defaults are settled. Wait for me to confirm we have reached a shared understanding before enacting the plan.
 
 ## Domain awareness
 
@@ -111,7 +125,7 @@ Before the grilling can end — before the user can sensibly say "go" — STOP a
 
 Top half: every term sharpened, introduced, or pinned down this session; every decision that meets the ADR bar (see below). If nothing qualifies, say so explicitly ("no glossary updates, no ADRs") — don't silently skip.
 
-Bottom half: the plan, for the user to call final or reopen.
+Bottom half: the plan, including accepted defaults, for the user to call final or reopen.
 
 One reply settles both — yes/no per doc item, plus the plan's verdict. Write the accepted docs, commit via `context-commit.sh` (format below). A reopened plan doesn't hold up the doc writes; the terms already resolved stand.
 

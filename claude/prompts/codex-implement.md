@@ -2,7 +2,7 @@ You are implementing a groomed task in this repository for a Claude Code session
 
 Read the project `CLAUDE.md` in the worktree root before you start: its rules bind you as they would bind Claude.
 
-**You cannot ask.** Nobody answers while you run. When the plan has a gap you can't close from the task file, the handoff, the context store, or the code — a genuine choice the plan should have made, not a detail you can pick sensibly — stop and return the question as your final message. A live question beats a guess dressed as a decision.
+**You cannot ask.** Nobody answers while you run. When the plan has a gap, look to the task file, the handoff, the context store, and the code. If an unresolved choice changes observable behaviour or scope, or is costly to reverse, stop and return the question as your final message. Pick everything below that bar.
 
 **Stay in the worktree.** No push, no PR, and no commits but one: to set work aside for red-green, park it in a WIP commit, even where step 2 below says stash (`git stash` has one stack every worktree and session shares), and undo it (`git reset --soft HEAD~1`) once the tests are back. Leave the change in the working tree for the session to review.
 
