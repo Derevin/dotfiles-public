@@ -1,4 +1,4 @@
-# CONTEXT.md Format
+# GLOSSARY.md Format
 
 ## Structure
 
@@ -48,18 +48,18 @@ _Avoid_: Client, buyer, account
 
 ## Single vs multi-context
 
-**Single context (default):** One `CONTEXT.md` at the project's context root, `~/repos/context/<project>/CONTEXT.md`.
+**Single context (default):** One `GLOSSARY.md` at the project's context root, `~/repos/context/<project>/GLOSSARY.md`.
 
-**Multiple contexts:** A `CONTEXT-MAP.md` at the project's context root lists the contexts, where they live both externally and in the repo, and how they relate:
+**Multiple contexts:** A `GLOSSARY-MAP.md` at the project's context root lists the contexts, where they live both externally and in the repo, and how they relate:
 
 ```md
 # Context Map
 
 ## Contexts
 
-- **Ordering** → [./ordering/CONTEXT.md](./ordering/CONTEXT.md), in repo: `src/ordering/`
-- **Billing** → [./billing/CONTEXT.md](./billing/CONTEXT.md), in repo: `src/billing/`
-- **Fulfillment** → [./fulfillment/CONTEXT.md](./fulfillment/CONTEXT.md), in repo: `src/fulfillment/`
+- **Ordering** → [./ordering/GLOSSARY.md](./ordering/GLOSSARY.md), in repo: `src/ordering/`
+- **Billing** → [./billing/GLOSSARY.md](./billing/GLOSSARY.md), in repo: `src/billing/`
+- **Fulfillment** → [./fulfillment/GLOSSARY.md](./fulfillment/GLOSSARY.md), in repo: `src/fulfillment/`
 
 ## Relationships
 
@@ -70,8 +70,8 @@ _Avoid_: Client, buyer, account
 
 The skill infers which structure applies:
 
-- If `CONTEXT-MAP.md` exists at the project's context root, read it to find contexts
-- If only `CONTEXT.md` exists at the project's context root, single context
-- If neither exists, create `CONTEXT.md` lazily when the first term is resolved
+- If `GLOSSARY-MAP.md` exists at the project's context root, read it to find contexts
+- If only `GLOSSARY.md` exists at the project's context root, single context
+- If neither exists, create `GLOSSARY.md` lazily when the first term is resolved
 
 When multiple contexts exist, infer which one the current topic relates to from the files and modules under discussion. If unclear, ask.

@@ -6,7 +6,7 @@ Every prose draft gets a trim pass: could this say the same in half the words? C
 
 Don't open a sentence with a lowercase symbol/path/identifier (`modules/gui/...`, `foo()`) — rephrase so it starts with a capital letter; a lowercase start looks malformed.
 
-Comments: sparse — only the surprising, the non-obvious, or the *why*; never narrate the code below. No history-relative phrasing ("previously", "originally", "used to", "now instead of") — describe the present, standalone. No ADR/CONTEXT.md citations — the store is outside the repo, so state the fact instead.
+Comments: sparse — only the surprising, the non-obvious, or the *why*; never narrate the code below. No history-relative phrasing ("previously", "originally", "used to", "now instead of") — describe the present, standalone. No ADR/GLOSSARY.md citations — the store is outside the repo, so state the fact instead.
 
 ## Git
 
@@ -49,6 +49,6 @@ Listing tasks and every state change (claim/complete/cancel/move) go through `ta
 
 ## Context store
 
-Per-project domain knowledge — a glossary (`CONTEXT.md`) and decision records (`adr/`) — lives in `~/repos/context/<project>/`, external to the code repo (keeps it out of possibly-public repos). Read before planning non-trivial work; `context-sync.sh` first to avoid stale reads. Resolve `<project>` with `find-project.sh` — not always the dir basename.
+Per-project domain knowledge — glossary (`GLOSSARY.md`) and decision records (`adr/`) — lives in `~/repos/context/<project>/`, external to the code repo (keeps it out of possibly-public repos). Read before planning non-trivial work; `context-sync.sh` first to avoid stale reads. Resolve `<project>` with `find-project.sh` — not always the dir basename.
 
 After editing, commit and push via `context-commit.sh "<project>: term|adr — …"`. Never run Git by hand in the store.

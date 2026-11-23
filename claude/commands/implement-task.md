@@ -14,7 +14,7 @@ Codex implements by default. With `--claude` in the arguments, Claude does: pass
 
 3. **Claim.** Run `taskania claim <filename>` — syncs, moves planned/ → active/, commits, outputs task content.
 
-4. **Orient.** Read the task file — the recorded plan and status sections are your brief. Read the referenced CONTEXT.md / ADRs. If the brief has a genuine gap that blocks implementation, surface it to the user before writing code rather than guessing — a well-groomed task shouldn't have one, so a gap is a signal worth raising.
+4. **Orient.** Read the task file — the recorded plan and status sections are your brief. Read the referenced GLOSSARY.md / ADRs. If the brief has a genuine gap that blocks implementation, surface it to the user before writing code rather than guessing — a well-groomed task shouldn't have one, so a gap is a signal worth raising.
 
 5. **Implement.** Invoke `/forkwc-implement`. The fork it dispatches takes the plan, the orientation above, and any steer the user has given from this conversation, implements the plan, proves the tests red-green, and returns the decisions the diff can't show. The reading and build output stay behind in the fork, so the review and handoff below run on a context that carries no implementation baggage. If it returns a question instead of an implementation, the plan had a gap — take it to the user, then dispatch again. If it returns local CI red, take that to the user too instead of starting review.
 

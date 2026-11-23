@@ -10,7 +10,7 @@ Review the current branch's diff against its merge base. Works offline — no PR
 
 1. **Gather changes.** Run exactly `review-diff.sh` (no arguments, no fallbacks, no shell wrappers) to get the commit log and full diff. The script handles merge-base discovery internally.
 
-1a. **Read project domain docs.** Resolve `<project>` via `find-project.sh`. If `~/repos/context/<project>/CONTEXT.md` (or `CONTEXT-MAP.md` + per-context files) exists, read it and note any terms the diff renames, repurposes, or contradicts. If `adr/` exists, skim for decisions the diff might violate. Hold these findings for step 3. Skip silently if the context store doesn't exist.
+1a. **Read project domain docs.** Resolve `<project>` via `find-project.sh`. If `~/repos/context/<project>/GLOSSARY.md` (or `GLOSSARY-MAP.md` + per-context files) exists, read it and note any terms the diff renames, repurposes, or contradicts. If `adr/` exists, skim for decisions the diff might violate. Hold these findings for step 3. Skip silently if the context store doesn't exist.
 
 2. **Dispatch subagent reviewers.** Launch all seven in parallel, passing each the full output — except **codex-reviewer**, which fetches the diff itself and takes only its report path:
 
@@ -24,7 +24,7 @@ Review the current branch's diff against its merge base. Works offline — no PR
 
    Instruct each to only report noteworthy findings. No praise, no minor style nits. Omit feedback on pre-existing code not affected by the branch changes.
 
-   Additionally, hand the **code-reviewer** this smell baseline to screen the diff against (Fowler, *Refactoring* ch.3) — beyond its generic brief. Each is a judgement call, not a hard rule: a documented repo or CONTEXT.md convention overrides it, and skip anything tooling already enforces. Name the smell and quote the hunk.
+   Additionally, hand the **code-reviewer** this smell baseline to screen the diff against (Fowler, *Refactoring* ch.3) — beyond its generic brief. Each is a judgement call, not a hard rule: a documented repo or GLOSSARY.md convention overrides it, and skip anything tooling already enforces. Name the smell and quote the hunk.
 
    - **Mysterious Name** — a function/variable/type whose name doesn't reveal what it does or holds.
    - **Duplicated Code** — the same logic shape in more than one hunk or file.

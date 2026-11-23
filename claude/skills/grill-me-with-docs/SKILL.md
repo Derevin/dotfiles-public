@@ -1,6 +1,6 @@
 ---
 name: grill-me-with-docs
-description: Grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation (CONTEXT.md, ADRs) inline as decisions crystallise. Use when user wants to stress-test a plan against their project's language and documented decisions.
+description: Grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation (GLOSSARY.md, ADRs) inline as decisions crystallise. Use when user wants to stress-test a plan against their project's language and documented decisions.
 ---
 
 Interview me relentlessly about every decision that meets the bar for a question until we reach a shared understanding. Map this as a **design tree** where each decision branches into the decisions that depend on it.
@@ -59,31 +59,31 @@ Single-context project (default):
 
 ```
 ~/repos/context/<project>/
-├── CONTEXT.md
+├── GLOSSARY.md
 └── adr/
     ├── 0001-event-sourced-orders.md
     └── 0002-postgres-for-write-model.md
 ```
 
-Multi-context project (only when one `CONTEXT.md` grew unwieldy and you split it):
+Multi-context project (only when one `GLOSSARY.md` grew unwieldy and you split it):
 
 ```
 ~/repos/context/<project>/
-├── CONTEXT-MAP.md
+├── GLOSSARY-MAP.md
 ├── adr/                          ← system-wide decisions
 ├── ordering/
-│   ├── CONTEXT.md
+│   ├── GLOSSARY.md
 │   └── adr/                      ← context-specific decisions
 └── billing/
-    ├── CONTEXT.md
+    ├── GLOSSARY.md
     └── adr/
 ```
 
-`CONTEXT-MAP.md` records each context's external dir and its in-repo path — see [CONTEXT-FORMAT.md](./CONTEXT-FORMAT.md).
+`GLOSSARY-MAP.md` records each context's external dir and its in-repo path — see [GLOSSARY-FORMAT.md](./GLOSSARY-FORMAT.md).
 
-Create files lazily — only when you have something to write. If no `CONTEXT.md` exists for the project, create `~/repos/context/<project>/CONTEXT.md` when the first term is resolved. If no `adr/` exists, create it when the first ADR is needed.
+Create files lazily — only when you have something to write. If no `GLOSSARY.md` exists for the project, create `~/repos/context/<project>/GLOSSARY.md` when the first term is resolved. If no `adr/` exists, create it when the first ADR is needed.
 
-Don't pre-sort. Start single-context. Split into `CONTEXT-MAP.md` + per-context dirs only when the single `CONTEXT.md` grows unwieldy.
+Don't pre-sort. Start single-context. Split into `GLOSSARY-MAP.md` + per-context dirs only when the single `GLOSSARY.md` grows unwieldy.
 
 When the project is multi-context, infer which one the current conversation relates to from the files and modules being discussed. If unclear, ask.
 
@@ -91,7 +91,7 @@ When the project is multi-context, infer which one the current conversation rela
 
 ### Challenge against the glossary
 
-When the user uses a term that conflicts with the existing language in `CONTEXT.md`, call it out immediately. "Your glossary defines 'cancellation' as X, but you seem to mean Y — which is it?"
+When the user uses a term that conflicts with the existing language in `GLOSSARY.md`, call it out immediately. "Your glossary defines 'cancellation' as X, but you seem to mean Y — which is it?"
 
 ### Sharpen fuzzy language
 
@@ -105,18 +105,18 @@ When domain relationships are being discussed, stress-test them with specific sc
 
 When the user states how something works, check whether the code agrees. If you find a contradiction, surface it: "Your code cancels entire Orders, but you just said partial cancellation is possible — which is right?"
 
-### Update CONTEXT.md inline (optional)
+### Update GLOSSARY.md inline (optional)
 
-If a term gets clearly resolved mid-session and you're confident it belongs in the glossary, capture it right then via the format in [CONTEXT-FORMAT.md](./CONTEXT-FORMAT.md). Don't force it — the mandatory checkpoint below catches anything missed.
+If a term gets clearly resolved mid-session and you're confident it belongs in the glossary, capture it right then via the format in [GLOSSARY-FORMAT.md](./GLOSSARY-FORMAT.md). Don't force it — the mandatory checkpoint below catches anything missed.
 
-`CONTEXT.md` should be totally devoid of implementation details. Do not treat `CONTEXT.md` as a spec, a scratch pad, or a repository for implementation decisions. It is a glossary and nothing else.
+`GLOSSARY.md` should be totally devoid of implementation details. Do not treat `GLOSSARY.md` as a spec, a scratch pad, or a repository for implementation decisions. It is a glossary and nothing else.
 
 ### Before handoff to implementation (mandatory)
 
 Before the grilling can end — before the user can sensibly say "go" — STOP and post one checkpoint message. Both halves in one go, split by a rule:
 
 ```
-<proposed CONTEXT.md diffs, proposed ADR drafts>
+<proposed GLOSSARY.md diffs, proposed ADR drafts>
 
 ---
 
