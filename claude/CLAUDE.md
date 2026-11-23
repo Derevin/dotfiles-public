@@ -20,19 +20,14 @@ Branch off `origin/main` (or `origin/master`), not local.
 
 Don't assert scope superlatives ("last/only/first X") in PR or commit bodies without verifying — grep to confirm it holds; if unsure, drop the superlative and state only the local fact.
 
-Amend HEAD for review fixes (`git commit --amend --no-edit`); don't fixup+autosquash when target is HEAD. Don't auto force-push after amend — wait for explicit direction.
-
+Amend HEAD for review fixes (`git commit --amend --no-edit`); don't fixup+autosquash when target is HEAD.
 After splitting or extracting work into its own PR, stop: leave HEAD on the split branch, don't restack the parent or branch the remainder until that PR merges. After splitting an orthogonal fix, don't auto-switch back.
 
 Skip the rebuild/test cycle when a rebase resolution is purely mechanical (list ordering, formatting).
 
-## Data processing
-
-Prefer built-in tools (Read, Grep, Glob) and CLI tools (jq, sort, cut, tr, uniq, diff, comm, column, paste) over `python`/`uv run python` for data parsing.
-
 ## Bash
 
-Just run commands directly — the working directory is already set. No `cd dir && cmd`, no `git -C`, no `git --git-dir`, no path workarounds. Run `pwd` first if unsure. If you genuinely need a different directory, run `cd` as a separate command first — but never into another worktree; read it with `git show <ref>:<path>`.
+No `git -C` or `git --git-dir`. Don't `cd` into another worktree; read it with `git show <ref>:<path>`.
 
 `pgrep -f` / `pkill -f` match the matcher's own command line — `pgrep -f ctest` in a shell whose argv contains "ctest" never goes false. Match exact name (`-x`), or exclude `$$`.
 
@@ -41,10 +36,6 @@ Just run commands directly — the working directory is already set. No `cd dir 
 Large command output: dump once to a file — `/tmp` unless you have a better place (`> /tmp/<name>.out 2>&1`) — re-read slices via `Read` offset/limit. Don't rerun command with different ranges.
 
 A background fork's `<new-diagnostics>` lag the tree it just edited — they index its mid-flight states, so a flood right after a fork lands is usually stale. Verify with one build/test run, not the diagnostics.
-
-## API errors
-
-The API is flaky — retry a call that trips an API error, up to 10 attempts, before giving up.
 
 ## Red-green workflow
 
@@ -61,7 +52,3 @@ Listing tasks and every state change (claim/complete/cancel/move) go through `ta
 Per-project domain knowledge — a glossary (`CONTEXT.md`) and decision records (`adr/`) — lives in `~/repos/context/<project>/`, external to the code repo (keeps it out of possibly-public repos). Read before planning non-trivial work; `context-sync.sh` first to avoid stale reads. Resolve `<project>` with `find-project.sh` — not always the dir basename.
 
 After editing, commit and push via `context-commit.sh "<project>: term|adr — …"`. Never run Git by hand in the store.
-
-## .claude directory
-
-When deleting inside `.claude/`, target the specific file — never `rm -rf .claude/`.
