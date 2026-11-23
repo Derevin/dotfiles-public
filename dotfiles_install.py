@@ -38,6 +38,7 @@ COMMON = [
     ("claude/skills/grill-me-with-docs", ".claude/skills/grill-me-with-docs"),
     ("claude/skills/write-a-skill", ".claude/skills/write-a-skill"),
     ("claude/skills/retro", ".claude/skills/retro"),
+    ("claude/skills/pr-body", ".claude/skills/pr-body"),
     ("claude/agents", ".claude/agents"),
     ("claude/commands", ".claude/commands"),
     ("claude/prompts", ".claude/prompts"),

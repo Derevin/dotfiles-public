@@ -12,19 +12,9 @@ No history-relative comments — "previously…", "originally", "the original X"
 
 ## Git
 
-Never add Co-Authored-By, Signed-off-by, or any other trailer attributing Claude to git commits.
-
 Commits: title-only when possible, max 50 chars. Capitalize first word. Optional `Tag: Message` format only when a tag adds clarity. If a body is needed, keep it brief. No caveat bodies about deferred/related/out-of-scope work. Sacrifice grammar for brevity.
 
-Before opening a PR, show the title and body and wait for user's OK. Don't run `gh pr create` until they approve.
-
-End a proposed PR body with a `----` rule, blank line before it (else the last body line renders as a heading). Commentary goes after the rule, never inside the body. The rule marks where the body ends for review — strip it from what `gh pr create` gets.
-
-PR descriptions: as short as the change allows, usually one sentence stating the why. Plain text, no headers/checklists/bullets. Why, not what — never restate the diff. No test plans, no "This PR..." preamble, no background already in the linked issue. Drop tail clauses, impact numbers, "so that…" purpose tails, named-pattern references. Every sentence must earn its place; if one is enough, stop there. When user edits a PR body, apply exactly the requested change — never reintroduce previously dropped text.
-
-Don't hard-wrap PR bodies at a column — one paragraph, one line, let it wrap. Newlines only for real paragraph breaks.
-
-No em dashes (—) in PR titles or bodies, even where grammatical — user never writes them, so they read as not-their-voice. Recast with `:`, a comma, a semicolon, a period, or a plain `-`.
+Before opening a PR, draft title and body per the `pr-body` skill, show them, and wait for user's OK. Don't run `gh pr create` until they approve.
 
 Branch off `origin/main` (or `origin/master`), not local.
 
@@ -70,13 +60,11 @@ Task data lives in `~/repos/tasks/` — personal, not shared with collaborators.
 
 Listing tasks and every state change (claim/complete/cancel/move) go through `taskania <verb>`; `taskania --help` lists the verbs. **Never `git mv` or `mv` task files by hand** — the verbs commit and push; a manual move leaves the repo out of sync with origin.
 
-Taskania's output names the project it acted on; `--project NAME` targets another (not on `commit` or `project`).
-
 ## Context store
 
 Per-project domain knowledge — a glossary (`CONTEXT.md`) and decision records (`adr/`) — lives in `~/repos/context/<project>/`, external to the code repo (keeps it out of possibly-public repos). Read before planning non-trivial work; `context-sync.sh` first to avoid stale reads. Resolve `<project>` with `find-project.sh` — not always the dir basename.
 
-After editing, commit and push via `context-commit.sh "<project>: term|adr — …"`. Use `--project NAME` when editing another project's context. Never run Git by hand in the store.
+After editing, commit and push via `context-commit.sh "<project>: term|adr — …"`. Never run Git by hand in the store.
 
 Don't cite a specific ADR or CONTEXT.md entry (by number or title) in a code comment — those records live in an external store the code reader can't open, so the pointer dangles. State the fact the record holds; drop the citation.
 
