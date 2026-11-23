@@ -2,7 +2,7 @@
 # Create an anonymous lab and print its name.
 #
 # The lab is <b>lab-tmp<N> at the lowest free index — where investigation starts
-# before it is worth filing. Claiming it later renames it (lab-claim.sh).
+# before it is worth filing. Claiming it later renames it (lab-rename.sh).
 #
 # Usage: lab-new.sh [host|docker|coder]
 #   backend  omit to take the project's default (lab.conf; host without a
@@ -45,8 +45,7 @@ for n in $(seq 1 99); do
 done
 [ -n "$NAME" ] || { echo "lab-new: no free ${LETTER}lab-tmp index" >&2; exit 1; }
 
-# The name on stdout is this script's whole output — lab-start.sh and the claim
-# read it back. Everything provisioning says goes to stderr.
+# Callers read the name from stdout. Provisioning output goes to stderr.
 lab_provision "$BACKEND" "$NAME" || exit 1
 
 echo "$NAME"

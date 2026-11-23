@@ -20,7 +20,7 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 fi
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-source "$SCRIPT_DIR/lab-lib.sh"
+source "$SCRIPT_DIR/lab-view-lib.sh" || exit 1
 
 PROJECT=$(lab_project_from_cwd) || exit 0
 lab_project_paths "$PROJECT" 2>/dev/null || exit 0
@@ -28,9 +28,9 @@ lab_project_paths "$PROJECT" 2>/dev/null || exit 0
 # The popup runs a tmux server of its own, so bare tmux has to be sent to the
 # one that holds the pane M-j was pressed in.
 export TMUX=
-CALLER=$(tmux show-environment -g JUST_CALLER 2>/dev/null | cut -d= -f2-) || true
+CALLER=$(lab_just_caller) || true
 
-FIRST=$(lab_backend_fallback "$CALLER")
+FIRST=$(lab_backend_fallback "$(lab_pane_backend "$CALLER")")
 [ -n "$FIRST" ] || exit 0
 FIRST=$(lab_backend "$FIRST") || exit 0
 

@@ -54,18 +54,19 @@ ok "render all marks an unresolved lab" \
 ok "header all drops the held count" \
     "$("$PICK" header "$S")" "ctrl-a: droppable only   |   1 unresolved"
 
-# --- resolve: coder gate, then the lab-drop.sh --check verdict ---------------
-# Stub lab-drop.sh so the verdict is fixed per lab and no real backend is touched.
+# --- resolve: coder gate, then the lab-destroy.sh --check verdict ------------
 mkdir -p "$TMP/bin"
-cat > "$TMP/bin/lab-drop.sh" <<'STUB'
+cat > "$TMP/bin/lab-destroy.sh" <<'STUB'
 #!/usr/bin/env bash
-lab="${@: -1}"
-case "$lab" in
+[ "$1" = --check ] || exit 2
+case "$2" in
     dirtyhost) echo "has uncommitted changes"; exit 1 ;;
     *)         exit 0 ;;
 esac
 STUB
-chmod +x "$TMP/bin/lab-drop.sh"
+# The picker must resolve through the core; a lab-drop.sh call fails the verdicts.
+printf '#!/usr/bin/env bash\nexit 2\n' > "$TMP/bin/lab-drop.sh"
+chmod +x "$TMP/bin/lab-destroy.sh" "$TMP/bin/lab-drop.sh"
 export PATH="$TMP/bin:$PATH"
 
 R="$TMP/resolve"; mkdir -p "$R/v"; echo droppable > "$R/mode"

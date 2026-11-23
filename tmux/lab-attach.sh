@@ -2,9 +2,6 @@
 # Take over a pane with a lab: convert a launchpad quadrant into a view of the
 # lab, and launch Claude in it.
 #
-# A pane is a view. Attaching does not create the lab and releasing does not
-# destroy it — lab-new.sh and lab-drop.sh are the only two that do.
-#
 # Usage: lab-attach.sh [--pane <id>] <lab> [claude-arg...]
 #   --pane  which pane to take over; default is the just caller, else this pane.
 set -euo pipefail
@@ -16,14 +13,7 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 fi
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# lab-lib.sh sits beside this script once installed; in the repo the tmux and
-# script helpers are kept apart, and the private tmux scripts a level further.
-for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts"; do
-    [ -f "$d/lab-lib.sh" ] && { source "$d/lab-lib.sh"; break; }
-done
-# A miss is otherwise silent: every lab_* call expands to nothing and the caller
-# degrades instead of stopping — a pane with no Claude, a recipe on the host.
-declare -F lab_resolve >/dev/null || { echo "lab-attach.sh: cannot find lab-lib.sh" >&2; exit 1; }
+source "$SCRIPT_DIR/lab-view-lib.sh"
 
 PANE=""
 if [ "${1:-}" = "--pane" ]; then PANE="${2:-}"; shift 2; fi

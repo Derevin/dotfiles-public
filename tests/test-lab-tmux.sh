@@ -80,6 +80,7 @@ LAB_WIDGET_CONTAINER_PREFIX=widget-
 LAB_WIDGET_PROVISIONER=
 CONF
 export LAB_CONF="$TMP/lab.conf" LAB_STATE_DIR="$TMP/state"
+export LAB_CORE_SCRIPTS="$SCRIPT_DIR/../scripts" LAB_DESTROY_LOG="$TMP/destroy.log"
 cd "$TMP/Widget"
 
 # --- fixtures ----------------------------------------------------------------
@@ -209,11 +210,21 @@ tmux set-option -pt "$P6" @quadrant 6
 F=$(lab-new.sh host 2>/dev/null)
 lab-attach.sh --pane "$P6" "$F" >/dev/null 2>&1
 wait_for claude_ran "$F"
+cat > "$TMP/bin/lab-destroy.sh" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$LAB_DESTROY_LOG"
+exec "$LAB_CORE_SCRIPTS/lab-destroy.sh" "$@"
+STUB
+chmod +x "$TMP/bin/lab-destroy.sh"
 tmux send-keys -t "$P6" "lab-drop.sh $F" Enter
 wait_for gone "$F"
+wait_for unplaced "$F"
 ok "drop from inside removes the worktree" "$(yn gone "$F")" y
 ok "drop from inside drops the placement" "$(yn unplaced "$F")" y
 ok "drop from inside reverts the pane" "$(yn untagged "$P6")" y
+ok "drop checks once before the detached, forced destroy" \
+    "$(cat "$LAB_DESTROY_LOG" 2>/dev/null)" "$(printf '%s\n' "--check $F" "--force $F")"
+rm "$TMP/bin/lab-destroy.sh"
 
 # --- what a background split leaves behind ------------------------------------
 # The split is ephemeral, so a recipe that fails would take its own error

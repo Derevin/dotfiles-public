@@ -55,7 +55,11 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # lab-lib.sh sits beside this script once installed; in the repo the tmux and
 # script helpers are kept apart, and the private tmux scripts a level further.
 for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts"; do
-    [ -f "$d/lab-lib.sh" ] && { source "$d/lab-lib.sh"; break; }
+    if [ -f "$d/lab-lib.sh" ]; then
+        source "$d/lab-lib.sh"
+        source "$d/pane-lib.sh" || exit 1
+        break
+    fi
 done
 # A miss is otherwise silent: every lab_* call expands to nothing and the caller
 # degrades instead of stopping — a pane with no Claude, a recipe on the host.

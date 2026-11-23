@@ -21,57 +21,20 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 fi
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# lab-lib.sh sits beside this script once installed; in the repo the tmux and
-# script helpers are kept apart, and the private tmux scripts a level further.
-LIB_DIR=""
-for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts"; do
-    [ -f "$d/lab-lib.sh" ] && { LIB_DIR=$d; break; }
-done
-[ -n "$LIB_DIR" ] || { echo "lab-start: cannot find lab-lib.sh" >&2; exit 1; }
-source "$LIB_DIR/lab-lib.sh"
+source "$SCRIPT_DIR/lab-view-lib.sh"
 
 ID="${1:-}"
 PROMPT="${2:-}"
-BACKEND_ARG="${3:-}"
+BACKEND="${3:-}"
 [ -n "$ID" ] && [ -n "$PROMPT" ] || { echo "usage: lab-start.sh <task-id> <prompt> [backend [claude-arg...]]" >&2; exit 2; }
 
-# A chooser shows a readable N238-slug, not three bare digits; read the id back
-# out of whatever form it arrives in.
-ID=$(lab_read_id "$ID") || { echo "lab-start: cannot read a three-digit task id out of '${1}'" >&2; exit 2; }
-
 export TMUX=
-CALLER=$(tmux show-environment -g JUST_CALLER 2>/dev/null | cut -d= -f2-) || true
-[ -n "$CALLER" ] || CALLER="${TMUX_PANE:-}"
+CALLER=$(lab_recipe_caller)
 [ -n "$CALLER" ] || { echo "lab-start: no caller pane" >&2; exit 1; }
 
-PROJECT=$(lab_project_from_cwd) || { echo "lab-start: not in a project checkout" >&2; exit 1; }
-lab_project_paths "$PROJECT"
-
 # A pane already showing a lab answers before the project does: standing in one
-# backend and asking for a task is not a request to leave it. A launchpad is a
-# plain host shell and answers nothing, which is where the project's default is
-# the whole point.
-BACKEND="$BACKEND_ARG"
-[ -n "$BACKEND" ] || BACKEND=$(tmux show-options -pvt "$CALLER" @backend 2>/dev/null || true)
-[ -n "$BACKEND" ] || BACKEND="$LAB_DEFAULT_BACKEND"
-[ -n "$BACKEND" ] || { echo "lab-start: no backend given, the caller pane names none, and $PROJECT declares none (see $LAB_CONF)" >&2; exit 1; }
-BACKEND=$(lab_backend "$BACKEND") || { echo "lab-start: unknown backend '$BACKEND'" >&2; exit 1; }
-
-# Resolved before anything is created: the claim looks the task up again, but by
-# then lab-new.sh has made a lab that a missing or ambiguous id would strand as
-# an anonymous one.
-lab_task_find "$PROJECT" "$ID" >/dev/null
-
-# One lab per (backend, task), keyed on the id. A task retitled since its lab was
-# claimed derives a different name now, and asking after that name would mint a
-# second lab beside the one already holding the work — grooming and
-# implementation are separate claims, so the rename lands right between them. The
-# lab keeps the name it was claimed under: re-slugging it means recreating the
-# backend under whatever else is attached, and the slug was never the identity.
-NAME=$(lab_task_lab "$BACKEND" "$ID")
-if [ -z "$NAME" ]; then
-    NEW=$(LAB_PROJECT_OVERRIDE="$PROJECT" lab-new.sh "$BACKEND")
-    NAME=$(LAB_PROJECT_OVERRIDE="$PROJECT" lab-claim.sh "$NEW" "$ID")
-fi
+# backend and asking for a task is not a request to leave it.
+[ -n "$BACKEND" ] || BACKEND=$(lab_pane_backend "$CALLER")
+NAME=$(lab-for-task.sh "$ID" "$BACKEND")
 
 exec lab-attach.sh --pane "$CALLER" "$NAME" "${@:4}" "$PROMPT"

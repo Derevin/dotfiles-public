@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pick a lab to drop. Lists the cwd project's labs (every project's outside a
-# repo), resolves each through `lab-drop.sh --check` in the background, and by
+# repo), resolves each through `lab-destroy.sh --check` in the background, and by
 # default shows only the ones that check passes — the labs a real drop would not
 # refuse. ctrl-a toggles to showing every lab, each annotated with why it is held
 # back.
@@ -88,7 +88,7 @@ resolve)
     read -r backend state < <(awk -v n="$lab" '$1 == n { print $2, $4 }' "$STATE/labs") || true
     if [ "$backend" = coder ] && [ "$state" != running ]; then
         printf 'no\tbackend stopped, cannot verify\n' > "$vf.tmp"
-    elif reason=$(timeout 20 lab-drop.sh --check "$lab" 2>/dev/null); then
+    elif reason=$(timeout 20 lab-destroy.sh --check "$lab" 2>/dev/null); then
         printf 'ok\n' > "$vf.tmp"
     else
         rc=$?

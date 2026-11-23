@@ -17,14 +17,7 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 fi
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# lab-lib.sh sits beside this script once installed; in the repo the tmux and
-# script helpers are kept apart, and the private tmux scripts a level further.
-for d in "$SCRIPT_DIR" "$SCRIPT_DIR/../scripts" "$SCRIPT_DIR/../public/scripts"; do
-    [ -f "$d/lab-lib.sh" ] && { source "$d/lab-lib.sh"; break; }
-done
-# A miss is otherwise silent: every lab_* call expands to nothing and the caller
-# degrades instead of stopping — a pane with no Claude, a recipe on the host.
-declare -F lab_resolve >/dev/null || { echo "lab-release.sh: cannot find lab-lib.sh" >&2; exit 1; }
+source "$SCRIPT_DIR/lab-view-lib.sh"
 
 PANE=""
 [ "${1:-}" = "--pane" ] && { PANE="${2:-}"; shift 2; }

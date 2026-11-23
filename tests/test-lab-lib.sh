@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Unit tests for lab-lib.sh — the derivations every lab script shares: names,
-# heads, truncation, project resolution, quadrant state, task lookup.
+# heads, truncation, project resolution, task lookup. Also checks lab-view-lib.sh's placement state.
 #
 # Self-contained: temp checkouts and a temp lab.conf, no docker, coder or tmux.
 # Usage: test-lab-lib.sh
@@ -36,6 +36,9 @@ CONF
 export LAB_CONF="$TMP/lab.conf"
 export LAB_STATE_DIR="$TMP/state"
 export LAB_TASKS_ROOT="$TMP/tasks"
+export TMUX_TMPDIR="$TMP/tmux"
+mkdir -p "$TMUX_TMPDIR"
+unset TMUX
 
 source "$SCRIPT_DIR/../scripts/lab-lib.sh"
 
@@ -175,20 +178,23 @@ ok "one declared project still answers for a coder lab" \
     "$(cd /tmp && LAB_CONF="$TMP/one-only.conf" bash -c 'source "'"$SCRIPT_DIR"'/../scripts/lab-lib.sh" && lab_resolve clab-001-x && echo "$LAB_CONTAINER"')" \
     one-clab-001-x
 
-# What a creation path takes when nothing names a backend. The caller pane's
-# lab answers first: standing in one backend and asking for a task is not a
-# request to leave it. Stubbed rather than served — a real pane needs a server,
-# and this suite starts none.
-tmux() { [ "$*" = "show-options -pvt %9 @backend" ] && printf 'coder\n'; }
 lab_project_paths one
-ok "pane answers before the project" "$(lab_backend_fallback %9)" coder
-ok "no pane leaves the project's" "$(lab_backend_fallback)" docker
+ok "supplied backend answers before the project" "$(lab_backend_fallback coder)" coder
+ok "no supplied backend leaves the project's" "$(lab_backend_fallback)" docker
 lab_project_paths three
-ok "neither answers" "$(lab_backend_fallback %1)" ""
-unset -f tmux
-
+ok "neither answers" "$(lab_backend_fallback '')" ""
 
 # --- quadrant state ---------------------------------------------------------
+source "$SCRIPT_DIR/../tmux/lab-view-lib.sh"
+
+# The caller pane's lab answers before the project: standing in one backend and
+# asking for a task is not a request to leave it. Stubbed rather than served.
+tmux() { [ "$*" = "show-options -pvt %9 @backend" ] && printf 'coder\n'; }
+lab_project_paths one
+ok "caller pane's backend answers before the project" "$(lab_backend_fallback "$(lab_pane_backend %9)")" coder
+ok "no caller pane leaves the project's" "$(lab_backend_fallback "$(lab_pane_backend '')")" docker
+unset -f tmux
+
 lab_state_put proj labs 1 dlab-238-x
 lab_state_put proj labs 3 hlab-tmp1
 lab_state_put proj labs2 1 clab-007-y

@@ -42,7 +42,7 @@ q() { git "$@" >/dev/null 2>&1; }
 # server answers at all.
 export TMUX_TMPDIR="$TMP/tmux"
 mkdir -p "$TMUX_TMPDIR"
-unset TMUX
+unset TMUX TMUX_PANE
 
 # Neither backend is under test here, and coder list is a network round trip that
 # can hang with no timeout. Stub both so the run is hermetic either way. uv too:
@@ -189,10 +189,14 @@ fails lab-drop.sh "$NEW"                      # attached task is in active/
 fails lab-drop.sh --check "$NEW"
 ok "check reports the active task" "$(lab-drop.sh --check "$NEW" 2>/dev/null)" \
     "is attached to a task in active/"
+ok "destroy checks an active task without a caller pane" \
+    "$(lab-destroy.sh --check "$NEW" 2>/dev/null)" "is attached to a task in active/"
 echo dirt > "$TMP/Widget-$N2/dirt"
 fails lab-drop.sh "$N2"                       # dirty worktree
 ok "check reports a dirty worktree" "$(lab-drop.sh --check "$N2" 2>/dev/null)" \
     "has uncommitted changes"
+ok "drop refusal speaks as lab-drop" "$(lab-drop.sh "$N2" 2>&1 >/dev/null)" \
+    "lab-drop: $N2 has uncommitted changes — use --force to drop anyway"
 rm "$TMP/Widget-$N2/dirt"
 q -C "$TMP/Widget-$N2" config user.email t@t
 q -C "$TMP/Widget-$N2" config user.name T
@@ -220,11 +224,18 @@ printf '# Abandoned\n\nbody\n' > "$TMP/tasks/widget/active/N241-abandoned.md"
 q -C "$TMP/tasks" add -A
 q -C "$TMP/tasks" commit -m add-241
 q -C "$TMP/tasks" push
-NC=$(lab-new.sh host 2>/dev/null)
-NEWC=$(lab-claim.sh "$NC" 241 2>/dev/null)
+# Refusals come before anything is created.
+fails lab-start.sh 241 '/plan-task 241'      # no caller pane
+fails lab-for-task.sh 777                     # no such task
+ok "refused starts create nothing" "$(lab-list.sh)" ""
+NEWC=$(lab-for-task.sh N241-abandoned 2>/dev/null)
+ok "for-task claims a new lab without a caller pane" \
+    "$NEWC|$(lab-list.sh)" "hlab-241-abandoned|hlab-241-abandoned"
+ok "for-task reuses the lab without a caller pane" \
+    "$(lab-for-task.sh 241 2>/dev/null)|$(lab-list.sh)" "$NEWC|hlab-241-abandoned"
 mv "$TMP/tasks/widget/active/"?241-*.md "$TMP/tasks/widget/canceled/"
-lab-drop.sh "$NEWC" >/dev/null
-ok "drop allows a canceled task" "$([ -d "$TMP/Widget-$NEWC" ] && echo y)" ""
+ok "destroy drops a canceled task without a caller pane" \
+    "$(lab-destroy.sh "$NEWC" 2>/dev/null)|$(lab-list.sh)" "dropped hlab-241-abandoned|"
 
 ok "nothing left to list" "$(lab-list.sh)" ""
 
@@ -253,8 +264,9 @@ q -C "$TMP/tasks" commit -m add-240
 q -C "$TMP/tasks" push
 HEAD_BEFORE=$(git -C "$TMP/tasks" rev-parse HEAD)
 N4=$(lab-new.sh host 2>/dev/null)
-OUT4=$(lab-claim.sh "$N4" 240 2>/dev/null)
-ok "claim works on a task still in todo/" "$OUT4" hlab-240-read-the-manual
+OUT4=$(lab-rename.sh "$N4" 240 2>/dev/null)
+ok "rename claims a task in todo/ without a caller pane" \
+    "$OUT4|$(lab-list.sh)" "hlab-240-read-the-manual|hlab-240-read-the-manual"
 ok "claim leaves a todo/ task in todo/" "$([ -f "$TASK240" ] && echo y)" y
 ok "and reaches no commit" "$(git -C "$TMP/tasks" rev-parse HEAD)" "$HEAD_BEFORE"
 
@@ -336,6 +348,16 @@ fails env TMUX_PANE=%9 lab-reconstruct.sh 238
 # No conversation for an id: refuse — plan-task/implement-task make a fresh lab.
 fails env TMUX_PANE=%9 lab-reconstruct.sh 777
 lab-drop.sh --force "$NEW" >/dev/null
+# The fold's cp -a gave PROJ_NEW the older dir's mtime; make it newest again so
+# --list shows its slug.
+touch "$PROJ_NEW"
+ok "rebuild lists the recoverable task without a caller pane" \
+    "$(lab-rebuild.sh --list 2>/dev/null)" "$(printf '238-make-the-build-f\t(2 saved · host)')"
+: > "$TMP/attach.log"
+RECOVERED=$(lab-rebuild.sh 238 2>/dev/null)
+ok "rebuild prints the name and provisions without attaching" \
+    "$RECOVERED|$(lab-list.sh)|$(cat "$TMP/attach.log")" "$NEW|$NEW|"
+[ -z "$RECOVERED" ] || lab-drop.sh --force "$RECOVERED" >/dev/null
 rm "$TMP/bin/lab-attach.sh"
 
 # --- an undeclared repo -------------------------------------------------------
