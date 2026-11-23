@@ -18,7 +18,6 @@ if [[ -n $model ]]; then
         max) model+="󰪥" ;;     # nf-md-circle_slice_8
     esac
 fi
-cost=$(printf '%s' "$input" | jq -r '.cost.total_cost_usd // empty')
 
 parts=()
 # CLAUDE_LABEL is set at launch by the workspace scripts; unlike a Claude session
@@ -34,7 +33,6 @@ fi
 session=()
 [[ -n "$ctx" ]] && session+=("${ctx}%")
 [[ -n "$model" ]] && session+=("$model")
-[[ -n "$cost" ]] && session+=("$(printf '$%.0f' "$cost")")
 (( ${#session[@]} )) && parts+=("${session[*]}")
 [[ -n "$branch" ]] && parts+=("$branch")
 

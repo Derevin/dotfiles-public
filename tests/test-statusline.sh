@@ -32,10 +32,10 @@ fills=""
 for level in low medium high xhigh max; do fills+="$(effort "$level") "; done
 ok "fills a circle per effort level" "$fills" "O5.5󰝦 O5.5󰪟 O5.5󰪡 O5.5󰪣 O5.5󰪥 "
 ok "skips an unknown effort level" "$(effort turbo)" "O5.5"
-ok "shows cost in whole USD" "$(echo '{"cost":{"total_cost_usd":1.234}}' | "$SL")" '$1'
-ok "leads with context, then model and cost" \
+# Claude Code's session cost leaves out its forks, so it misleads.
+ok "leads with context, leaves cost out" \
     "$(echo '{"model":{"display_name":"Opus 5.5"},"context_window":{"used_percentage":23.4},"cost":{"total_cost_usd":3.21}}' | "$SL")" \
-    '23% O5.5 $3'
+    '23% O5.5'
 # Account-wide, so shown once in the tmux status bar instead (ai-usage.sh).
 ok "leaves rate limits out" \
     "$(echo '{"model":{"display_name":"Opus 5.5"},"rate_limits":{"five_hour":{"used_percentage":20},"seven_day":{"used_percentage":40}}}' | "$SL")" \
