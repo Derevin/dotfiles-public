@@ -70,7 +70,7 @@ Task data lives in `~/repos/tasks/` — personal, not shared with collaborators.
 
 Listing tasks and every state change (claim/complete/cancel/move) go through `taskania <verb>`; `taskania --help` lists the verbs. **Never `git mv` or `mv` task files by hand** — the verbs commit and push; a manual move leaves the repo out of sync with origin.
 
-Verify pwd before any `taskania` call — the project derives from it; wrong cwd → wrong project. `--project NAME` names another (not on `commit` or `project`).
+Taskania's output names the project it acted on; `--project NAME` targets another (not on `commit` or `project`).
 
 ## Context store
 
