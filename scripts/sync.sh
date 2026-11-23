@@ -459,9 +459,10 @@ submit() {
 
 # Refresh Claude ahead of the panes (host first, then every running lab). It sits
 # after the re-exec gate, so a dotfiles pull can't double-run it and race the
-# shared docker volume. Its rc folds into SYNC_ISSUES like any other job — a
-# failed update holds the strip — and the lab updates keep the strip open until
-# the fleet is current.
+# shared docker volume, and after install, so the workspace's Taskania pane can
+# take the host marker as its new binary having landed. Its rc folds into
+# SYNC_ISSUES like any other job — a failed update holds the strip — and the lab
+# updates keep the strip open until the fleet is current.
 submit claude-update.sh
 for repo in "${other_repos[@]}"; do
   submit apply_repo_and_subtrees "$repo"

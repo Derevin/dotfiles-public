@@ -361,14 +361,19 @@ ok "quadrant 4 is bottom-right" "$(qpos 4)" "bottom right"
 # mode both the dotfiles pane and the extra repo's pane get it. run-shell sets
 # $TMUX, so the script builds its window in this session instead of exec-attaching
 # to a terminal it hasn't got. claude-update/sync are stubbed to return at once —
-# the launch is under test, not the morning wait.
-mkdir -p "$HOME/repos/dotfiles"
-for s in claude-update.sh sync.sh; do
+# the launch is under test, not the morning wait — and the taskania stub plus the
+# tasks dir pass the dashboard's guard.
+mkdir -p "$HOME/repos/dotfiles" "$HOME/repos/tasks"
+for s in claude-update.sh sync.sh taskania; do
     printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/bin/$s"
+    chmod +x "$TMP/bin/$s"
 done
-chmod +x "$TMP/bin/claude-update.sh" "$TMP/bin/sync.sh"
 cont() { grep -q "^$1|--effort xhigh --continue$" "$CLAUDE_STUB_LOG" 2>/dev/null; }
 fresh() { grep -q "^$1|--effort xhigh$" "$CLAUDE_STUB_LOG" 2>/dev/null; }
+taskania_waits() {
+    tmux capture-pane -p -J -t "$1" 2>/dev/null \
+        | grep -E 'claude-update\.sh --wait-host [0-9]+ && taskania --watch --with dotfiles'
+}
 
 WSA=$(new_pane)
 tmux run-shell -t "$WSA" "workspace-dotfiles.sh $TMP/Widget dota widgeta"
@@ -376,6 +381,8 @@ wait_for cont dotfiles
 wait_for cont widgeta
 ok "workspace resumes the dotfiles pane"   "$(yn cont dotfiles)" y
 ok "workspace resumes the extra-repo pane" "$(yn cont widgeta)" y
+DASHBOARD=$(tmux list-panes -t t:dota -F '#{pane_id} #{@split-dir}' | awk '$2 == "up" { print $1 }')
+ok "workspace waits for the host update before Taskania" "$(yn wait_for taskania_waits "$DASHBOARD")" y
 
 WSB=$(new_pane)
 tmux run-shell -t "$WSB" "workspace-dotfiles.sh --fresh $TMP/Widget dotb widgetb"
