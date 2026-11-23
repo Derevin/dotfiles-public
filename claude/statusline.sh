@@ -12,17 +12,6 @@ rl5_reset=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.resets_at // em
 rl7=$(printf '%s' "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
 rl7_reset=$(printf '%s' "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
 
-# USD→CZK rate (cached daily, refreshed in background — never blocks statusline)
-rate_file=~/.cache/claude-statusline-usd-czk
-mkdir -p ~/.cache 2>/dev/null
-if [[ ! -f $rate_file ]] || (( $(date +%s) - $(stat -c %Y "$rate_file" 2>/dev/null || echo 0) > 86400 )); then
-    ( curl -fsSL -m 5 'https://api.frankfurter.app/latest?from=USD&to=CZK' 2>/dev/null \
-        | jq -r '.rates.CZK // empty' > "$rate_file.tmp" 2>/dev/null \
-        && [[ -s $rate_file.tmp ]] && mv "$rate_file.tmp" "$rate_file" ) &
-    disown 2>/dev/null
-fi
-czk_rate=$(cat "$rate_file" 2>/dev/null)
-
 scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../scripts"
 
 # Logged out, the snapshot is stale and Codex unusable: a lock replaces it.
@@ -57,15 +46,7 @@ if [[ -n "$rl5" ]]; then
     [[ -n "$rl5_reset" ]] && p="$p $(date -d "@$rl5_reset" +%H%M)"
     extras+=("$p")
 fi
-if [[ -n "$cost" ]]; then
-    usd=$(printf '$%.2f' "$cost")
-    if [[ -n "$czk_rate" ]]; then
-        czk=$(awk -v c="$cost" -v r="$czk_rate" 'BEGIN{printf "%.0f", c*r}')
-        extras+=("$usd ${czk} Kč")
-    else
-        extras+=("$usd")
-    fi
-fi
+[[ -n "$cost" ]] && extras+=("$(printf '$%.2f' "$cost")")
 if [[ -n "$rl7" ]]; then
     p="wk $(printf '%.0f' "$rl7")%"
     [[ -n "$fb7" ]] && p="$p/$fb7"

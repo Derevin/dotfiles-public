@@ -16,11 +16,8 @@ SL="$SCRIPT_DIR/../claude/statusline.sh"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-# A fresh rate cache keeps the script from fetching; a non-repo cwd and no label
-# leave the model as the only segment.
+# A non-repo cwd and no label leave the model as the only segment.
 export HOME="$TMP"
-mkdir -p "$HOME/.cache"
-echo 23 > "$HOME/.cache/claude-statusline-usd-czk"
 unset CLAUDE_LABEL
 cd "$TMP" || exit 1
 
@@ -29,6 +26,7 @@ model() { printf '{"model":{"display_name":"%s"}}' "$1" | "$SL"; }
 ok "keeps the version" "$(model 'Opus 4.8')" "Opus 4.8"
 ok "drops the context suffix" "$(model 'Opus 5.5 (1M context)')" "Opus 5.5"
 ok "keeps a long name whole" "$(model 'Sonnet 5')" "Sonnet 5"
+ok "shows cost in USD" "$(echo '{"cost":{"total_cost_usd":1.234}}' | "$SL")" '($1.23)'
 
 # Codex usage comes from the rate-limit snapshot in its newest session log and
 # rides beside Claude's: block <claude>/<codex>, wk <claude>/<codex>.
