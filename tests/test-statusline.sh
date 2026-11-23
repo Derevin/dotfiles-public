@@ -30,7 +30,7 @@ ok "keeps a versionless name whole" "$(model 'Opus')" "Opus"
 effort() { printf '{"model":{"display_name":"Opus 5.5"},"effort":{"level":"%s"}}' "$1" | "$SL"; }
 fills=""
 for level in low medium high xhigh max; do fills+="$(effort "$level") "; done
-ok "fills a circle per effort level" "$fills" "O5.5○ O5.5◔ O5.5◑ O5.5◕ O5.5● "
+ok "fills a circle per effort level" "$fills" "O5.5󰝦 O5.5󰪟 O5.5󰪡 O5.5󰪣 O5.5󰪥 "
 ok "skips an unknown effort level" "$(effort turbo)" "O5.5"
 ok "shows cost in whole USD" "$(echo '{"cost":{"total_cost_usd":1.234}}' | "$SL")" '$1'
 ok "leads with context, then model and cost" \
