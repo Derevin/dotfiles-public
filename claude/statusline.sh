@@ -6,16 +6,15 @@ branch=$(git -C "$dir" symbolic-ref --short HEAD 2>/dev/null || git -C "$dir" re
 ctx=$(printf '%s' "$input" | jq -r '.context_window.used_percentage // empty' | cut -d. -f1)
 model=$(printf '%s' "$input" | jq -r '.model.display_name // empty')
 model=${model%% (*}   # "Opus 5.5 (1M context)"→"Opus 5.5"
-[[ $model == *' '* ]] && model="${model:0:1}${model##* }"   # "Opus 5.5"→"O5.5"
 # Nerd Font circle slices, one style and drawn to the cell; ◑ isn't in the font,
 # so a fallback draws it bigger than its ○◔◕● siblings.
 if [[ -n $model ]]; then
     case $(printf '%s' "$input" | jq -r '.effort.level // empty') in
-        low) model+="󰝦" ;;     # nf-md-circle_outline
-        medium) model+="󰪟" ;;  # nf-md-circle_slice_2
-        high) model+="󰪡" ;;    # nf-md-circle_slice_4
-        xhigh) model+="󰪣" ;;   # nf-md-circle_slice_6
-        max) model+="󰪥" ;;     # nf-md-circle_slice_8
+        low) model+=" 󰝦" ;;     # nf-md-circle_outline
+        medium) model+=" 󰪟" ;;  # nf-md-circle_slice_2
+        high) model+=" 󰪡" ;;    # nf-md-circle_slice_4
+        xhigh) model+=" 󰪣" ;;   # nf-md-circle_slice_6
+        max) model+=" 󰪥" ;;     # nf-md-circle_slice_8
     esac
 fi
 
