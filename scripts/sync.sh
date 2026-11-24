@@ -154,9 +154,11 @@ apply_repo() {
     return 1
   fi
 
+  follow_upstream_rename "$name"
+
   local local_ref remote_ref base
   local_ref=$(git rev-parse HEAD)
-  remote_ref=$(git rev-parse @{u} 2>/dev/null || echo "")
+  remote_ref=$(git rev-parse -q --verify @{u} 2>/dev/null || echo "")
   base=$(git merge-base HEAD @{u} 2>/dev/null || echo "")
 
   if [[ -z "$remote_ref" ]]; then
@@ -192,6 +194,28 @@ apply_repo() {
     return 1
   else
     echo "$name: ✓"
+  fi
+}
+
+# follow_upstream_rename <name> — when origin renamed its default branch (e.g.
+# master → main), rename the local branch to match and track the new one. The
+# signal: the upstream is gone (pruned by fetch) and <remote>/HEAD still points
+# at it. A feature branch whose upstream was deleted fails the HEAD check.
+follow_upstream_rename() {
+  local name=$1 branch remote old new
+  git rev-parse -q --verify @{u} >/dev/null 2>&1 && return 0
+  branch=$(git symbolic-ref -q --short HEAD) || return 0
+  remote=$(git config "branch.$branch.remote") || return 0
+  old=$(git config "branch.$branch.merge") || return 0
+  old=${old#refs/heads/}
+  [[ "$branch" == "$old" ]] || return 0
+  [[ "$(git symbolic-ref -q "refs/remotes/$remote/HEAD")" == "refs/remotes/$remote/$old" ]] || return 0
+  git remote set-head "$remote" -a >/dev/null 2>&1 || return 0
+  new=$(git symbolic-ref -q --short "refs/remotes/$remote/HEAD") || return 0
+  new=${new#"$remote"/}
+  [[ "$new" != "$old" ]] || return 0
+  if git branch -m "$old" "$new" && git branch -q -u "$remote/$new"; then
+    echo "$name: followed rename $old → $new"
   fi
 }
 
