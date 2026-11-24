@@ -109,4 +109,25 @@ ok "missing report" "$(cat "$REPORT")" "Codex review unavailable: codex not inst
 # ok, fail and silent reached codex; the missing run did not.
 ok "only runs that reached codex registered" "$(find "$FORK_REGISTRY_ROOT" -name meta.json | wc -l)" 3
 
+# Usage gate: a review spends little, so it runs up to 97% of the 5-hour window
+# and 99% of the week, past codex-run.sh's defaults.
+snap="$CODEX_HOME/sessions/2026/11/20/rollout-snap.jsonl"
+mkdir -p "$(dirname "$snap")"
+snapshot() { # <5h%> <wk%>
+    local later=$(( $(date +%s) + 3600 ))
+    printf '{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":%s,"resets_at":%s},"secondary":{"used_percent":%s,"resets_at":%s}}}}\n' \
+        "$1" "$later" "$2" "$later" > "$snap"
+}
+REPORT="$TMP/gate.md"
+snapshot 96 98
+FAKE_CODEX=ok run "$REPORT"
+ok "under raised limits runs" "$(cat "$REPORT")" "src/a.c:3 off-by-one"
+snapshot 97 10
+FAKE_CODEX=ok run "$REPORT"; rc=$?
+ok "5h limit exit" "$rc" 0
+ok "5h limit report" "$(cat "$REPORT")" "Codex review unavailable: codex near its usage limit (5h 97%, week 10%)"
+snapshot 10 99
+FAKE_CODEX=ok run "$REPORT"
+ok "weekly limit report" "$(cat "$REPORT")" "Codex review unavailable: codex near its usage limit (5h 10%, week 99%)"
+
 report

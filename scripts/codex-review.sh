@@ -49,7 +49,8 @@ trap 'rm -f "$stderr"' EXIT
 rm -f "$REPORT"
 
 { printf '%s\n\n<stdin>\n' "$PROMPT"; review-diff.sh; printf '</stdin>\n'; } \
-    | timeout "$TIMEOUT" "$SCRIPT_DIR/codex-run.sh" -l review -s read-only -o "$REPORT" \
+    | timeout "$TIMEOUT" "$SCRIPT_DIR/codex-run.sh" -l review -s read-only \
+        --max-5h 97 --max-week 99 -o "$REPORT" \
         >/dev/null 2>"$stderr"
 rc=${PIPESTATUS[1]}
 
