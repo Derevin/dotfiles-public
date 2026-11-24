@@ -11,19 +11,21 @@ set -uo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     echo "Run Codex (gpt-6.2-sol) on the prompt from stdin, registered in the fork registry."
-    echo "Usage: codex-run.sh [-l LABEL] [-e EFFORT] [-s SANDBOX|bypass] [-C DIR] [-o FILE] [--resume ID | --resume-latest] < prompt"
+    echo "Usage: codex-run.sh [-l LABEL] [-e EFFORT] [-s SANDBOX|bypass] [-C DIR] [-o FILE] [--max-5h N] [--max-week N] [--resume ID | --resume-latest] < prompt"
     echo
     echo "  -l LABEL         what the run is for (implement, cold-read, review), kept in meta.json"
     echo "  -e EFFORT        reasoning effort; unset leaves Codex's default"
     echo "  -s SANDBOX       read-only | workspace-write | danger-full-access | bypass"
     echo "  -C DIR           working root (default: current directory)"
     echo "  -o FILE          final message (default: the entry's scratch/final.md)"
+    echo "  --max-5h N       5-hour usage % that stops the run (default 93)"
+    echo "  --max-week N     weekly usage % that stops the run (default 98)"
     echo "  --resume ID      continue Codex session ID with the prompt as the next turn"
     echo "  --resume-latest  continue the newest closed run with this label and DIR;"
     echo "                   exit 3 when there is none, before any side effect"
     echo
     echo "Exits 75 before any side effect when Codex is near its usage limit"
-    echo "(5-hour window >= 93% or week >= 98%), for the caller to fall back to Claude."
+    echo "(either window at or past its max), for the caller to fall back to Claude."
     exit 0
 fi
 
@@ -39,11 +41,12 @@ die() { echo "codex-run.sh: $1" >&2; exit "${2:-1}"; }
 LABEL="" EFFORT="" SANDBOX="" DIR="$PWD" OUTPUT="" RESUME="" LATEST=0
 while [ $# -gt 0 ]; do
     case "$1" in
-    -l|-e|-s|-C|-o|--resume)
+    -l|-e|-s|-C|-o|--resume|--max-5h|--max-week)
         [ $# -ge 2 ] || die "$1 needs a value" 2
         case "$1" in
         -l) LABEL=$2 ;; -e) EFFORT=$2 ;; -s) SANDBOX=$2 ;;
         -C) DIR=$2 ;; -o) OUTPUT=$2 ;; --resume) RESUME=$2 ;;
+        --max-5h) MAX_5H=$2 ;; --max-week) MAX_WEEK=$2 ;;
         esac
         shift ;;
     --resume-latest) LATEST=1 ;;
@@ -52,6 +55,8 @@ while [ $# -gt 0 ]; do
     shift
 done
 [ -n "$RESUME" ] && [ "$LATEST" = 1 ] && die "--resume and --resume-latest are exclusive" 2
+# A non-integer would fail the -ge test below and read as headroom.
+[[ "$MAX_5H" =~ ^[0-9]+$ && "$MAX_WEEK" =~ ^[0-9]+$ ]] || die "--max-5h and --max-week take whole percents" 2
 
 # -s: a symlinked -o is replaced, not its target deleted by the rm below.
 [ -z "$OUTPUT" ] || OUTPUT=$(realpath -ms -- "$OUTPUT")

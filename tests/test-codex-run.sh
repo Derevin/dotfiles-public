@@ -255,7 +255,7 @@ ok "latest none stdout" "$out" ""
 ok "latest none ran no codex" "$(test -e "$CR_LOG.argv" && echo ran || echo none)" none
 ok "latest none registered nothing" "$(entries)" "$before"
 
-# Near the usage limit (5h >= 93% or weekly >= 98%): exit 75 before any side
+# Near the usage limit (by default 5h >= 93% or weekly >= 98%): exit 75 before any side
 # effect, so the caller falls back to Claude. A window past its reset is empty.
 snap="$CODEX_HOME/sessions/2026/11/20/rollout-snap.jsonl"
 mkdir -p "$(dirname "$snap")"
@@ -287,6 +287,18 @@ ok "reads past a log without a snapshot" "$?" 75
 snapshot 99 "$earlier" 10 "$later"
 echo p | FAKE_CODEX=ok run -C "$TMP/work" >/dev/null 2>&1
 ok "reset window is empty" "$?" 0
+# A caller's own limits replace the defaults.
+snapshot 95 "$later" 98 "$later"
+echo p | FAKE_CODEX=ok run --max-5h 97 --max-week 99 -C "$TMP/work" >/dev/null 2>&1
+ok "raised limits run" "$?" 0
+snapshot 97 "$later" 10 "$later"
+echo p | FAKE_CODEX=ok run --max-5h 97 --max-week 99 -C "$TMP/work" >/dev/null 2>&1
+ok "raised 5h limit exit" "$?" 75
+snapshot 10 "$later" 99 "$later"
+echo p | FAKE_CODEX=ok run --max-5h 97 --max-week 99 -C "$TMP/work" >/dev/null 2>&1
+ok "raised weekly limit exit" "$?" 75
+echo p | FAKE_CODEX=ok run --max-5h 97.5 -C "$TMP/work" >/dev/null 2>&1
+ok "fractional limit is a usage error" "$?" 2
 
 # No codex installed: fails before registering. The system dirs may hold a real
 # codex, so the PATH is every tool the script reaches before the check, alone.

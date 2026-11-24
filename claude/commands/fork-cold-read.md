@@ -27,7 +27,7 @@ Test whether the task brief stands alone. You start cold: you did not inherit th
    { awk 'n >= 2; /^---$/ && n < 2 { n++ }' ~/.claude/agents/cold-reader.md
      printf '\nTask file: %s\nContext store: %s\nReport path: %s\n\nYour sandbox is read-only, so write no file: your final message is the report, saved to that path for you.\n' \
          <task-file> <context-store> <report-path>
-   } | timeout 540 codex-run.sh -l cold-read -e low -s read-only -o <report-path>
+   } | timeout 540 codex-run.sh -l cold-read -e low -s read-only --max-5h 97 --max-week 99 -o <report-path>
    ```
 
    It returns when Codex is done, so there is nothing to collect: read the report and go on to step 3. Exit 75: Codex is near its usage limit and nothing ran; launch the `cold-reader` subagent as above. Any other non-zero exit is the return: stop and report the failure with its stderr, without falling back.
