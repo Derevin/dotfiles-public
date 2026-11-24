@@ -80,7 +80,7 @@ fi
 command -v codex >/dev/null || die "codex not found" 127
 
 # No snapshot reads as headroom: a fresh install has logged none yet.
-if read -r used5 usedweek < <("$SCRIPT_DIR/codex-usage.sh" 2>/dev/null) \
+if read -r used5 usedweek _ < <("$SCRIPT_DIR/codex-usage.sh" 2>/dev/null) \
     && { [ "$used5" -ge "$MAX_5H" ] || [ "$usedweek" -ge "$MAX_WEEK" ]; }; then
     die "codex near its usage limit (5h $used5%, week $usedweek%)" 75
 fi

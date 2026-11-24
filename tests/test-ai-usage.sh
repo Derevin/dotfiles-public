@@ -80,6 +80,44 @@ ok "pairs codex usage from the newest snapshot" "$(usage)" "$r5 󰛄20% 󰋙12% 
 claude 20 40 51
 ok "puts fable between Claude and Codex weekly" "$(usage)" "$r5 󰛄20% 󰋙12% · $r7 󰛄40% ƒ51% 󰋙31%"
 
+# Codex's 5h reset rides on Claude's as an offset in whole minutes, as both
+# clocks would read; none when they read the same.
+claude 20 40
+snapshot 12 $((later + 10 * 60 + 32)) 31 "$later" > "$new/rollout-b.jsonl"
+ok "offsets a later codex 5h reset" "$(usage)" "$r5+10 󰛄20% 󰋙12% · $r7 󰛄40% 󰋙31%"
+snapshot 12 $((later - 15 * 60)) 31 "$later" > "$new/rollout-b.jsonl"
+ok "offsets an earlier codex 5h reset" "$(usage)" "$r5-15 󰛄20% 󰋙12% · $r7 󰛄40% 󰋙31%"
+snapshot 12 $((later + 90 * 60)) 31 "$later" > "$new/rollout-b.jsonl"
+ok "offsets up to 90 minutes in minutes" "$(usage)" "$r5+90 󰛄20% 󰋙12% · $r7 󰛄40% 󰋙31%"
+snapshot 12 $((later + 95 * 60)) 31 "$later" > "$new/rollout-b.jsonl"
+ok "offsets past 90 minutes as h:mm" "$(usage)" "$r5+1:35 󰛄20% 󰋙12% · $r7 󰛄40% 󰋙31%"
+snapshot 12 "$earlier" 31 "$later" > "$new/rollout-b.jsonl"
+ok "drops the offset past codex's 5h reset" "$(usage)" "$r5 󰛄20% 󰋙0% · $r7 󰛄40% 󰋙31%"
+snapshot 12 $((later + 10 * 60)) 31 "$later" > "$new/rollout-b.jsonl"
+printf '{"limits":[{"kind":"session","percent":20,"resets_at":"%s","scope":null},{"kind":"weekly_all","percent":40,"resets_at":"%s","scope":null}]}' \
+    "$(iso "$earlier")" "$(iso "$later")" > "$CACHE"
+ok "drops the offset past Claude's 5h reset" "$(usage)" "󰛄0% 󰋙12% · $r7 󰛄40% 󰋙31%"
+
+# The weekly offset is in hours, as the weekly reset shows, to the nearest.
+claude 20 40
+snapshot 12 "$later" 31 $((later + 3 * 3600)) > "$new/rollout-b.jsonl"
+ok "offsets a later codex weekly reset" "$(usage)" "$r5 󰛄20% 󰋙12% · $r7+3 󰛄40% 󰋙31%"
+snapshot 12 "$later" 31 $((later + 2 * 3600 + 31 * 60)) > "$new/rollout-b.jsonl"
+ok "rounds the weekly offset up" "$(usage)" "$r5 󰛄20% 󰋙12% · $r7+3 󰛄40% 󰋙31%"
+snapshot 12 "$later" 31 $((later + 3 * 3600 + 29 * 60)) > "$new/rollout-b.jsonl"
+ok "rounds the weekly offset down" "$(usage)" "$r5 󰛄20% 󰋙12% · $r7+3 󰛄40% 󰋙31%"
+snapshot 12 "$later" 31 $((later + 29 * 60)) > "$new/rollout-b.jsonl"
+ok "drops a weekly offset under half an hour" "$(usage)" "$r5 󰛄20% 󰋙12% · $r7 󰛄40% 󰋙31%"
+snapshot 12 "$later" 31 $((later + 26 * 3600)) > "$new/rollout-b.jsonl"
+ok "keeps a day or more in hours" "$(usage)" "$r5 󰛄20% 󰋙12% · $r7+26 󰛄40% 󰋙31%"
+snapshot 12 "$earlier" 31 $((later + 3 * 3600)) > "$new/rollout-b.jsonl"
+ok "offsets weekly past codex's 5h reset" "$(usage)" "$r5 󰛄20% 󰋙0% · $r7+3 󰛄40% 󰋙31%"
+week=$((later + 5 * 3600))
+printf '{"limits":[{"kind":"session","percent":20,"resets_at":"%s","scope":null},{"kind":"weekly_all","percent":40,"resets_at":"%s","scope":null}]}' \
+    "$(iso "$later")" "$(iso "$week")" > "$CACHE"
+snapshot 12 "$later" 31 "$later" > "$new/rollout-b.jsonl"
+ok "offsets an earlier codex weekly reset" "$(usage)" "$r5 󰛄20% 󰋙12% · $(dowhh "$week")-5 󰛄40% 󰋙31%"
+
 rm "$CACHE"
 ok "skips codex without Claude usage" "$(usage)" ""
 

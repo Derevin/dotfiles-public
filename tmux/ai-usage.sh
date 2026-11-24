@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Print account-wide AI usage for the tmux status bar: the 5-hour then the weekly
 # window, each led by its reset, then a glyph per provider, e.g.
-# "16:30 󰛄20% 󰋙12% · We10 󰛄40% ƒ51% 󰋙31%". Claude's numbers come
+# "16:30+10 󰛄20% 󰋙12% · We10+3 󰛄40% ƒ51% 󰋙31%", where +10 and +3 put
+# Codex's resets ten minutes and three hours after Claude's. Claude's numbers come
 # from the usage API cache fable-usage.sh keeps, not a session, so they cover
 # sessions in containers too. tmux asks every status-interval; the answer is
 # cached for CACHE_TTL.
@@ -28,14 +29,39 @@ cache=$HOME/.cache/claude-usage.json
 fb7=$("$scripts/fable-usage.sh") || fb7=""
 
 # Logged out, the snapshot is stale and Codex unusable: a lock replaces it.
-cx5="" cx7=""
+cx5="" cx7="" cx5_reset="" cx7_reset=""
 if ! command -v codex >/dev/null; then
     :  # not installed: no Codex segment at all
 elif [[ ! -f ${CODEX_HOME:-$HOME/.codex}/auth.json ]]; then
     cx5="🔒" cx7="🔒"
 else
-    read -r cx5 cx7 < <("$scripts/codex-usage.sh")
+    read -r cx5 cx7 cx5_reset cx7_reset < <("$scripts/codex-usage.sh")
 fi
+
+# Codex's 5h reset against Claude's, in whole minutes as both clocks read: "+10",
+# "-15"; past 90 as h:mm, "+1:35". Nothing when Codex's is unknown or the same.
+codex_offset_5h() {  # <claude reset> <codex reset>
+    [[ -n $2 && $2 != - ]] || return
+    local d=$(( $2 / 60 - $1 / 60 )) sign=+
+    (( d < 0 )) && { sign=-; d=$(( -d )); }
+    if (( d > 90 )); then
+        printf '%s%d:%02d' "$sign" $(( d / 60 )) $(( d % 60 ))
+    elif (( d > 0 )); then
+        printf '%s%d' "$sign" "$d"
+    fi
+}
+
+# Codex's weekly reset against Claude's, to the nearest hour: "+3", "-26".
+# Nothing when Codex's is unknown or within half an hour.
+codex_offset_7d() {  # <claude reset> <codex reset>
+    [[ -n $2 && $2 != - ]] || return
+    local d=$(( $2 - $1 )) sign=+
+    (( d < 0 )) && { sign=-; d=$(( -d )); }
+    d=$(( (d + 1800) / 3600 ))
+    if (( d > 0 )); then
+        printf '%s%d' "$sign" "$d"
+    fi
+}
 
 # One of Claude's windows as "<whole percent> <reset epoch>"; past its reset it
 # reads 0, with no reset. Prints nothing when the cache doesn't hold it.
@@ -75,7 +101,7 @@ CODEX=󰋙   # nf-md-hexagon_outline
 parts=()
 if read -r p reset < <(claude_window session); then
     seg=()
-    [[ -n $reset ]] && seg+=("$(date -d "@$reset" +%H:%M)")
+    [[ -n $reset ]] && seg+=("$(date -d "@$reset" +%H:%M)$(codex_offset_5h "$reset" "$cx5_reset")")
     tag "$CLAUDE" "$p"
     tag "$CODEX" "$cx5"
     parts+=("${seg[*]}")
@@ -84,7 +110,7 @@ if read -r p reset < <(claude_window weekly_all); then
     seg=()
     if [[ -n $reset ]]; then
         dow=$(date -d "@$reset" +%a)
-        seg+=("${dow:0:2}$(date -d "@$reset" +%H)")
+        seg+=("${dow:0:2}$(date -d "@$reset" +%H)$(codex_offset_7d "$reset" "$cx7_reset")")
     fi
     tag "$CLAUDE" "$p"
     tag ƒ "$fb7"
