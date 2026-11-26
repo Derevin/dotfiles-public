@@ -4,7 +4,7 @@
 # the review — a missing, failing or silent codex still leaves a report saying why.
 #
 # Self-contained: `codex` and `review-diff.sh` are faked on a prepended PATH. The fake
-# codex logs its argv and stdin, then acts on $FAKE_CODEX (ok|fail|silent).
+# codex logs its argv and stdin, then acts on $FAKE_CODEX (ok|fail|partial|silent).
 # Usage: test-codex-review.sh
 set -uo pipefail
 
@@ -45,6 +45,7 @@ done
 case "${FAKE_CODEX:-ok}" in
     ok) echo "src/a.c:3 off-by-one" > "$out" ;;
     fail) echo "error: not logged in" >&2; exit 1 ;;
+    partial) echo "src/a.c:3 off-by" > "$out"; echo "error: usage limit reached" >&2; exit 1 ;;
     silent) : ;;
 esac
 EOF
@@ -87,6 +88,11 @@ ok "fail report headline" "$(grep -c '^Codex review unavailable' "$REPORT")" 1
 ok "fail report first line" "$(head -1 "$REPORT")" "Codex review unavailable: codex exited 1"
 ok "fail report stderr" "$(grep -c 'not logged in' "$REPORT")" 1
 
+# Cut off mid-run, e.g. by the usage limit: whatever codex wrote is scrapped.
+REPORT="$TMP/partial.md"
+FAKE_CODEX=partial run "$REPORT"
+ok "partial report scrapped" "$(head -1 "$REPORT")" "Codex review unavailable: codex exited 1"
+
 # Silent: codex exits 0 without a final message.
 REPORT="$TMP/silent.md"
 FAKE_CODEX=silent run "$REPORT"; rc=$?
@@ -106,11 +112,11 @@ REPORT="$TMP/missing.md"
 PATH="$nocodex" bash "$CR" "$REPORT"; rc=$?
 ok "missing exit" "$rc" 0
 ok "missing report" "$(cat "$REPORT")" "Codex review unavailable: codex not installed"
-# ok, fail and silent reached codex; the missing run did not.
-ok "only runs that reached codex registered" "$(find "$FORK_REGISTRY_ROOT" -name meta.json | wc -l)" 3
+# ok, fail, partial and silent reached codex; the missing run did not.
+ok "only runs that reached codex registered" "$(find "$FORK_REGISTRY_ROOT" -name meta.json | wc -l)" 4
 
 # Usage gate: a review spends little, so it runs up to 97% of the 5-hour window
-# and 99% of the week, past codex-run.sh's defaults.
+# and until the week is spent, past codex-run.sh's defaults.
 snap="$CODEX_HOME/sessions/2026/11/20/rollout-snap.jsonl"
 mkdir -p "$(dirname "$snap")"
 snapshot() { # <5h%> <wk%>
@@ -119,15 +125,15 @@ snapshot() { # <5h%> <wk%>
         "$1" "$later" "$2" "$later" > "$snap"
 }
 REPORT="$TMP/gate.md"
-snapshot 96 98
+snapshot 96 99
 FAKE_CODEX=ok run "$REPORT"
 ok "under raised limits runs" "$(cat "$REPORT")" "src/a.c:3 off-by-one"
 snapshot 97 10
 FAKE_CODEX=ok run "$REPORT"; rc=$?
 ok "5h limit exit" "$rc" 0
 ok "5h limit report" "$(cat "$REPORT")" "Codex review unavailable: codex near its usage limit (5h 97%, week 10%)"
-snapshot 10 99
+snapshot 10 100
 FAKE_CODEX=ok run "$REPORT"
-ok "weekly limit report" "$(cat "$REPORT")" "Codex review unavailable: codex near its usage limit (5h 10%, week 99%)"
+ok "weekly limit report" "$(cat "$REPORT")" "Codex review unavailable: codex near its usage limit (5h 10%, week 100%)"
 
 report
