@@ -72,11 +72,15 @@ IFS='|' read -r WINDOW QUADRANT <<<"$(tmux display-message -t "$PANE" -p '#{wind
 # docker exec / coder ssh do not reliably size their pty to the pane either, so
 # force the winsize we know is correct right now.
 CMD=""
+CLAUDE_OPTS=()
+# A --continue is a relaunch: resume at the session's last effort.
+for a in "$@"; do
+    if [ "$a" = --continue ]; then CLAUDE_OPTS+=(--recorded-effort); break; fi
+done
 if [ "$LAB_BACKEND" != host ]; then
     read -r H W <<<"$(tmux display-message -p -t "$PANE" '#{pane_height} #{pane_width}')"
     CMD="stty rows $H cols $W; "
-    CMD+=$(lab_claude_cmd --no-auto-memory "$(lab_head "$LAB")" "$@")
-else
-    CMD+=$(lab_claude_cmd "$(lab_head "$LAB")" "$@")
+    CLAUDE_OPTS+=(--no-auto-memory)
 fi
+CMD+=$(lab_claude_cmd ${CLAUDE_OPTS+"${CLAUDE_OPTS[@]}"} "$(lab_head "$LAB")" "$@")
 tmux send-keys -t "$PANE" "$CMD" Enter

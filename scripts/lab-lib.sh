@@ -490,9 +490,10 @@ lab_provision() {
 
 # lab_claude_project_dir <path> — where Claude keeps the session state for a cwd.
 # It keys on the encoded path, which is why the claim rename has to carry this
-# directory along with the worktree.
+# directory along with the worktree. lab_claude_cmd --recorded-effort spells the
+# same expansion inline; change both together.
 lab_claude_project_dir() {
-  printf '%s/.claude/projects/%s' "$HOME" "$(printf '%s' "$1" | sed 's/[^a-zA-Z0-9]/-/g')"
+  printf '%s/.claude/projects/%s' "$HOME" "${1//[^a-zA-Z0-9]/-}"
 }
 
 # lab_history_dirs <checkout> <letter> <id> — the ~/.claude/projects dirs a
@@ -529,15 +530,22 @@ lab_history_scan() {
   done
 }
 
-# lab_claude_cmd [--no-auto-memory] <label> [claude-arg...] — the one definition
-# of how Claude is launched. Every workspace and lab script goes
-# through it, so "the normal command plus --continue" means something.
-# Effort is xhigh unless a claude-arg sets it.
+# lab_claude_cmd [--no-auto-memory] [--recorded-effort] <label> [claude-arg...] —
+# the one definition of how Claude is launched. Every workspace and lab script
+# goes through it, so "the normal command plus --continue" means something.
+# Effort is xhigh unless a claude-arg sets it. --recorded-effort makes the default
+# the level statusline.sh last recorded in the cwd's project dir, still xhigh
+# without one. The lookup runs where the command runs: on a docker or coder lab,
+# that shell is the only one that sees the project dir.
 lab_claude_cmd() {
   local prefix="" effort=" --effort xhigh" args="" label a
   while [ $# -gt 0 ]; do
     case "$1" in
       --no-auto-memory) prefix="CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 "; shift ;;
+      # Same encoding as lab_claude_project_dir, spelled inline to run in the pane.
+      --recorded-effort)
+        effort=' --effort "$(cat ~/.claude/projects/${PWD//[^a-zA-Z0-9]/-}/.effort 2>/dev/null || echo xhigh)"'
+        shift ;;
       *) break ;;
     esac
   done

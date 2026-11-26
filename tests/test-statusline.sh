@@ -40,4 +40,36 @@ ok "leaves rate limits out" \
     "$(echo '{"model":{"display_name":"Opus 5.5"},"rate_limits":{"five_hour":{"used_percentage":20},"seven_day":{"used_percentage":40}}}' | "$SL")" \
     'Opus 5.5'
 
+# --- effort record -----------------------------------------------------------
+# The live effort goes beside the transcript, where a lab relaunch reads it back.
+PD="$TMP/.claude/projects/-p"
+mkdir -p "$PD" && touch "$PD/s.jsonl"
+render() {
+    printf '{"model":{"display_name":"Opus 5.5"},"effort":{"level":"%s"},"transcript_path":"%s"}' "$1" "$2" | "$SL"
+}
+record() { cat "$PD/.effort" 2>/dev/null; }
+
+ok "renders while recording" "$(render medium "$PD/s.jsonl")" "Opus 5.5 󰪟"
+ok "records the effort beside the transcript" "$(record)" medium
+render high "$PD/s.jsonl" >/dev/null
+ok "records an /effort change" "$(record)" high
+# The write goes through a rename, so an unchanged inode means no rewrite.
+ino=$(stat -c %i "$PD/.effort")
+render high "$PD/s.jsonl" >/dev/null
+ok "an unchanged level is not rewritten" "$(stat -c %i "$PD/.effort")" "$ino"
+ok "no temp file left beside the record" "$(ls -A "$PD" | tr '\n' ' ')" ".effort s.jsonl "
+render turbo "$PD/s.jsonl" >/dev/null
+ok "an unknown level keeps the record" "$(record)" high
+
+# Before the first turn there is no transcript to resume, so nothing to record.
+PN="$TMP/.claude/projects/-new"
+mkdir -p "$PN"
+render low "$PN/s.jsonl" >/dev/null
+ok "no transcript file, no record" "$(ls -A "$PN")" ""
+ok "no transcript path still renders" "$(render low '')" "Opus 5.5 󰝦"
+# A relative path would resolve against the cwd ($TMP), so it must not count.
+mkdir rel && touch rel/s.jsonl
+render low rel/s.jsonl >/dev/null
+ok "a relative transcript path leaves no stray file" "$(ls -A rel)" s.jsonl
+
 report

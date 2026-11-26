@@ -87,6 +87,28 @@ ok "claude cmd quotes what needs it" "$(lab_claude_cmd x '/plan-task 039')" \
 ok "claude cmd skips empty args" "$(lab_claude_cmd x '')" "CLAUDE_LABEL=x claude --effort xhigh"
 ok "claude cmd takes the caller's effort" "$(lab_claude_cmd x --model fable --effort medium)" \
     "CLAUDE_LABEL=x claude --model fable --effort medium"
+ok "caller's effort beats the recorded one" "$(lab_claude_cmd --recorded-effort x --effort high --continue)" \
+    "CLAUDE_LABEL=x claude --effort high --continue"
+
+# The lookup runs in the command's own shell, so these eval it from the worktree.
+# Writing the record via statusline.sh pins writer and reader to the same file.
+RW="$TMP/relaunch/Proj-hlab-067-x"
+RH="$TMP/relaunch-home"
+mkdir -p "$RW" "$RH"
+relaunch() {
+    (cd "$RW" && export HOME="$RH" && claude() { printf '%s' "$*"; } \
+        && eval "$(lab_claude_cmd --recorded-effort x "$@")")
+}
+ok "relaunch without a record stays at xhigh" "$(relaunch --continue)" "--effort xhigh --continue"
+RP=$(HOME=$RH lab_claude_project_dir "$RW")
+mkdir -p "$RP" && touch "$RP/s.jsonl"
+printf '{"effort":{"level":"medium"},"transcript_path":"%s"}' "$RP/s.jsonl" \
+    | HOME=$RH "$SCRIPT_DIR/../claude/statusline.sh" >/dev/null
+ok "relaunch resumes the recorded effort" "$(relaunch --continue)" "--effort medium --continue"
+ok "docker relaunch reads the record with auto memory off" \
+    "$(cd "$RW" && HOME=$RH && claude() { printf '%s %s' "${CLAUDE_CODE_DISABLE_AUTO_MEMORY:-}" "$*"; } \
+        && eval "$(lab_claude_cmd --recorded-effort --no-auto-memory x --continue)")" \
+    "1 --effort medium --continue"
 
 # Claude keys session state on this path, which is why the claim rename carries
 # it. Only separators a checkout path actually contains are pinned here; how

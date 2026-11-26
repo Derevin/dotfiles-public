@@ -226,6 +226,28 @@ ok "drop checks once before the detached, forced destroy" \
     "$(cat "$LAB_DESTROY_LOG" 2>/dev/null)" "$(printf '%s\n' "--check $F" "--force $F")"
 rm "$TMP/bin/lab-destroy.sh"
 
+# --- a relaunch resumes the recorded effort -----------------------------------
+# --continue is what every relaunch passes; a fresh attach ignores the record.
+record_effort() {
+    local pd
+    pd=$(source "$SCRIPT_DIR/../scripts/lab-lib.sh" && lab_claude_project_dir "$1")
+    mkdir -p "$pd" && printf '%s\n' "$2" > "$pd/.effort"
+}
+# Lab names are reused once dropped, so match the resumed launch, not the name,
+# and count fresh launches rather than finding one.
+resumed() { grep "^$1|.*--continue$" "$CLAUDE_STUB_LOG" 2>/dev/null; }
+fresh_count() { grep -c "^$1|--effort xhigh$" "$CLAUDE_STUB_LOG" 2>/dev/null; }
+fresh_since() { [ "$(fresh_count "$1")" -gt "$2" ]; }
+G=$(lab-new.sh host 2>/dev/null)
+record_effort "$TMP/Widget-$G" medium
+N=$(fresh_count "$G")
+lab-attach.sh --pane "$(new_pane)" "$G" >/dev/null 2>&1
+wait_for fresh_since "$G" "$N"
+ok "a fresh attach ignores the recorded effort" "$(yn fresh_since "$G" "$N")" y
+lab-attach.sh --pane "$(new_pane)" "$G" --continue >/dev/null 2>&1
+wait_for resumed "$G"
+ok "relaunch resumes the recorded effort" "$(resumed "$G")" "$G|--effort medium --continue"
+
 # --- what a background split leaves behind ------------------------------------
 # The split is ephemeral, so a recipe that fails would take its own error
 # message off the screen with it. Driving just.sh needs the two commands it
@@ -386,6 +408,9 @@ taskania_waits() {
         | grep -E 'claude-update\.sh --wait-host [0-9]+ && taskania --watch --with dotfiles'
 }
 
+# A morning workspace has no chooser to have picked from, so it stays at xhigh
+# even beside a recorded effort.
+record_effort "$HOME/repos/dotfiles" medium
 WSA=$(new_pane)
 tmux run-shell -t "$WSA" "workspace-dotfiles.sh $TMP/Widget dota widgeta"
 wait_for cont dotfiles
