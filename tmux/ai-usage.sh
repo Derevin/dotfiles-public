@@ -51,15 +51,15 @@ codex_offset_5h() {  # <claude reset> <codex reset>
     fi
 }
 
-# Codex's weekly reset against Claude's, to the nearest hour: "+3", "-26".
-# Nothing when Codex's is unknown or within half an hour.
+# Hours from Claude's weekly reset to Codex's next one, to the nearest: "+3",
+# "+163". Both repeat weekly, so the offset wraps into 0-167. Nothing when Codex's
+# is unknown or within half an hour of Claude's.
 codex_offset_7d() {  # <claude reset> <codex reset>
     [[ -n $2 && $2 != - ]] || return
-    local d=$(( $2 - $1 )) sign=+
-    (( d < 0 )) && { sign=-; d=$(( -d )); }
-    d=$(( (d + 1800) / 3600 ))
+    local week=$(( 168 * 3600 ))
+    local d=$(( (($2 - $1) % week + week + 1800) % week / 3600 ))
     if (( d > 0 )); then
-        printf '%s%d' "$sign" "$d"
+        printf '+%d' "$d"
     fi
 }
 
