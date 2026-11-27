@@ -1,7 +1,6 @@
 ---
 allowed-tools: Bash(taskania *),Read(~/repos/tasks/**)
 description: Pick the next groomed task from planned/ and implement it
-disable-model-invocation: true
 ---
 
 Pick a groomed task from `planned/` and implement it from its snapshotted plan. The task file plus the context store is your entire brief.
